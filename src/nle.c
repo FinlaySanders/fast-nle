@@ -142,6 +142,18 @@ init_nle(FILE *ttyrec, nle_obs *obs)
 {
     nle_ctx_t *nle = malloc(sizeof(nle_ctx_t));
 
+    /* fast-nle: allocate this env's migrated game state and anchor the
+     * context pointer before any game code can run. */
+    nle->nh = nh_ctx_new();
+    assert(nle->nh);
+    nh_cur = nle->nh;
+
+    /* Set CO and LI to control ttyrec output size (used by tmt_open below).
+     * They live in the migrated tc_gbl_data, so this cannot happen before
+     * the ctx exists — it used to be done at the top of nle_start. */
+    CO = NLE_TERM_CO;
+    LI = NLE_TERM_LI;
+
     nle->ttyrec = ttyrec;
 
 #ifdef NLE_BZ2_TTYRECS
@@ -410,12 +422,10 @@ nle_fopen_wizkit_file()
 nle_ctx_t *
 nle_start(nle_obs *obs, FILE *ttyrec, nle_settings *settings_p)
 {
-    /* Set CO and LI to control ttyrec output size. */
-    CO = NLE_TERM_CO;
-    LI = NLE_TERM_LI;
-
     settings = *settings_p;
 
+    /* CO/LI setup moved into init_nle: they live in the migrated
+     * tc_gbl_data and need the ctx allocated first. */
     nle_ctx_t *nle = init_nle(ttyrec, obs);
 
     /* Initialise the level generation RNG */
@@ -448,6 +458,7 @@ nle_ctx_t *
 nle_step(nle_ctx_t *nle, nle_obs *obs)
 {
     current_nle_ctx = nle;
+    nh_cur = (struct nh_ctx *) nle->nh;
     nle->observation = obs;
     if (nle->ttyrec) {
         write_ttyrec_header(1, 1);
@@ -509,6 +520,9 @@ nle_end(nle_ctx_t *nle)
     tmt_close(nle->vterminal);
 
     destroy_fcontext_stack(&nle->stack);
+    if (nh_cur == nle->nh)
+        nh_cur = (struct nh_ctx *) 0;
+    nh_ctx_free((struct nh_ctx *) nle->nh);
     free(nle);
 }
 

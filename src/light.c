@@ -73,7 +73,7 @@ anything *id;
     ls->range = range;
     ls->type = type;
     ls->id = *id;
-    ls->flags = 0;
+    ls->ls_flags = 0;
     light_base = ls;
 
     vision_full_recalc = 1; /* make the source show up */
@@ -111,7 +111,7 @@ anything *id;
         if (curr->type != type)
             continue;
         if (curr->id.a_obj
-            == ((curr->flags & LSF_NEEDS_FIXUP) ? tmp_id.a_obj : id->a_obj)) {
+            == ((curr->ls_flags & LSF_NEEDS_FIXUP) ? tmp_id.a_obj : id->a_obj)) {
             if (prev)
                 prev->next = curr->next;
             else
@@ -138,7 +138,7 @@ char **cs_rows;
     char *row;
 
     for (ls = light_base; ls; ls = ls->next) {
-        ls->flags &= ~LSF_SHOW;
+        ls->ls_flags &= ~LSF_SHOW;
 
         /*
          * Check for moved light sources.  It may be possible to
@@ -148,22 +148,22 @@ char **cs_rows;
          */
         if (ls->type == LS_OBJECT) {
             if (get_obj_location(ls->id.a_obj, &ls->x, &ls->y, 0))
-                ls->flags |= LSF_SHOW;
+                ls->ls_flags |= LSF_SHOW;
         } else if (ls->type == LS_MONSTER) {
             if (get_mon_location(ls->id.a_monst, &ls->x, &ls->y, 0))
-                ls->flags |= LSF_SHOW;
+                ls->ls_flags |= LSF_SHOW;
         }
 
         /* minor optimization: don't bother with duplicate light sources
            at hero */
         if (ls->x == u.ux && ls->y == u.uy) {
             if (at_hero_range >= ls->range)
-                ls->flags &= ~LSF_SHOW;
+                ls->ls_flags &= ~LSF_SHOW;
             else
                 at_hero_range = ls->range;
         }
 
-        if (ls->flags & LSF_SHOW) {
+        if (ls->ls_flags & LSF_SHOW) {
             /*
              * Walk the points in the circle and see if they are
              * visible from the center.  If so, mark'em.
@@ -407,7 +407,7 @@ boolean ghostly;
     light_source *ls;
 
     for (ls = light_base; ls; ls = ls->next) {
-        if (ls->flags & LSF_NEEDS_FIXUP) {
+        if (ls->ls_flags & LSF_NEEDS_FIXUP) {
             if (ls->type == LS_OBJECT || ls->type == LS_MONSTER) {
                 if (ghostly) {
                     if (!lookup_id_mapping(ls->id.a_uint, &nid))
@@ -427,7 +427,7 @@ boolean ghostly;
             } else
                 impossible("relink_light_sources: bad type (%d)", ls->type);
 
-            ls->flags &= ~LSF_NEEDS_FIXUP;
+            ls->ls_flags &= ~LSF_NEEDS_FIXUP;
         }
     }
 }
@@ -512,7 +512,7 @@ light_source *ls;
     struct monst *mtmp;
 
     if (ls->type == LS_OBJECT || ls->type == LS_MONSTER) {
-        if (ls->flags & LSF_NEEDS_FIXUP) {
+        if (ls->ls_flags & LSF_NEEDS_FIXUP) {
             bwrite(fd, (genericptr_t) ls, sizeof(light_source));
         } else {
             /* replace object pointer with id for write, then put back */
@@ -532,10 +532,10 @@ light_source *ls;
                     impossible("write_ls: can't find mon #%u!",
                                ls->id.a_uint);
             }
-            ls->flags |= LSF_NEEDS_FIXUP;
+            ls->ls_flags |= LSF_NEEDS_FIXUP;
             bwrite(fd, (genericptr_t) ls, sizeof(light_source));
             ls->id = arg_save;
-            ls->flags &= ~LSF_NEEDS_FIXUP;
+            ls->ls_flags &= ~LSF_NEEDS_FIXUP;
         }
     } else {
         impossible("write_ls: bad type (%d)", ls->type);
@@ -788,7 +788,7 @@ wiz_light_sources()
         putstr(win, 0, "-------- ----- ------ ----  -------");
         for (ls = light_base; ls; ls = ls->next) {
             Sprintf(buf, "  %2d,%2d   %2d   0x%04x  %s  %s", ls->x, ls->y,
-                    ls->range, ls->flags,
+                    ls->range, ls->ls_flags,
                     (ls->type == LS_OBJECT
                        ? "obj"
                        : ls->type == LS_MONSTER

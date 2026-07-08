@@ -240,6 +240,13 @@ char **argv;
     FILE *fin;
     int i;
     boolean errors_encountered = FALSE;
+
+    /* fast-nle: lev_comp links decl.c, whose globals now live behind
+     * nh_cur. Give this tool a context before anything touches one. */
+    nh_cur = nh_ctx_new();
+    if (!nh_cur)
+        panic("nh_ctx_new failed");
+
 #if defined(MAC) && (defined(THINK_C) || defined(__MWERKS__))
     static char *mac_argv[] = {
         "lev_comp", /* dummy argv[0] */

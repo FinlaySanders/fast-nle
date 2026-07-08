@@ -334,7 +334,7 @@ typedef union str_or_len {
 
 typedef struct {
     xchar init_style; /* one of LVLINIT_foo */
-    long flags;
+    long init_flags;
     schar filling;
     boolean init_present, padding;
     char fg, bg;

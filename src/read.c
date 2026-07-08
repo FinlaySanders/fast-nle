@@ -858,8 +858,8 @@ int percent;
      */
     indices[0] = 0; /* lint suppression */
     for (count = 0, i = 0; i <= maxl; i++)
-        if ((level_info[i].flags & VISITED)
-            && !(level_info[i].flags & FORGOTTEN) && i != this_lev) {
+        if ((level_info[i].linfo_flags & VISITED)
+            && !(level_info[i].linfo_flags & FORGOTTEN) && i != this_lev) {
             if (ledger_to_dnum(i) == sokoban_dnum)
                 percent += 2;
             else
@@ -875,7 +875,7 @@ int percent;
         /* forget first % of randomized indices */
         count = ((count * percent) + 50) / 100;
         for (i = 0; i < count; i++) {
-            level_info[indices[i]].flags |= FORGOTTEN;
+            level_info[indices[i]].linfo_flags |= FORGOTTEN;
             forget_mapseen(indices[i]);
         }
     }
@@ -1542,7 +1542,7 @@ struct obj *sobj; /* scroll, or fake spellbook object for scroll-like spell */
             recharge(otmp, scursed ? -1 : sblessed ? 1 : 0);
         break;
     case SCR_MAGIC_MAPPING:
-        if (level.flags.nommap) {
+        if (level.lflags.nommap) {
             Your("mind is filled with crazy lines!");
             if (Hallucination)
                 pline("Wow!  Modern art.");
@@ -1563,7 +1563,7 @@ struct obj *sobj; /* scroll, or fake spellbook object for scroll-like spell */
         known = TRUE;
         /*FALLTHRU*/
     case SPE_MAGIC_MAPPING:
-        if (level.flags.nommap) {
+        if (level.lflags.nommap) {
             Your("%s spins as %s blocks the spell!", body_part(HEAD),
                  something);
             make_confused(HConfusion + rnd(30), FALSE);

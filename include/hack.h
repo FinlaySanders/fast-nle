@@ -538,4 +538,9 @@ enum bodypart_types {
 #define DEVTEAM_EMAIL "devteam@nethack.org"
 #define DEVTEAM_URL "https://www.nethack.org/"
 
+/* fast-nle: per-env context (struct nh_ctx, nh_cur, global accessors).
+ * Included last so every game type is complete when the struct is defined.
+ * See docs/DESIGN.md §2 and tools/globals.def. */
+#include "nh_ctx_gen.h"
+
 #endif /* HACK_H */

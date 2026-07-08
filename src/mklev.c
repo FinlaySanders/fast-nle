@@ -304,7 +304,7 @@ boolean nxcor;
     dest.x = tx;
     dest.y = ty;
 
-    if (!dig_corridor(&org, &dest, nxcor, level.flags.arboreal ? ROOM : CORR,
+    if (!dig_corridor(&org, &dest, nxcor, level.lflags.arboreal ? ROOM : CORR,
                       STONE))
         return;
 
@@ -536,7 +536,7 @@ int trap_type;
                                               mkclass(S_HUMAN, 0), xx,
                                               yy + dy, TRUE);
                     }
-                    if (!level.flags.noteleport)
+                    if (!level.lflags.noteleport)
                         (void) mksobj_at(SCR_TELEPORTATION, xx, yy + dy, TRUE,
                                          FALSE);
                     if (!rn2(3))
@@ -552,7 +552,7 @@ STATIC_OVL void
 make_niches()
 {
     int ct = rnd((nroom >> 1) + 1), dep = depth(&u.uz);
-    boolean ltptr = (!level.flags.noteleport && dep > 15),
+    boolean ltptr = (!level.lflags.noteleport && dep > 15),
             vamp = (dep > 5 && dep < 25);
 
     while (ct--) {
@@ -611,28 +611,28 @@ clear_level_structures()
     level.damagelist = (struct damage *) 0;
     level.bonesinfo = (struct cemetery *) 0;
 
-    level.flags.nfountains = 0;
-    level.flags.nsinks = 0;
-    level.flags.has_shop = 0;
-    level.flags.has_vault = 0;
-    level.flags.has_zoo = 0;
-    level.flags.has_court = 0;
-    level.flags.has_morgue = level.flags.graveyard = 0;
-    level.flags.has_beehive = 0;
-    level.flags.has_barracks = 0;
-    level.flags.has_temple = 0;
-    level.flags.has_swamp = 0;
-    level.flags.noteleport = 0;
-    level.flags.hardfloor = 0;
-    level.flags.nommap = 0;
-    level.flags.hero_memory = 1;
-    level.flags.shortsighted = 0;
-    level.flags.sokoban_rules = 0;
-    level.flags.is_maze_lev = 0;
-    level.flags.is_cavernous_lev = 0;
-    level.flags.arboreal = 0;
-    level.flags.wizard_bones = 0;
-    level.flags.corrmaze = 0;
+    level.lflags.nfountains = 0;
+    level.lflags.nsinks = 0;
+    level.lflags.has_shop = 0;
+    level.lflags.has_vault = 0;
+    level.lflags.has_zoo = 0;
+    level.lflags.has_court = 0;
+    level.lflags.has_morgue = level.lflags.graveyard = 0;
+    level.lflags.has_beehive = 0;
+    level.lflags.has_barracks = 0;
+    level.lflags.has_temple = 0;
+    level.lflags.has_swamp = 0;
+    level.lflags.noteleport = 0;
+    level.lflags.hardfloor = 0;
+    level.lflags.nommap = 0;
+    level.lflags.hero_memory = 1;
+    level.lflags.shortsighted = 0;
+    level.lflags.sokoban_rules = 0;
+    level.lflags.is_maze_lev = 0;
+    level.lflags.is_cavernous_lev = 0;
+    level.lflags.arboreal = 0;
+    level.lflags.wizard_bones = 0;
+    level.lflags.corrmaze = 0;
 
     nroom = 0;
     rooms[0].hx = -1;
@@ -748,11 +748,11 @@ makelevel()
  fill_vault:
             add_room(vault_x, vault_y, vault_x + w, vault_y + h,
                      TRUE, VAULT, FALSE);
-            level.flags.has_vault = 1;
+            level.lflags.has_vault = 1;
             ++room_threshold;
             fill_room(&rooms[nroom - 1], FALSE);
             mk_knox_portal(vault_x + w, vault_y + h);
-            if (!level.flags.noteleport && !rn2(3))
+            if (!level.lflags.noteleport && !rn2(3))
                 makevtele();
         } else if (rnd_rect() && create_vault()) {
             vault_x = rooms[nroom].lx;
@@ -921,9 +921,9 @@ boolean skip_lvl_checks;
        almost all special levels are excluded */
     if (!skip_lvl_checks
         && (In_hell(&u.uz) || In_V_tower(&u.uz) || Is_rogue_level(&u.uz)
-            || level.flags.arboreal
+            || level.lflags.arboreal
             || ((sp = Is_special(&u.uz)) != 0 && !Is_oracle_level(&u.uz)
-                && (!In_mines(&u.uz) || sp->flags.town))))
+                && (!In_mines(&u.uz) || sp->dflags.town))))
         return;
 
     /* basic level-related probabilities */
@@ -1014,9 +1014,9 @@ mklev()
     /* has_morgue gets cleared once morgue is entered; graveyard stays
        set (graveyard might already be set even when has_morgue is clear
        [see fixup_special()], so don't update it unconditionally) */
-    if (level.flags.has_morgue)
-        level.flags.graveyard = 1;
-    if (!level.flags.is_maze_lev) {
+    if (level.lflags.has_morgue)
+        level.lflags.graveyard = 1;
+    if (!level.lflags.is_maze_lev) {
         for (croom = &rooms[0]; croom != &rooms[nroom]; croom++)
 #ifdef SPECIALIZATION
             topologize(croom, FALSE);
@@ -1338,7 +1338,7 @@ coord *tm;
                     kind = NO_TRAP;
                 break;
             case LEVEL_TELEP:
-                if (lvl < 5 || level.flags.noteleport)
+                if (lvl < 5 || level.lflags.noteleport)
                     kind = NO_TRAP;
                 break;
             case SPIKED_PIT:
@@ -1363,7 +1363,7 @@ coord *tm;
                     kind = NO_TRAP;
                 break;
             case TELEP_TRAP:
-                if (level.flags.noteleport)
+                if (level.lflags.noteleport)
                     kind = NO_TRAP;
                 break;
             case HOLE:
@@ -1599,7 +1599,7 @@ struct mkroom *croom;
     if (!rn2(7))
         levl[m.x][m.y].blessedftn = 1;
 
-    level.flags.nfountains++;
+    level.lflags.nfountains++;
 }
 
 STATIC_OVL void
@@ -1619,7 +1619,7 @@ struct mkroom *croom;
     /* Put a sink at m.x, m.y */
     levl[m.x][m.y].typ = SINK;
 
-    level.flags.nsinks++;
+    level.lflags.nsinks++;
 }
 
 STATIC_OVL void

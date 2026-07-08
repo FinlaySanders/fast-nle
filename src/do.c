@@ -67,7 +67,7 @@ boolean pushing;
                 levl[rx][ry].drawbridgemask &= ~DB_UNDER; /* clear lava */
                 levl[rx][ry].drawbridgemask |= DB_FLOOR;
             } else
-                levl[rx][ry].typ = ROOM, levl[rx][ry].flags = 0;
+                levl[rx][ry].typ = ROOM, levl[rx][ry].rmflags = 0;
 
             if (ttmp)
                 (void) delfloortrap(ttmp);
@@ -316,7 +316,7 @@ polymorph_sink()
         return;
 
     sinklooted = levl[u.ux][u.uy].looted != 0;
-    level.flags.nsinks--;
+    level.lflags.nsinks--;
     levl[u.ux][u.uy].doormask = 0; /* levl[][].flags */
     switch (rn2(4)) {
     default:
@@ -326,7 +326,7 @@ polymorph_sink()
         levl[u.ux][u.uy].blessedftn = 0;
         if (sinklooted)
             SET_FOUNTAIN_LOOTED(u.ux, u.uy);
-        level.flags.nfountains++;
+        level.lflags.nfountains++;
         break;
     case 1:
         sym = S_throne;
@@ -751,7 +751,7 @@ boolean with_impact;
             container_impact_dmg(obj, u.ux, u.uy);
         if (obj == uball)
             drop_ball(u.ux, u.uy);
-        else if (level.flags.has_shop)
+        else if (level.lflags.has_shop)
             sellobj(obj, u.ux, u.uy);
         stackobj(obj);
         if (Blind && Levitation)
@@ -1439,11 +1439,11 @@ boolean at_stairs, falling, portal;
     (void) memset((genericptr_t) &updest, 0, sizeof updest);
     (void) memset((genericptr_t) &dndest, 0, sizeof dndest);
 
-    if (!(level_info[new_ledger].flags & LFILE_EXISTS)) {
+    if (!(level_info[new_ledger].linfo_flags & LFILE_EXISTS)) {
         /* entering this level for first time; make it now */
-        if (level_info[new_ledger].flags & (FORGOTTEN | VISITED)) {
+        if (level_info[new_ledger].linfo_flags & (FORGOTTEN | VISITED)) {
             impossible("goto_level: returning to discarded level?");
-            level_info[new_ledger].flags &= ~(FORGOTTEN | VISITED);
+            level_info[new_ledger].linfo_flags &= ~(FORGOTTEN | VISITED);
         }
         mklev();
         new = TRUE; /* made the level */
@@ -1571,11 +1571,11 @@ boolean at_stairs, falling, portal;
     else if (Is_firelevel(&u.uz))
         fumaroles();
 
-    if (level_info[new_ledger].flags & FORGOTTEN) {
+    if (level_info[new_ledger].linfo_flags & FORGOTTEN) {
         forget_map(ALL_MAP); /* forget the map */
         forget_traps();      /* forget all traps too */
         familiar = TRUE;
-        level_info[new_ledger].flags &= ~FORGOTTEN;
+        level_info[new_ledger].linfo_flags &= ~FORGOTTEN;
     }
 
     /* Reset the screen. */

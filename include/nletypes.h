@@ -68,7 +68,10 @@ typedef struct nle_observation {
     unsigned char *specials; /* Size ROWNO * (COLNO - 1) */
     long *blstats;           /* Size NLE_BLSTATS_SIZE */
     unsigned char *message;  /* Size NLE_MESSAGE_SIZE */
-    int *program_state;      /* Size NLE_PROGRAM_STATE_SIZE */
+    /* renamed from program_state: that token is a migrated game global
+     * whose accessor macro would expand inside this declaration and at
+     * every obs->program_state use site after hack.h. */
+    int *prog_state;         /* Size NLE_PROGRAM_STATE_SIZE */
     int *internal;           /* Size NLE_INTERNAL_SIZE */
     short *inv_glyphs;       /* Size NLE_INVENTORY_SIZE */
     unsigned char
@@ -108,6 +111,10 @@ typedef struct nle_globals {
 
     boolean done;
     nle_obs *observation;
+
+    /* fast-nle: this env's migrated game state (struct nh_ctx, generated
+     * from tools/globals.def). Opaque here to keep game headers out. */
+    void *nh;
 } nle_ctx_t;
 
 typedef struct nle_settings {

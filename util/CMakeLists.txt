@@ -10,6 +10,8 @@ set(LEV_COMP_SRC
     lev_main.c
     panic.c
     ${NLE_SRC}/decl.c
+    ${NLE_SRC}/nh_ctx_gen.c
+    ${NLE_SRC}/nh_ctx_fixup.c
     ${NLE_SRC}/monst.c
     ${NLE_SRC}/objects.c
     ${NLE_SRC}/alloc.c

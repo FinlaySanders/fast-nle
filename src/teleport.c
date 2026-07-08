@@ -491,7 +491,7 @@ struct obj *scroll;
     boolean result = FALSE; /* don't learn scroll */
 
     /* Disable teleportation in stronghold && Vlad's Tower */
-    if (level.flags.noteleport) {
+    if (level.lflags.noteleport) {
         if (!wizard) {
             pline("A mysterious force prevents you from teleporting!");
             return TRUE;
@@ -1293,7 +1293,7 @@ boolean
 tele_restrict(mon)
 struct monst *mon;
 {
-    if (level.flags.noteleport) {
+    if (level.lflags.noteleport) {
         if (canseemon(mon))
             pline("A mysterious force prevents %s from teleporting!",
                   mon_nam(mon));
@@ -1568,7 +1568,7 @@ boolean give_feedback;
         if (give_feedback)
             pline("%s resists your magic!", Monnam(mtmp));
         return FALSE;
-    } else if (level.flags.noteleport && u.uswallow && mtmp == u.ustuck) {
+    } else if (level.lflags.noteleport && u.uswallow && mtmp == u.ustuck) {
         if (give_feedback)
             You("are no longer inside %s!", mon_nam(mtmp));
         unstuck(mtmp);

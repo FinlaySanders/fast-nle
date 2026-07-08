@@ -278,7 +278,7 @@ E NEARDATA long domove_succeeded;
 #define DOMOVE_WALK         0x00000001
 #define DOMOVE_RUSH         0x00000002
 
-E NEARDATA struct c_color_names {
+E const struct c_color_names {
     const char *const c_black, *const c_amber, *const c_golden,
         *const c_light_blue, *const c_red, *const c_green, *const c_silver,
         *const c_blue, *const c_purple, *const c_white, *const c_orange;
@@ -296,9 +296,9 @@ E NEARDATA struct c_color_names {
 #define NH_ORANGE c_color_names.c_orange
 
 /* The names of the colors used for gems, etc. */
-E const char *c_obj_colors[];
+E const char *const c_obj_colors[];
 
-E struct c_common_strings {
+E const struct c_common_strings {
     const char *const c_nothing_happens, *const c_thats_enough_tries,
         *const c_silly_thing_to, *const c_shudder_for_moment,
         *const c_something, *const c_Something, *const c_You_can_move_again,
@@ -320,7 +320,7 @@ E struct c_common_strings {
 #define fakename c_common_strings.c_fakename
 
 /* material strings */
-E const char *materialnm[];
+E const char *const materialnm[];
 
 /* Monster name articles */
 #define ARTICLE_NONE 0
@@ -402,7 +402,7 @@ E char *fqn_prefix[PREFIX_COUNT];
 E boolean fqn_prefix_locked[PREFIX_COUNT];
 #endif
 #ifdef PREFIXES_IN_USE
-E const char *fqn_prefix_names[PREFIX_COUNT];
+E const char *const fqn_prefix_names[PREFIX_COUNT];
 #endif
 
 E NEARDATA struct savefile_info sfcap, sfrestinfo, sfsaveinfo;

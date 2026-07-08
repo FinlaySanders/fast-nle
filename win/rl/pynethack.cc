@@ -213,7 +213,7 @@ class Nethack
     void
     set_buffers(py::object glyphs, py::object chars, py::object colors,
                 py::object specials, py::object blstats, py::object message,
-                py::object program_state, py::object internal,
+                py::object program_state_buf, py::object internal,
                 py::object inv_glyphs, py::object inv_letters,
                 py::object inv_oclasses, py::object inv_strs,
                 py::object screen_descriptions, py::object tty_chars,
@@ -230,8 +230,8 @@ class Nethack
         obs_.blstats =
             checked_conversion<long>(blstats, { NLE_BLSTATS_SIZE });
         obs_.message = checked_conversion<uint8_t>(message, { 256 });
-        obs_.program_state = checked_conversion<int>(
-            std::move(program_state), { NLE_PROGRAM_STATE_SIZE });
+        obs_.prog_state = checked_conversion<int>(
+            std::move(program_state_buf), { NLE_PROGRAM_STATE_SIZE });
         obs_.internal =
             checked_conversion<int>(internal, { NLE_INTERNAL_SIZE });
         obs_.inv_glyphs =
@@ -258,7 +258,7 @@ class Nethack
                         std::move(specials),
                         std::move(blstats),
                         std::move(message),
-                        std::move(program_state),
+                        std::move(program_state_buf),
                         std::move(internal),
                         std::move(inv_glyphs),
                         std::move(inv_letters),

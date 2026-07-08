@@ -150,7 +150,7 @@ const char *str;
 {
     struct WinDesc *cw = wins[WIN_MESSAGE];
 
-    if (!(cw->flags & WIN_STOP)) {
+    if (!(cw->wflags & WIN_STOP)) {
         if (ttyDisplay->cury && ttyDisplay->toplin == 2)
             clear_nhwindow(WIN_MESSAGE);
 
@@ -172,7 +172,7 @@ remember_topl()
     int idx = cw->maxrow;
     unsigned len = strlen(toplines) + 1;
 
-    if ((cw->flags & WIN_LOCKHISTORY) || !*toplines)
+    if ((cw->wflags & WIN_LOCKHISTORY) || !*toplines)
         return;
 
     if (len > (unsigned) cw->datlen[idx]) {
@@ -225,7 +225,7 @@ more()
     xwaitforspace("\033 ");
 
     if (morc == '\033')
-        cw->flags |= WIN_STOP;
+        cw->wflags |= WIN_STOP;
 
     if (ttyDisplay->toplin && cw->cury) {
         docorner(1, cw->cury + 1);
@@ -252,17 +252,17 @@ register const char *bp;
     /* If there is room on the line, print message on same line */
     /* But messages like "You die..." deserve their own line */
     n0 = strlen(bp);
-    if ((ttyDisplay->toplin == 1 || (cw->flags & WIN_STOP))
+    if ((ttyDisplay->toplin == 1 || (cw->wflags & WIN_STOP))
         && cw->cury == 0
         && n0 + (int) strlen(toplines) + 3 < CO - 8 /* room for --More-- */
         && (notdied = strncmp(bp, "You die", 7)) != 0) {
         Strcat(toplines, "  ");
         Strcat(toplines, bp);
         cw->curx += 2;
-        if (!(cw->flags & WIN_STOP))
+        if (!(cw->wflags & WIN_STOP))
             addtopl(bp);
         return;
-    } else if (!(cw->flags & WIN_STOP)) {
+    } else if (!(cw->wflags & WIN_STOP)) {
         if (ttyDisplay->toplin == 1) {
             more();
         } else if (cw->cury) { /* for when flags.toplin == 2 && cury > 1 */
@@ -289,8 +289,8 @@ register const char *bp;
         n0 = strlen(tl);
     }
     if (!notdied)
-        cw->flags &= ~WIN_STOP;
-    if (!(cw->flags & WIN_STOP))
+        cw->wflags &= ~WIN_STOP;
+    if (!(cw->wflags & WIN_STOP))
         redotoplin(toplines);
 }
 
@@ -381,9 +381,9 @@ char def;
     char prompt[BUFSZ];
 
     yn_number = 0L;
-    if (ttyDisplay->toplin == 1 && !(cw->flags & WIN_STOP))
+    if (ttyDisplay->toplin == 1 && !(cw->wflags & WIN_STOP))
         more();
-    cw->flags &= ~WIN_STOP;
+    cw->wflags &= ~WIN_STOP;
     ttyDisplay->toplin = 3; /* special prompt state */
     ttyDisplay->inread++;
     if (resp) {
@@ -564,7 +564,7 @@ boolean purge; /* clear message history buffer as we copy it */
     /* for a passive snapshot, we just copy pointers, so can't allow further
        history updating to take place because that could clobber them */
     if (!purge)
-        cw->flags |= WIN_LOCKHISTORY;
+        cw->wflags |= WIN_LOCKHISTORY;
 
     snapshot_mesgs = (char **) alloc((cw->rows + 1) * sizeof(char *));
     outidx = 0;
@@ -608,7 +608,7 @@ boolean purged; /* True: took history's pointers, False: just cloned them */
 
         /* history can resume being updated at will now... */
         if (!purged)
-            wins[WIN_MESSAGE]->flags &= ~WIN_LOCKHISTORY;
+            wins[WIN_MESSAGE]->wflags &= ~WIN_LOCKHISTORY;
     }
 }
 

@@ -46,7 +46,7 @@ typedef struct ls_t {
     struct ls_t *next;
     xchar x, y;  /* source's position */
     short range; /* source's current range */
-    short flags;
+    short ls_flags;
     short type;  /* type of light source */
     anything id; /* source's identifier */
 } light_source;

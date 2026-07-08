@@ -6,10 +6,13 @@ behavior is unchanged from stock NLE.
 
 Base: fork of heiner/nle @ `2319f298` (engine = NetHack 3.6.6 + NLE's patches:
 win/rl window port, obs extraction, RNG seed control, fcontext coroutine
-driver). The Python package (`nle/`, `pyproject.toml`, gym bindings) will be
-removed — the deliverable is a C API (`nle_start`/`nle_step`/`nle_end`) for
-PufferLib's native vecenv. Python appears only in offline tooling (golden
-recording via stock `pip install nle` + AutoAscend).
+driver). The deliverable is the C API (`nle_start`/`nle_step`/`nle_end`) for
+PufferLib's native vecenv. The Python package stays, demoted to a
+verification/debug surface: it lets existing bots (AutoAscend) run live
+against the refactored engine, `nle/tests/` doubles as an extra oracle, and
+tty_render/interactive play help debugging. It is excluded from performance
+claims and the hot path; its dlopen-copy-per-instance hack becomes
+unnecessary after the per-env refactor.
 
 Prior art: liujonathan24/NetHack did this migration by hand over ten stages
 (~13K diff lines, 441 ad-hoc ctx fields, per-file macro shims). Its mechanism
@@ -139,13 +142,15 @@ Each lands as its own replay-gated commit.
 ## 8. Phases
 
 0. Harness first: golden recorder (stock NLE + AutoAscend), replay tool,
-   section-check script, CI. Commit goldens.
-1. Strip Python; keep C engine + win/rl + fcontext + makedefs/dat build.
-2. Migration sweep: `globals.def` from section-check output → generate →
-   scripted per-file edits → iterate until both oracles green.
-3. Port proven optimizations (replay-gated, one per commit).
-4. Regime work: contiguous blocks, hugepages, prefetch pipelining, snapshot
+   section-check script, CI. Commit goldens. [DONE 2026-07-08]
+1. Migration sweep: `globals.def` from section-check output → generate →
+   scripted per-file edits → iterate until both oracles green. Python
+   bindings kept building throughout (extra oracle: nle/tests/).
+2. Port proven optimizations (replay-gated, one per commit).
+3. Regime work: contiguous blocks, hugepages, prefetch pipelining, snapshot
    resets; validate scaling on the tinybox with the in-tree thread benchmark.
+4. Phase-0b in parallel: AutoAscend deep goldens + live-agent runs against
+   the refactored engine.
 
 ## Credits
 

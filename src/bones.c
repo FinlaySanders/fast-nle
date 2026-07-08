@@ -518,7 +518,7 @@ struct obj *corpse;
        they might already be flagged as such, even when we're playing
        in normal mode, if this level came from a previous bones file */
     if (wizard)
-        level.flags.wizard_bones = 1;
+        level.lflags.wizard_bones = 1;
 
     fd = create_bonesfile(&u.uz, &bonesid, whynot);
     if (fd < 0) {

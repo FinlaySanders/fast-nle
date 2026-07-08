@@ -556,7 +556,7 @@ struct monst *mtmp;
              * mean if the monster leaves the level, they'll know
              * about teleport traps.
              */
-            if (!level.flags.noteleport
+            if (!level.lflags.noteleport
                 || !(mtmp->mtrapseen & (1 << (TELEP_TRAP - 1)))) {
                 m.defensive = obj;
                 m.has_defense = (mon_has_amulet(mtmp))
@@ -570,7 +570,7 @@ struct monst *mtmp;
             && (!obj->cursed || (!(mtmp->isshk && inhishop(mtmp))
                                  && !mtmp->isgd && !mtmp->ispriest))) {
             /* see WAN_TELEPORTATION case above */
-            if (!level.flags.noteleport
+            if (!level.lflags.noteleport
                 || !(mtmp->mtrapseen & (1 << (TELEP_TRAP - 1)))) {
                 m.defensive = obj;
                 m.has_defense = MUSE_SCR_TELEPORTATION;
@@ -683,7 +683,7 @@ struct monst *mtmp;
             if (vismon && how)     /* mentions 'teleport' */
                 makeknown(how);
             /* monster learns that teleportation isn't useful here */
-            if (level.flags.noteleport)
+            if (level.lflags.noteleport)
                 mtmp->mtrapseen |= (1 << (TELEP_TRAP - 1));
             return 2;
         }
@@ -702,7 +702,7 @@ struct monst *mtmp;
         m_using = TRUE;
         mbhit(mtmp, rn1(8, 6), mbhitm, bhito, otmp);
         /* monster learns that teleportation isn't useful here */
-        if (level.flags.noteleport)
+        if (level.lflags.noteleport)
             mtmp->mtrapseen |= (1 << (TELEP_TRAP - 1));
         m_using = FALSE;
         return 2;
@@ -1026,7 +1026,7 @@ struct monst *mtmp;
     switch (rn2(8 + (difficulty > 3) + (difficulty > 6) + (difficulty > 8))) {
     case 6:
     case 9:
-        if (level.flags.noteleport && ++trycnt < 2)
+        if (level.lflags.noteleport && ++trycnt < 2)
             goto try_again;
         if (!rn2(3))
             return WAN_TELEPORTATION;

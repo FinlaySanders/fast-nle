@@ -264,7 +264,7 @@ xchar lx, ly, hx, hy;
 {
     return (boolean) (occupied(x, y)
                       || within_bounded_area(x, y, lx, ly, hx, hy)
-                      || !((levl[x][y].typ == CORR && level.flags.is_maze_lev)
+                      || !((levl[x][y].typ == CORR && level.lflags.is_maze_lev)
                            || levl[x][y].typ == ROOM
                            || levl[x][y].typ == AIR));
 }
@@ -471,7 +471,7 @@ fixup_special()
     boolean added_branch = FALSE;
 
     if (Is_waterlevel(&u.uz) || Is_airlevel(&u.uz)) {
-        level.flags.hero_memory = 0;
+        level.lflags.hero_memory = 0;
         /* water level is an odd beast - it has to be set up
            before calling place_lregions etc. */
         setup_waterlevel();
@@ -580,7 +580,7 @@ fixup_special()
         /* using an unfilled morgue for rm id */
         croom = search_special(MORGUE);
         /* avoid inappropriate morgue-related messages */
-        level.flags.graveyard = level.flags.has_morgue = 0;
+        level.lflags.graveyard = level.lflags.has_morgue = 0;
         croom->rtype = OROOM; /* perhaps it should be set to VAULT? */
         /* stock the main vault */
         for (x = croom->lx; x <= croom->hx; x++)
@@ -591,9 +591,9 @@ fixup_special()
             }
     } else if (Role_if(PM_PRIEST) && In_quest(&u.uz)) {
         /* less chance for undead corpses (lured from lower morgues) */
-        level.flags.graveyard = 1;
+        level.lflags.graveyard = 1;
     } else if (Is_stronghold(&u.uz)) {
-        level.flags.graveyard = 1;
+        level.lflags.graveyard = 1;
     } else if (Is_sanctum(&u.uz)) {
         croom = search_special(TEMPLE);
 
@@ -888,7 +888,7 @@ int wallthick;
     rdx = (x_maze_max / scale);
     rdy = (y_maze_max / scale);
 
-    if (level.flags.corrmaze)
+    if (level.lflags.corrmaze)
         for (x = 2; x < (rdx * 2); x++)
             for (y = 2; y < (rdy * 2); y++)
                 levl[x][y].typ = STONE;
@@ -906,7 +906,7 @@ int wallthick;
     walkfrom((int) mm.x, (int) mm.y, 0);
 
     if (!rn2(5))
-        maze_remove_deadends((level.flags.corrmaze) ? CORR : ROOM);
+        maze_remove_deadends((level.lflags.corrmaze) ? CORR : ROOM);
 
     /* restore bounds */
     x_maze_max = tmp_xmax;
@@ -1020,8 +1020,8 @@ const char *s;
         impossible("Couldn't load \"%s\" - making a maze.", protofile);
     }
 
-    level.flags.is_maze_lev = TRUE;
-    level.flags.corrmaze = !rn2(3);
+    level.lflags.is_maze_lev = TRUE;
+    level.lflags.corrmaze = !rn2(3);
 
     if (!Invocation_lev(&u.uz) && rn2(2)) {
         int corrscale = rnd(4);
@@ -1030,7 +1030,7 @@ const char *s;
         create_maze(1,1);
     }
 
-    if (!level.flags.corrmaze)
+    if (!level.lflags.corrmaze)
         wallification(2, 2, x_maze_max, y_maze_max);
 
     mazexy(&mm);
@@ -1173,7 +1173,7 @@ schar typ;
     int dirs[4];
 
     if (!typ) {
-        if (level.flags.corrmaze)
+        if (level.lflags.corrmaze)
             typ = CORR;
         else
             typ = ROOM;
@@ -1182,7 +1182,7 @@ schar typ;
     if (!IS_DOOR(levl[x][y].typ)) {
         /* might still be on edge of MAP, so don't overwrite */
         levl[x][y].typ = typ;
-        levl[x][y].flags = 0;
+        levl[x][y].rmflags = 0;
     }
 
     while (1) {
@@ -1215,7 +1215,7 @@ coord *cc;
         cpt++;
     } while (cpt < 100
              && levl[cc->x][cc->y].typ
-                    != (level.flags.corrmaze ? CORR : ROOM));
+                    != (level.lflags.corrmaze ? CORR : ROOM));
     if (cpt >= 100) {
         int x, y;
 
@@ -1225,7 +1225,7 @@ coord *cc;
                 cc->x = x;
                 cc->y = y;
                 if (levl[cc->x][cc->y].typ
-                    == (level.flags.corrmaze ? CORR : ROOM))
+                    == (level.lflags.corrmaze ? CORR : ROOM))
                     return;
             }
         panic("mazexy: can't find a place!");
@@ -1267,7 +1267,7 @@ bound_digging()
             }
         }
     }
-    xmin -= (nonwall || !level.flags.is_maze_lev) ? 2 : 1;
+    xmin -= (nonwall || !level.lflags.is_maze_lev) ? 2 : 1;
     if (xmin < 0)
         xmin = 0;
 
@@ -1283,7 +1283,7 @@ bound_digging()
             }
         }
     }
-    xmax += (nonwall || !level.flags.is_maze_lev) ? 2 : 1;
+    xmax += (nonwall || !level.lflags.is_maze_lev) ? 2 : 1;
     if (xmax >= COLNO)
         xmax = COLNO - 1;
 
@@ -1299,7 +1299,7 @@ bound_digging()
             }
         }
     }
-    ymin -= (nonwall || !level.flags.is_maze_lev) ? 2 : 1;
+    ymin -= (nonwall || !level.lflags.is_maze_lev) ? 2 : 1;
 
     found = nonwall = FALSE;
     for (ymax = ROWNO - 1; !found && ymax >= 0; ymax--) {
@@ -1313,7 +1313,7 @@ bound_digging()
             }
         }
     }
-    ymax += (nonwall || !level.flags.is_maze_lev) ? 2 : 1;
+    ymax += (nonwall || !level.lflags.is_maze_lev) ? 2 : 1;
 
     for (x = 0; x < COLNO; x++)
         for (y = 0; y < ROWNO; y++)

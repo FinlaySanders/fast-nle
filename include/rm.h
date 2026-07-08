@@ -88,7 +88,7 @@ enum levl_typ_types {
 #define IS_DOOR(typ) ((typ) == DOOR)
 #define IS_DOORJOIN(typ) (IS_ROCK(typ) || (typ) == IRONBARS)
 #define IS_TREE(typ)                                            \
-    ((typ) == TREE || (level.flags.arboreal && (typ) == STONE))
+    ((typ) == TREE || (level.lflags.arboreal && (typ) == STONE))
 #define ACCESSIBLE(typ) ((typ) >= DOOR) /* good position */
 #define IS_ROOM(typ) ((typ) >= ROOM)    /* ROOM, STAIRS, furniture.. */
 #define ZAP_POS(typ) ((typ) >= POOL)
@@ -419,7 +419,7 @@ struct rm {
     int glyph;               /* what the hero thinks is there */
     schar typ;               /* what is really there */
     uchar seenv;             /* seen vector */
-    Bitfield(flags, 5);      /* extra information for typ */
+    Bitfield(rmflags, 5);      /* extra information for typ */
     Bitfield(horizontal, 1); /* wall/door/etc is horiz. (more typ info) */
     Bitfield(lit, 1);        /* speed hack for lit rooms */
     Bitfield(waslit, 1);     /* remember if a location was lit */
@@ -524,13 +524,13 @@ struct rm {
 #define SV7   0x80
 #define SVALL 0xFF
 
-#define doormask flags
-#define altarmask flags
-#define wall_info flags
-#define ladder flags
-#define drawbridgemask flags
-#define looted flags
-#define icedpool flags
+#define doormask rmflags
+#define altarmask rmflags
+#define wall_info rmflags
+#define ladder rmflags
+#define drawbridgemask rmflags
+#define looted rmflags
+#define icedpool rmflags
 
 #define blessedftn horizontal /* a fountain that grants attribs */
 #define disturbed horizontal  /* a grave that has been disturbed */
@@ -605,7 +605,7 @@ typedef struct {
     struct monst *monlist;
     struct damage *damagelist;
     struct cemetery *bonesinfo;
-    struct levelflags flags;
+    struct levelflags lflags;
 } dlevel_t;
 
 extern schar lastseentyp[COLNO][ROWNO]; /* last seen/touched dungeon typ */
@@ -663,6 +663,6 @@ extern dlevel_t level; /* structure describing the current level */
     (MON_BURIED_AT(x, y) ? level.monsters[x][y] : (struct monst *) 0)
 
 /* restricted movement, potential luck penalties */
-#define Sokoban level.flags.sokoban_rules
+#define Sokoban level.lflags.sokoban_rules
 
 #endif /* RM_H */

@@ -1,0 +1,175 @@
+# Per-env mutable-state inventory (see docs/DESIGN.md §2).
+#
+# Every writable symbol in libnethack (tools/global_baseline.txt) either gets
+# an entry here (migrated into struct nh_ctx) or a justified entry in
+# tools/global_whitelist.txt. tools/gen_ctx.py generates the struct, accessor
+# macros, and init code from this file; run it after every edit:
+#
+#   python3 tools/gen_ctx.py
+#
+# Format (pipe-separated, '#' comments, whitespace trimmed):
+#
+#   scope | heat | type | name | dims | init
+#
+#   scope: 'global' for true globals (accessor emitted into nh_ctx_gen.h,
+#          visible everywhere), or the defining .c file's basename
+#          (e.g. 'track.c') for file statics (accessor emitted into
+#          include/nh_ctx_files/<file>.h, included only by that file).
+#   heat:  'hot' (touched every step; packed first, prefetch-covered) or
+#          'cold'. Classify from profiles, not intuition.
+#   type:  C type as written in the original declaration.
+#   dims:  array suffix, e.g. '[50]' or '[21][80]'; empty for scalars.
+#          Must compile inside hack.h context — use literals for macros
+#          that are private to the defining file.
+#   init:  0 = zero-initialized (.bss/.common; calloc covers it).
+#          1 = has a non-zero initializer (.data). The original definition
+#          becomes 'const <type> nh_tmpl_<name><dims> = <original init>;'
+#          at its original site, and nh_ctx_new() memcpys it in.
+#
+# Special forms:
+#   type containing '{NAME}' is a full declarator with a placeholder
+#   (function pointers etc.); dims must be empty.
+#   Fields initialized with addresses of other ctx fields (e.g.
+#   subrooms = &rooms[N]) use init=0 here plus an assignment in the
+#   handwritten src/nh_ctx_fixup.c.
+#
+# ---------------------------------------------------------------------------
+# track.c — hero movement ring (first migrated slice)
+track.c | cold | int   | utcnt  |      | 0
+track.c | cold | int   | utpnt  |      | 0
+track.c | cold | coord | utrack | [50] | 0
+
+# ---------------------------------------------------------------------------
+# decl.c — the central globals file. Heat: step-hot scalars/pointers first;
+# the big structs (u, level, youmonst, flags) are hot too but dominate their
+# own cache lines regardless of placement.
+global | hot | long | moves | | 1
+global | hot | long | monstermoves | | 1
+global | hot | int | multi | | 0
+global | hot | boolean | vision_full_recalc | | 0
+global | hot | char ** | viz_array | | 0
+global | hot | struct sinfo | program_state | | 0
+global | hot | int (*{NAME})(void) | occupation | | 0
+global | hot | int (*{NAME})(void) | afternmv | | 0
+global | cold | const char * | hname | | 0
+global | cold | int | hackpid | | 0
+global | cold | int | locknum | | 0
+global | cold | char | chosen_windowtype | [WINTYPELEN] | 0
+global | cold | int | bases | [MAXOCLASSES] | 0
+global | cold | const char * | multi_reason | | 0
+global | cold | int | nroom | | 0
+global | cold | int | nsubroom | | 0
+global | cold | int | occtime | | 0
+global | cold | int | x_maze_max | | 1
+global | cold | int | y_maze_max | | 1
+global | cold | int | otg_temp | | 0
+global | cold | int | in_doagain | | 0
+global | cold | struct dgn_topology | dungeon_topology | | 0
+global | cold | struct q_score | quest_status | | 0
+global | cold | int | warn_obj_cnt | | 0
+global | cold | int | smeq | [MAXNROFROOMS + 1] | 0
+global | cold | int | doorindex | | 0
+global | cold | char * | save_cm | | 0
+global | cold | struct kinfo | killer | | 0
+global | cold | long | done_money | | 0
+global | cold | const char * | nomovemsg | | 0
+global | cold | char | plname | [PL_NSIZ] | 0
+global | cold | char | pl_character | [PL_CSIZ] | 0
+global | cold | char | pl_race | | 0
+global | cold | char | pl_fruit | [PL_FSIZ] | 0
+global | cold | struct fruit * | ffruit | | 0
+global | cold | char | tune | [6] | 0
+global | cold | boolean | ransacked | | 0
+global | cold | const char * | occtxt | | 0
+global | cold | long | yn_number | | 0
+global | cold | struct linfo | level_info | [MAXLINFO] | 0
+global | cold | schar | tbx | | 0
+global | cold | schar | tby | | 0
+global | cold | struct multishot | m_shot | | 0
+global | cold | dungeon | dungeons | [MAXDUNGEON] | 0
+global | cold | s_level * | sp_levchn | | 0
+global | cold | stairway | upstair | | 0
+global | cold | stairway | dnstair | | 0
+global | cold | stairway | upladder | | 0
+global | cold | stairway | dnladder | | 0
+global | cold | stairway | sstairs | | 0
+global | cold | dest_area | updest | | 0
+global | cold | dest_area | dndest | | 0
+global | cold | coord | inv_pos | | 0
+global | cold | boolean | defer_see_monsters | | 0
+global | cold | boolean | in_mklev | | 0
+global | cold | boolean | stoned | | 0
+global | cold | boolean | unweapon | | 0
+global | cold | boolean | mrg_to_wielded | | 0
+global | cold | boolean | in_steed_dismounting | | 0
+global | cold | boolean | has_strong_rngseed | | 0
+global | cold | coord | bhitpos | | 0
+global | cold | coord | doors | [DOORMAX] | 0
+global | cold | struct mkroom | rooms | [(MAXNROFROOMS + 1) * 2] | 0
+global | cold | struct mkroom * | subrooms | | 0
+global | cold | struct mkroom * | upstairs_room | | 0
+global | cold | struct mkroom * | dnstairs_room | | 0
+global | cold | struct mkroom * | sstairs_room | | 0
+global | cold | dlevel_t | level | | 0
+global | cold | struct trap * | ftrap | | 0
+global | cold | struct monst | youmonst | | 0
+global | cold | struct context_info | context | | 0
+global | cold | struct flag | flags | | 0
+global | cold | struct instance_flags | iflags | | 0
+global | cold | struct you | u | | 0
+global | cold | time_t | ubirthday | | 0
+global | cold | struct u_realtime | urealtime | | 0
+global | cold | schar | lastseentyp | [COLNO][ROWNO] | 0
+global | cold | struct obj * | invent | | 0
+global | cold | struct obj * | uwep | | 0
+global | cold | struct obj * | uarm | | 0
+global | cold | struct obj * | uswapwep | | 0
+global | cold | struct obj * | uquiver | | 0
+global | cold | struct obj * | uarmu | | 0
+global | cold | struct obj * | uskin | | 0
+global | cold | struct obj * | uarmc | | 0
+global | cold | struct obj * | uarmh | | 0
+global | cold | struct obj * | uarms | | 0
+global | cold | struct obj * | uarmg | | 0
+global | cold | struct obj * | uarmf | | 0
+global | cold | struct obj * | uamul | | 0
+global | cold | struct obj * | uright | | 0
+global | cold | struct obj * | uleft | | 0
+global | cold | struct obj * | ublindf | | 0
+global | cold | struct obj * | uchain | | 0
+global | cold | struct obj * | uball | | 0
+global | cold | struct obj * | current_wand | | 0
+global | cold | struct obj * | thrownobj | | 0
+global | cold | struct obj * | kickedobj | | 0
+global | cold | struct spell | spl_book | [MAXSPELL + 1] | 0
+global | cold | long | wailmsg | | 0
+global | cold | struct obj * | migrating_objs | | 0
+global | cold | struct obj * | billobjs | | 0
+global | cold | char | dogname | [PL_PSIZ] | 0
+global | cold | char | catname | [PL_PSIZ] | 0
+global | cold | char | horsename | [PL_PSIZ] | 0
+global | cold | char | preferred_pet | | 0
+global | cold | struct monst * | mydogs | | 0
+global | cold | struct monst * | migrating_mons | | 0
+global | cold | struct autopickup_exception * | apelist | | 0
+global | cold | struct mvitals | mvitals | [NUMMONS] | 0
+global | cold | long | domove_attempting | | 0
+global | cold | long | domove_succeeded | | 0
+# c_color_names / c_common_strings / c_obj_colors / materialnm /
+# fqn_prefix_names: never written -> const-ified in decl.c/decl.h instead of
+# migrated (drops them from the writable sections entirely).
+global | cold | struct menucoloring * | menu_colorings | | 0
+global | cold | winid | WIN_MESSAGE | | 1
+global | cold | winid | WIN_STATUS | | 1
+global | cold | winid | WIN_MAP | | 1
+global | cold | winid | WIN_INVEN | | 1
+global | cold | char | toplines | [TBUFSZ] | 0
+global | cold | struct tc_gbl_data | tc_gbl_data | | 0
+global | cold | char * | fqn_prefix | [PREFIX_COUNT] | 0
+global | cold | struct savefile_info | sfcap | | 1
+global | cold | struct savefile_info | sfrestinfo | | 0
+global | cold | struct savefile_info | sfsaveinfo | | 1
+global | cold | struct plinemsg_type * | plinemsg_types | | 0
+global | cold | unsigned | nhUse_dummy | | 0
+options.c | cold | short | n_menu_mapped | | 0
+attrib.c | cold | char | from_what_buf | [256] | 0   # BUFSZ; from_what() return buffer

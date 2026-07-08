@@ -1493,7 +1493,7 @@ register struct permonst *ptr;
         lev = Is_special(&u.uz);
         oldmoves = moves;
     }
-    switch ((lev) ? lev->flags.align : dungeons[u.uz.dnum].flags.align) {
+    switch ((lev) ? lev->dflags.align : dungeons[u.uz.dnum].dflags.align) {
     default: /* just in case */
     case AM_NONE:
         alshift = 0;
@@ -2174,7 +2174,7 @@ register struct monst *mtmp;
             appear = Is_rogue_level(&u.uz) ? S_hwall : S_hcdoor;
         else
             appear = Is_rogue_level(&u.uz) ? S_vwall : S_vcdoor;
-    } else if (level.flags.is_maze_lev && !In_sokoban(&u.uz) && rn2(2)) {
+    } else if (level.lflags.is_maze_lev && !In_sokoban(&u.uz) && rn2(2)) {
         ap_type = M_AP_OBJECT;
         appear = STATUE;
     } else if (roomno < 0 && !t_at(mx, my)) {

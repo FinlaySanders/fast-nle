@@ -95,9 +95,9 @@ dumpit()
         fprintf(stderr, "    depth_start %d, ledger_start %d\n",
                 DD.depth_start, DD.ledger_start);
         fprintf(stderr, "    flags:%s%s%s\n",
-                DD.flags.rogue_like ? " rogue_like" : "",
-                DD.flags.maze_like ? " maze_like" : "",
-                DD.flags.hellish ? " hellish" : "");
+                DD.dflags.rogue_like ? " rogue_like" : "",
+                DD.dflags.maze_like ? " maze_like" : "",
+                DD.dflags.hellish ? " hellish" : "");
         getchar();
     }
     fprintf(stderr, "\nSpecial levels:\n");
@@ -105,10 +105,10 @@ dumpit()
         fprintf(stderr, "%s (%d): ", x->proto, x->rndlevs);
         fprintf(stderr, "on %d, %d; ", x->dlevel.dnum, x->dlevel.dlevel);
         fprintf(stderr, "flags:%s%s%s%s\n",
-                x->flags.rogue_like ? " rogue_like" : "",
-                x->flags.maze_like ? " maze_like" : "",
-                x->flags.hellish ? " hellish" : "",
-                x->flags.town ? " town" : "");
+                x->dflags.rogue_like ? " rogue_like" : "",
+                x->dflags.maze_like ? " maze_like" : "",
+                x->dflags.hellish ? " hellish" : "",
+                x->dflags.town ? " town" : "");
         getchar();
     }
     fprintf(stderr, "\nBranches:\n");
@@ -557,14 +557,14 @@ struct proto_dungeon *pd;
     new_level->dlevel.dnum = dgn;
     new_level->dlevel.dlevel = 0; /* for now */
 
-    new_level->flags.town = !!(tlevel->flags & TOWN);
-    new_level->flags.hellish = !!(tlevel->flags & HELLISH);
-    new_level->flags.maze_like = !!(tlevel->flags & MAZELIKE);
-    new_level->flags.rogue_like = !!(tlevel->flags & ROGUELIKE);
-    new_level->flags.align = ((tlevel->flags & D_ALIGN_MASK) >> 4);
-    if (!new_level->flags.align)
-        new_level->flags.align =
-            ((pd->tmpdungeon[dgn].flags & D_ALIGN_MASK) >> 4);
+    new_level->dflags.town = !!(tlevel->tflags & TOWN);
+    new_level->dflags.hellish = !!(tlevel->tflags & HELLISH);
+    new_level->dflags.maze_like = !!(tlevel->tflags & MAZELIKE);
+    new_level->dflags.rogue_like = !!(tlevel->tflags & ROGUELIKE);
+    new_level->dflags.align = ((tlevel->tflags & D_ALIGN_MASK) >> 4);
+    if (!new_level->dflags.align)
+        new_level->dflags.align =
+            ((pd->tmpdungeon[dgn].tflags & D_ALIGN_MASK) >> 4);
 
     new_level->rndlevs = tlevel->rndlevs;
     new_level->next = (s_level *) 0;
@@ -678,36 +678,82 @@ struct proto_dungeon *pd;
     return FALSE;
 }
 
-struct level_map {
+/* Was 'd_level *lev_spec' initialized with &air_level etc. — addresses
+ * inside the migrated dungeon_topology, no longer compile-time constants.
+ * The table stores an enum index; lev_map_spec() resolves it at runtime. */
+enum lev_map_idx {
+    LM_AIR, LM_ASMODEUS, LM_ASTRAL, LM_BAALZ, LM_BIGRM, LM_CASTLE,
+    LM_EARTH, LM_FAKEWIZ1, LM_FIRE, LM_JUIBLEX, LM_KNOX, LM_MEDUSA,
+    LM_ORACLE, LM_ORCUS, LM_ROGUE, LM_SANCTUM, LM_VALLEY, LM_WATER,
+    LM_WIZ1, LM_WIZ2, LM_WIZ3, LM_MINEND, LM_SOKOEND,
+    LM_QSTART, LM_QLOCATE, LM_NEMESIS,
+    LM_NONE
+};
+static const struct level_map {
     const char *lev_name;
-    d_level *lev_spec;
-} level_map[] = { { "air", &air_level },
-                  { "asmodeus", &asmodeus_level },
-                  { "astral", &astral_level },
-                  { "baalz", &baalzebub_level },
-                  { "bigrm", &bigroom_level },
-                  { "castle", &stronghold_level },
-                  { "earth", &earth_level },
-                  { "fakewiz1", &portal_level },
-                  { "fire", &fire_level },
-                  { "juiblex", &juiblex_level },
-                  { "knox", &knox_level },
-                  { "medusa", &medusa_level },
-                  { "oracle", &oracle_level },
-                  { "orcus", &orcus_level },
-                  { "rogue", &rogue_level },
-                  { "sanctum", &sanctum_level },
-                  { "valley", &valley_level },
-                  { "water", &water_level },
-                  { "wizard1", &wiz1_level },
-                  { "wizard2", &wiz2_level },
-                  { "wizard3", &wiz3_level },
-                  { "minend", &mineend_level },
-                  { "soko1", &sokoend_level },
-                  { X_START, &qstart_level },
-                  { X_LOCATE, &qlocate_level },
-                  { X_GOAL, &nemesis_level },
-                  { "", (d_level *) 0 } };
+    enum lev_map_idx lev_idx;
+} level_map[] = { { "air", LM_AIR },
+                  { "asmodeus", LM_ASMODEUS },
+                  { "astral", LM_ASTRAL },
+                  { "baalz", LM_BAALZ },
+                  { "bigrm", LM_BIGRM },
+                  { "castle", LM_CASTLE },
+                  { "earth", LM_EARTH },
+                  { "fakewiz1", LM_FAKEWIZ1 },
+                  { "fire", LM_FIRE },
+                  { "juiblex", LM_JUIBLEX },
+                  { "knox", LM_KNOX },
+                  { "medusa", LM_MEDUSA },
+                  { "oracle", LM_ORACLE },
+                  { "orcus", LM_ORCUS },
+                  { "rogue", LM_ROGUE },
+                  { "sanctum", LM_SANCTUM },
+                  { "valley", LM_VALLEY },
+                  { "water", LM_WATER },
+                  { "wizard1", LM_WIZ1 },
+                  { "wizard2", LM_WIZ2 },
+                  { "wizard3", LM_WIZ3 },
+                  { "minend", LM_MINEND },
+                  { "soko1", LM_SOKOEND },
+                  { X_START, LM_QSTART },
+                  { X_LOCATE, LM_QLOCATE },
+                  { X_GOAL, LM_NEMESIS },
+                  { "", LM_NONE } };
+
+static d_level *
+lev_map_spec(idx)
+enum lev_map_idx idx;
+{
+    switch (idx) {
+    case LM_AIR:       return &air_level;
+    case LM_ASMODEUS:  return &asmodeus_level;
+    case LM_ASTRAL:    return &astral_level;
+    case LM_BAALZ:     return &baalzebub_level;
+    case LM_BIGRM:     return &bigroom_level;
+    case LM_CASTLE:    return &stronghold_level;
+    case LM_EARTH:     return &earth_level;
+    case LM_FAKEWIZ1:  return &portal_level;
+    case LM_FIRE:      return &fire_level;
+    case LM_JUIBLEX:   return &juiblex_level;
+    case LM_KNOX:      return &knox_level;
+    case LM_MEDUSA:    return &medusa_level;
+    case LM_ORACLE:    return &oracle_level;
+    case LM_ORCUS:     return &orcus_level;
+    case LM_ROGUE:     return &rogue_level;
+    case LM_SANCTUM:   return &sanctum_level;
+    case LM_VALLEY:    return &valley_level;
+    case LM_WATER:     return &water_level;
+    case LM_WIZ1:      return &wiz1_level;
+    case LM_WIZ2:      return &wiz2_level;
+    case LM_WIZ3:      return &wiz3_level;
+    case LM_MINEND:    return &mineend_level;
+    case LM_SOKOEND:   return &sokoend_level;
+    case LM_QSTART:    return &qstart_level;
+    case LM_QLOCATE:   return &qlocate_level;
+    case LM_NEMESIS:   return &nemesis_level;
+    default:           return (d_level *) 0;
+    }
+}
 
 /* initialize the "dungeon" structs */
 void
@@ -717,7 +763,7 @@ init_dungeons()
     register int i, cl = 0, cb = 0;
     register s_level *x;
     struct proto_dungeon pd;
-    struct level_map *lev_map;
+    const struct level_map *lev_map;
     struct version_info vers_info;
 
     pd.n_levs = pd.n_brs = 0;
@@ -809,11 +855,11 @@ init_dungeons()
             dungeons[i].dunlev_ureached = 0;
         }
 
-        dungeons[i].flags.hellish = !!(pd.tmpdungeon[i].flags & HELLISH);
-        dungeons[i].flags.maze_like = !!(pd.tmpdungeon[i].flags & MAZELIKE);
-        dungeons[i].flags.rogue_like = !!(pd.tmpdungeon[i].flags & ROGUELIKE);
-        dungeons[i].flags.align =
-            ((pd.tmpdungeon[i].flags & D_ALIGN_MASK) >> 4);
+        dungeons[i].dflags.hellish = !!(pd.tmpdungeon[i].tflags & HELLISH);
+        dungeons[i].dflags.maze_like = !!(pd.tmpdungeon[i].tflags & MAZELIKE);
+        dungeons[i].dflags.rogue_like = !!(pd.tmpdungeon[i].tflags & ROGUELIKE);
+        dungeons[i].dflags.align =
+            ((pd.tmpdungeon[i].tflags & D_ALIGN_MASK) >> 4);
         /*
          * Set the entry level for this dungeon.  The pd.tmpdungeon entry
          * value means:
@@ -923,16 +969,17 @@ init_dungeons()
      * locations quickly.
      */
     for (lev_map = level_map; lev_map->lev_name[0]; lev_map++) {
+        d_level *spec = lev_map_spec(lev_map->lev_idx);
         x = find_level(lev_map->lev_name);
         if (x) {
-            assign_level(lev_map->lev_spec, &x->dlevel);
+            assign_level(spec, &x->dlevel);
             if (!strncmp(lev_map->lev_name, "x-", 2)) {
                 /* This is where the name substitution on the
                  * levels of the quest dungeon occur.
                  */
                 Sprintf(x->proto, "%s%s", urole.filecode,
                         &lev_map->lev_name[1]);
-            } else if (lev_map->lev_spec == &knox_level) {
+            } else if (spec == &knox_level) {
                 branch *br;
                 /*
                  * Kludge to allow floating Knox entrance.  We
@@ -1297,7 +1344,7 @@ boolean
 Can_dig_down(lev)
 d_level *lev;
 {
-    return (boolean) (!level.flags.hardfloor
+    return (boolean) (!level.lflags.hardfloor
                       && !Is_botlevel(lev)
                       && !Invocation_lev(lev));
 }
@@ -1509,7 +1556,7 @@ boolean
 In_hell(lev)
 d_level *lev;
 {
-    return (boolean) (dungeons[lev->dnum].flags.hellish);
+    return (boolean) (dungeons[lev->dnum].dflags.hellish);
 }
 
 /* sets *lev to be the gateway to Gehennom... */
@@ -1563,13 +1610,13 @@ int pct;
     s_level *lev = Is_special(&u.uz);
     aligntyp al;
 
-    if (lev && lev->flags.align)
+    if (lev && lev->dflags.align)
         if (rn2(100) < pct)
-            return lev->flags.align;
+            return lev->dflags.align;
 
-    if (dungeons[u.uz.dnum].flags.align)
+    if (dungeons[u.uz.dnum].dflags.align)
         if (rn2(100) < pct)
-            return dungeons[u.uz.dnum].flags.align;
+            return dungeons[u.uz.dnum].dflags.align;
 
     al = rn2(3) - 1;
     return Align2amask(al);
@@ -1694,7 +1741,7 @@ const char *nam;
                  && dlev.dnum == valley_level.dnum))
             && (/* either wizard mode or else seen and not forgotten */
                 wizard
-                || (level_info[idx].flags & (FORGOTTEN | VISITED))
+                || (level_info[idx].linfo_flags & (FORGOTTEN | VISITED))
                        == VISITED)) {
             lev = depth(&dlev);
         }
@@ -1709,8 +1756,8 @@ const char *nam;
             idx &= 0x00FF;
             if (/* either wizard mode, or else _both_ sides of branch seen */
                 wizard
-                || ((level_info[idx].flags & (FORGOTTEN | VISITED)) == VISITED
-                    && (level_info[idxtoo].flags & (FORGOTTEN | VISITED))
+                || ((level_info[idx].linfo_flags & (FORGOTTEN | VISITED)) == VISITED
+                    && (level_info[idxtoo].linfo_flags & (FORGOTTEN | VISITED))
                            == VISITED)) {
                 if (ledger_to_dnum(idxtoo) == u.uz.dnum)
                     idx = idxtoo;
@@ -2141,7 +2188,7 @@ int ledger_num;
 
     /* if not found, then nothing to forget */
     if (mptr) {
-        mptr->flags.forgot = 1;
+        mptr->mflags.forgot = 1;
         mptr->br = (branch *) 0;
 
         /* custom names are erased, not just forgotten until revisited */
@@ -2205,7 +2252,7 @@ mapseen *mptr;
 
     bwrite(fd, (genericptr_t) &mptr->lev, sizeof mptr->lev);
     bwrite(fd, (genericptr_t) &mptr->feat, sizeof mptr->feat);
-    bwrite(fd, (genericptr_t) &mptr->flags, sizeof mptr->flags);
+    bwrite(fd, (genericptr_t) &mptr->mflags, sizeof mptr->mflags);
     bwrite(fd, (genericptr_t) &mptr->custom_lth, sizeof mptr->custom_lth);
     if (mptr->custom_lth)
         bwrite(fd, (genericptr_t) mptr->custom, mptr->custom_lth);
@@ -2231,7 +2278,7 @@ int fd;
 
     mread(fd, (genericptr_t) &load->lev, sizeof load->lev);
     mread(fd, (genericptr_t) &load->feat, sizeof load->feat);
-    mread(fd, (genericptr_t) &load->flags, sizeof load->flags);
+    mread(fd, (genericptr_t) &load->mflags, sizeof load->mflags);
     mread(fd, (genericptr_t) &load->custom_lth, sizeof load->custom_lth);
     if (load->custom_lth) {
         /* length doesn't include terminator (which isn't saved & restored) */
@@ -2305,7 +2352,7 @@ int dnum;
     while ((mptr = *mptraddr) != 0) {
         if (mptr->lev.dnum == dnum) {
 #if 1 /* use this... */
-            mptr->flags.unreachable = 1;
+            mptr->mflags.unreachable = 1;
         }
 #else /* old deletion code */
             *mptraddr = mptr->next;
@@ -2370,12 +2417,12 @@ mapseen *mptr;
 {
     if (on_level(&u.uz, &mptr->lev))
         return TRUE;
-    if (mptr->flags.unreachable || mptr->flags.forgot)
+    if (mptr->mflags.unreachable || mptr->mflags.forgot)
         return FALSE;
     /* level is of interest if it has an auto-generated annotation */
-    if (mptr->flags.oracle || mptr->flags.bigroom || mptr->flags.roguelevel
-        || mptr->flags.castle || mptr->flags.valley || mptr->flags.msanctum
-        || mptr->flags.quest_summons || mptr->flags.questing)
+    if (mptr->mflags.oracle || mptr->mflags.bigroom || mptr->mflags.roguelevel
+        || mptr->mflags.castle || mptr->mflags.valley || mptr->mflags.msanctum
+        || mptr->mflags.quest_summons || mptr->mflags.questing)
         return TRUE;
     /* when in Sokoban, list all sokoban levels visited; when not in it,
        list any visited Sokoban level which remains unsolved (will usually
@@ -2383,7 +2430,7 @@ mapseen *mptr;
        climb out on the far side on the first Sokoban level; also, wizard
        mode overrides teleport restrictions) */
     if (In_sokoban(&mptr->lev)
-        && (In_sokoban(&u.uz) || !mptr->flags.sokosolved))
+        && (In_sokoban(&u.uz) || !mptr->mflags.sokosolved))
         return TRUE;
     /* when in the endgame, list all endgame levels visited, whether they
        have annotations or not, so that #overview doesn't become extremely
@@ -2395,7 +2442,7 @@ mapseen *mptr;
        or is the furthest level reached in its branch */
     return (boolean) (INTEREST(mptr->feat)
                       || (mptr->final_resting_place
-                          && (mptr->flags.knownbones || wizard))
+                          && (mptr->mflags.knownbones || wizard))
                       || mptr->custom || mptr->br
                       || (mptr->lev.dlevel
                           == dungeons[mptr->lev.dnum].dunlev_ureached));
@@ -2423,8 +2470,8 @@ recalc_mapseen()
     /* reset all features; mptr->feat.* = 0; */
     (void) memset((genericptr_t) &mptr->feat, 0, sizeof mptr->feat);
     /* reset most flags; some level-specific ones are left as-is */
-    if (mptr->flags.unreachable) {
-        mptr->flags.unreachable = 0; /* reached it; Eye of the Aethiopica? */
+    if (mptr->mflags.unreachable) {
+        mptr->mflags.unreachable = 0; /* reached it; Eye of the Aethiopica? */
         if (In_quest(&u.uz)) {
             mapseen *mptrtmp = mapseenchn;
 
@@ -2433,30 +2480,30 @@ recalc_mapseen()
                data for all quest levels, not just the one we're on now */
             do {
                 if (mptrtmp->lev.dnum == mptr->lev.dnum)
-                    mptrtmp->flags.unreachable = 0;
+                    mptrtmp->mflags.unreachable = 0;
                 mptrtmp = mptrtmp->next;
             } while (mptrtmp);
         }
     }
-    mptr->flags.knownbones = 0;
-    mptr->flags.sokosolved = In_sokoban(&u.uz) && !Sokoban;
+    mptr->mflags.knownbones = 0;
+    mptr->mflags.sokosolved = In_sokoban(&u.uz) && !Sokoban;
     /* mptr->flags.bigroom retains previous value when hero can't see */
     if (!Blind)
-        mptr->flags.bigroom = Is_bigroom(&u.uz);
-    else if (mptr->flags.forgot)
-        mptr->flags.bigroom = 0;
-    mptr->flags.roguelevel = Is_rogue_level(&u.uz);
-    mptr->flags.oracle = 0; /* recalculated during room traversal below */
-    mptr->flags.castletune = 0;
+        mptr->mflags.bigroom = Is_bigroom(&u.uz);
+    else if (mptr->mflags.forgot)
+        mptr->mflags.bigroom = 0;
+    mptr->mflags.roguelevel = Is_rogue_level(&u.uz);
+    mptr->mflags.oracle = 0; /* recalculated during room traversal below */
+    mptr->mflags.castletune = 0;
     /* flags.castle, flags.valley, flags.msanctum retain previous value */
-    mptr->flags.forgot = 0;
+    mptr->mflags.forgot = 0;
     /* flags.quest_summons disabled once quest finished */
-    mptr->flags.quest_summons = (at_dgn_entrance("The Quest")
+    mptr->mflags.quest_summons = (at_dgn_entrance("The Quest")
                                  && u.uevent.qcalled
                                  && !(u.uevent.qcompleted
                                       || u.uevent.qexpelled
                                       || quest_status.leader_is_dead));
-    mptr->flags.questing = (on_level(&u.uz, &qstart_level)
+    mptr->mflags.questing = (on_level(&u.uz, &qstart_level)
                             && quest_status.got_quest);
 
     /* track rooms the hero is in */
@@ -2496,7 +2543,7 @@ recalc_mapseen()
                 if (count <= 3)
                     mptr->feat.ntemple = count;
             } else if (rooms[i].orig_rtype == DELPHI) {
-                mptr->flags.oracle = 1;
+                mptr->mflags.oracle = 1;
             }
         }
     }
@@ -2619,7 +2666,7 @@ recalc_mapseen()
                      */
                     for (ty = y - 1; ty <= y + 1; ++ty)
                         if (isok(tx, ty) && IS_THRONE(levl[tx][ty].typ)) {
-                            mptr->flags.ludios = 1;
+                            mptr->mflags.ludios = 1;
                             break;
                         }
                     break;
@@ -2630,7 +2677,7 @@ recalc_mapseen()
             case DBWALL:
             case DRAWBRIDGE_DOWN:
                 if (Is_stronghold(&u.uz))
-                    mptr->flags.castle = 1, mptr->flags.castletune = 1;
+                    mptr->mflags.castle = 1, mptr->mflags.castletune = 1;
                 break;
             default:
                 break;
@@ -2657,7 +2704,7 @@ recalc_mapseen()
     for (bp = mptr->final_resting_place; bp; bp = bp->next)
         if (lastseentyp[bp->frpx][bp->frpy]) {
             bp->bonesknown = TRUE;
-            mptr->flags.knownbones = 1;
+            mptr->mflags.knownbones = 1;
         }
 }
 
@@ -2670,9 +2717,9 @@ struct monst *priest UNUSED; /* currently unused; might be useful someday */
     mapseen *mptr = find_mapseen(&u.uz);
 
     if (Is_valley(&u.uz))
-        mptr->flags.valley = 1;
+        mptr->mflags.valley = 1;
     else if (Is_sanctum(&u.uz))
-        mptr->flags.msanctum = 1;
+        mptr->mflags.msanctum = 1;
 }
 
 /* room entry message has just been delivered so learn room even if blind */
@@ -2876,7 +2923,7 @@ mapseen *mptr;
 char *outbuf;
 {
     *outbuf = '\0';
-    if (mptr->flags.castletune && u.uevent.uheard_tune) {
+    if (mptr->mflags.castletune && u.uevent.uheard_tune) {
         char tmp[BUFSZ];
 
         if (u.uevent.uheard_tune == 2)
@@ -2974,7 +3021,7 @@ boolean printdun;
                     : "were");
     putstr(win, !final ? ATR_BOLD : 0, buf);
 
-    if (mptr->flags.forgot)
+    if (mptr->mflags.forgot)
         return;
 
     if (INTEREST(mptr->feat)) {
@@ -3022,38 +3069,38 @@ boolean printdun;
 
     /* we assume that these are mutually exclusive */
     *buf = '\0';
-    if (mptr->flags.oracle) {
+    if (mptr->mflags.oracle) {
         Sprintf(buf, "%sOracle of Delphi.", PREFIX);
     } else if (In_sokoban(&mptr->lev)) {
         Sprintf(buf, "%s%s.", PREFIX,
-                mptr->flags.sokosolved ? "Solved" : "Unsolved");
-    } else if (mptr->flags.bigroom) {
+                mptr->mflags.sokosolved ? "Solved" : "Unsolved");
+    } else if (mptr->mflags.bigroom) {
         Sprintf(buf, "%sA very big room.", PREFIX);
-    } else if (mptr->flags.roguelevel) {
+    } else if (mptr->mflags.roguelevel) {
         Sprintf(buf, "%sA primitive area.", PREFIX);
     } else if (on_level(&mptr->lev, &qstart_level)) {
         Sprintf(buf, "%sHome%s.", PREFIX,
-                mptr->flags.unreachable ? " (no way back...)" : "");
+                mptr->mflags.unreachable ? " (no way back...)" : "");
         if (u.uevent.qcompleted)
             Sprintf(buf, "%sCompleted quest for %s.", PREFIX, ldrname());
-        else if (mptr->flags.questing)
+        else if (mptr->mflags.questing)
             Sprintf(buf, "%sGiven quest by %s.", PREFIX, ldrname());
-    } else if (mptr->flags.ludios) {
+    } else if (mptr->mflags.ludios) {
         /* presence of the ludios branch in #overview output indicates that
            the player has made it onto the level; presence of this annotation
            indicates that the fort's entrance has been seen (or mapped) */
         Sprintf(buf, "%sFort Ludios.", PREFIX);
-    } else if (mptr->flags.castle) {
+    } else if (mptr->mflags.castle) {
         Sprintf(buf, "%sThe castle%s.", PREFIX, tunesuffix(mptr, tmpbuf));
-    } else if (mptr->flags.valley) {
+    } else if (mptr->mflags.valley) {
         Sprintf(buf, "%sValley of the Dead.", PREFIX);
-    } else if (mptr->flags.msanctum) {
+    } else if (mptr->mflags.msanctum) {
         Sprintf(buf, "%sMoloch's Sanctum.", PREFIX);
     }
     if (*buf)
         putstr(win, 0, buf);
     /* quest entrance is not mutually-exclusive with bigroom or rogue level */
-    if (mptr->flags.quest_summons) {
+    if (mptr->mflags.quest_summons) {
         Sprintf(buf, "%sSummoned by %s.", PREFIX, ldrname());
         putstr(win, 0, buf);
     }

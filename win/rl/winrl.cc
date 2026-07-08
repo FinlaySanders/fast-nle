@@ -259,13 +259,13 @@ NetHackRL::player_selection_method()
 void
 NetHackRL::fill_obs(nle_obs *obs)
 {
-    if (obs->program_state) {
-        obs->program_state[0] = program_state.gameover;
-        obs->program_state[1] = program_state.panicking;
-        obs->program_state[2] = program_state.exiting;
-        obs->program_state[3] = program_state.in_moveloop;
-        obs->program_state[4] = program_state.in_impossible;
-        obs->program_state[5] = program_state.something_worth_saving;
+    if (obs->prog_state) {
+        obs->prog_state[0] = program_state.gameover;
+        obs->prog_state[1] = program_state.panicking;
+        obs->prog_state[2] = program_state.exiting;
+        obs->prog_state[3] = program_state.in_moveloop;
+        obs->prog_state[4] = program_state.in_impossible;
+        obs->prog_state[5] = program_state.something_worth_saving;
         // TODO: Consider adding something_worth_saving.
         // Also consider adding ttyDisplay->inmore ...
     }
@@ -429,7 +429,7 @@ NetHackRL::getch_method()
        the context switch. No stdin required. The following code is from
        tty_nhgetch. */
     if (WIN_MESSAGE != WIN_ERR && wins[WIN_MESSAGE])
-        wins[WIN_MESSAGE]->flags &= ~WIN_STOP;
+        wins[WIN_MESSAGE]->wflags &= ~WIN_STOP;
     if (!i)
         i = '\033'; /* map NUL to ESC since nethack doesn't expect NUL */
     else if (i == EOF)

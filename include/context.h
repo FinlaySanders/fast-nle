@@ -21,7 +21,7 @@
 
 struct dig_info { /* apply.c, hack.c */
     int effort;
-    d_level level;
+    d_level dlvl; /* renamed from level: collides with the migrated global */
     coord pos;
     long lastdigtime;
     boolean down, chew, warned, quiet;

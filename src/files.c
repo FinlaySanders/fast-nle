@@ -532,7 +532,7 @@ char errbuf[];
 #endif /* MICRO || WIN32 */
 
     if (fd >= 0)
-        level_info[lev].flags |= LFILE_EXISTS;
+        level_info[lev].linfo_flags |= LFILE_EXISTS;
     else if (errbuf) /* failure explanation */
         Sprintf(errbuf, "Cannot create file \"%s\" for level %d (errno %d).",
                 lock, lev, errno);
@@ -586,14 +586,14 @@ int lev;
      * Level 0 might be created by port specific code that doesn't
      * call create_levfile(), so always assume that it exists.
      */
-    if (lev == 0 || (level_info[lev].flags & LFILE_EXISTS)) {
+    if (lev == 0 || (level_info[lev].linfo_flags & LFILE_EXISTS)) {
         set_levelfile_name(lock, lev);
 #ifdef HOLD_LOCKFILE_OPEN
         if (lev == 0)
             really_close();
 #endif
         (void) unlink(fqname(lock, LEVELPREFIX, 0));
-        level_info[lev].flags &= ~LFILE_EXISTS;
+        level_info[lev].linfo_flags &= ~LFILE_EXISTS;
     }
 }
 

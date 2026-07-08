@@ -1,3 +1,4 @@
 # Symbols allowed to remain writable in the final library.
 # Every entry needs a justification.
 # (empty until the migration defines the ctx TLS pointer)
+nh_cur	# the per-env context pointer itself: the ONE writable symbol the design allows (becomes the single __thread pointer at the multi-env step)

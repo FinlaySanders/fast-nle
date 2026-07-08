@@ -482,8 +482,8 @@ lev_init *init_lev;
                init_lev->icedpools);
     /* a walled, joined level is cavernous, not mazelike -dlc */
     if (walled && join) {
-        level.flags.is_maze_lev = FALSE;
-        level.flags.is_cavernous_lev = TRUE;
+        level.lflags.is_maze_lev = FALSE;
+        level.lflags.is_cavernous_lev = TRUE;
     }
     free(new_locations);
 }

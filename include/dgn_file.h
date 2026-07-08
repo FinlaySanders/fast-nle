@@ -20,7 +20,7 @@ struct couple {
 struct tmpdungeon {
     char name[24], protoname[24];
     struct couple lev;
-    int flags, chance, levels, branches,
+    int tflags, chance, levels, branches,
         entry_lev; /* entry level for this dungeon */
     char boneschar;
 };
@@ -28,7 +28,7 @@ struct tmpdungeon {
 struct tmplevel {
     char name[24];
     struct couple lev;
-    int chance, rndlevs, chain, flags;
+    int chance, rndlevs, chain, tflags;
     char boneschar;
 };
 

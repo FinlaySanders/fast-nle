@@ -24,7 +24,7 @@ typedef struct tty_mi {
 
 /* descriptor for tty-based windows */
 struct WinDesc {
-    int flags;           /* window flags */
+    int wflags;           /* window wflags */
     xchar type;          /* type of window */
     boolean active;      /* true if window is active */
     short offx, offy;    /* offset from topleft of display */

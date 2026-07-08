@@ -5,11 +5,9 @@
 /* track.c - version 1.0.2 */
 
 #include "hack.h"
+#include "nh_ctx_files/track_c.h" /* utcnt, utpnt, utrack -> nh_cur */
 
 #define UTSZ 50
-
-STATIC_VAR NEARDATA int utcnt, utpnt;
-STATIC_VAR NEARDATA coord utrack[UTSZ];
 
 void
 initrack()

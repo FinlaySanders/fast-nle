@@ -233,7 +233,7 @@ dosave0()
     for (ltmp = (xchar) 1; ltmp <= maxledgerno(); ltmp++) {
         if (ltmp == ledger_no(&uz_save))
             continue;
-        if (!(level_info[ltmp].flags & LFILE_EXISTS))
+        if (!(level_info[ltmp].linfo_flags & LFILE_EXISTS))
             continue;
 #ifdef MICRO
         curs(WIN_MAP, 1 + dotcnt++, dotrow);
@@ -512,7 +512,7 @@ int mode;
         count_only = (mode & COUNT_SAVE);
 #endif
         if (lev >= 0 && lev <= maxledgerno())
-            level_info[lev].flags |= VISITED;
+            level_info[lev].linfo_flags |= VISITED;
         bwrite(fd, (genericptr_t) &hackpid, sizeof hackpid);
 #ifdef TOS
         tlev = lev;
@@ -543,7 +543,7 @@ int mode;
     bwrite(fd, (genericptr_t) &sstairs, sizeof (stairway));
     bwrite(fd, (genericptr_t) &updest, sizeof (dest_area));
     bwrite(fd, (genericptr_t) &dndest, sizeof (dest_area));
-    bwrite(fd, (genericptr_t) &level.flags, sizeof level.flags);
+    bwrite(fd, (genericptr_t) &level.lflags, sizeof level.lflags);
     bwrite(fd, (genericptr_t) doors, sizeof doors);
     save_rooms(fd); /* no dynamic memory to reclaim */
 

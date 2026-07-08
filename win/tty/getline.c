@@ -53,9 +53,9 @@ getlin_hook_proc hook;
     struct WinDesc *cw = wins[WIN_MESSAGE];
     boolean doprev = 0;
 
-    if (ttyDisplay->toplin == 1 && !(cw->flags & WIN_STOP))
+    if (ttyDisplay->toplin == 1 && !(cw->wflags & WIN_STOP))
         more();
-    cw->flags &= ~WIN_STOP;
+    cw->wflags &= ~WIN_STOP;
     ttyDisplay->toplin = 3; /* special prompt state */
     ttyDisplay->inread++;
 
@@ -268,10 +268,10 @@ char *base;
 
     com_index = -1;
     for (oindex = 0; extcmdlist[oindex].ef_txt != (char *) 0; oindex++) {
-        if (extcmdlist[oindex].flags & CMD_NOT_AVAILABLE)
+        if (extcmdlist[oindex].cmd_flags & CMD_NOT_AVAILABLE)
             continue;
-        if ((extcmdlist[oindex].flags & AUTOCOMPLETE)
-            && !(!wizard && (extcmdlist[oindex].flags & WIZMODECMD))
+        if ((extcmdlist[oindex].cmd_flags & AUTOCOMPLETE)
+            && !(!wizard && (extcmdlist[oindex].cmd_flags & WIZMODECMD))
             && !strncmpi(base, extcmdlist[oindex].ef_txt, strlen(base))) {
             if (com_index == -1) /* no matches yet */
                 com_index = oindex;

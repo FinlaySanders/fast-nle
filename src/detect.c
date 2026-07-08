@@ -1081,15 +1081,33 @@ d_level *where;
         return "near you";
 }
 
+/* Was 'd_level *where' initialized with &oracle_level etc. — addresses
+ * inside the migrated dungeon_topology, no longer compile-time constants;
+ * resolved at runtime via level_detects_where(). */
+enum level_detect_idx {
+    LD_ORACLE, LD_MEDUSA, LD_STRONGHOLD, LD_WIZ1,
+    LD_COUNT
+};
 static const struct {
     const char *what;
-    d_level *where;
+    int where_idx;
 } level_detects[] = {
-    { "Delphi", &oracle_level },
-    { "Medusa's lair", &medusa_level },
-    { "a castle", &stronghold_level },
-    { "the Wizard of Yendor's tower", &wiz1_level },
+    { "Delphi", LD_ORACLE },
+    { "Medusa's lair", LD_MEDUSA },
+    { "a castle", LD_STRONGHOLD },
+    { "the Wizard of Yendor's tower", LD_WIZ1 },
 };
+static d_level *
+level_detects_where(int idx)
+{
+    switch (idx) {
+    case LD_ORACLE:     return &oracle_level;
+    case LD_MEDUSA:     return &medusa_level;
+    case LD_STRONGHOLD: return &stronghold_level;
+    case LD_WIZ1:       return &wiz1_level;
+    }
+    return (d_level *) 0;
+}
 
 void
 use_crystal_ball(optr)
@@ -1219,7 +1237,8 @@ struct obj **optr;
             default:
                 i = rn2(SIZE(level_detects));
                 You_see("%s, %s.", level_detects[i].what,
-                        level_distance(level_detects[i].where));
+                        level_distance(
+                            level_detects_where(level_detects[i].where_idx)));
                 ret = 0;
                 break;
             }
@@ -1262,7 +1281,7 @@ register int x, y;
      * opposite to how normal vision behaves.
      */
     oldglyph = glyph_at(x, y);
-    if (level.flags.hero_memory) {
+    if (level.lflags.hero_memory) {
         magic_map_background(x, y, 0);
         newsym(x, y); /* show it, if not blocked */
     } else {
@@ -1273,7 +1292,7 @@ register int x, y;
             map_trap(t, 1);
         } else if (glyph_is_trap(oldglyph) || glyph_is_object(oldglyph)) {
             show_glyph(x, y, oldglyph);
-            if (level.flags.hero_memory)
+            if (level.lflags.hero_memory)
                 lev->glyph = oldglyph;
         }
     }
@@ -1290,7 +1309,7 @@ do_mapping()
         for (zy = 0; zy < ROWNO; zy++)
             show_map_spot(zx, zy);
 
-    if (!level.flags.hero_memory || unconstrained) {
+    if (!level.lflags.hero_memory || unconstrained) {
         flush_screen(1);                 /* flush temp screen */
         /* browse_map() instead of display_nhwindow(WIN_MAP, TRUE) */
         browse_map(TER_DETECT | TER_MAP | TER_TRP | TER_OBJ,
@@ -1380,7 +1399,7 @@ struct obj *sobj; /* scroll--actually fake spellbook--object */
                    the map and we're not doing extended/blessed clairvoyance
                    (hence must be swallowed or underwater), show "unseen
                    creature" unless map already displayed a monster here */
-                if ((unconstrained || !level.flags.hero_memory)
+                if ((unconstrained || !level.lflags.hero_memory)
                     && !extended && (zx != u.ux || zy != u.uy)
                     && !glyph_is_monster(oldglyph))
                     map_invisible(zx, zy);
@@ -1393,7 +1412,7 @@ struct obj *sobj; /* scroll--actually fake spellbook--object */
             }
         }
 
-    if (!level.flags.hero_memory || unconstrained || mdetected || odetected) {
+    if (!level.lflags.hero_memory || unconstrained || mdetected || odetected) {
         flush_screen(1);                 /* flush temp screen */
         /* the getpos() prompt from browse_map() is only shown when
            flags.verbose is set, but make this unconditional so that
@@ -1847,14 +1866,14 @@ int default_glyph, which_subset;
     /* for 'full', show the actual terrain for the entire level,
        otherwise what the hero remembers for seen locations with
        monsters, objects, and/or traps removed as caller dictates */
-    seenv = (full || level.flags.hero_memory)
+    seenv = (full || level.lflags.hero_memory)
               ? levl[x][y].seenv : cansee(x, y) ? SVALL : 0;
     if (full) {
         levl[x][y].seenv = SVALL;
         glyph = back_to_glyph(x, y);
         levl[x][y].seenv = seenv;
     } else {
-        levl_glyph = level.flags.hero_memory
+        levl_glyph = level.lflags.hero_memory
               ? levl[x][y].glyph
               : seenv ? back_to_glyph(x, y): default_glyph;
         /* glyph_at() returns the displayed glyph, which might
@@ -1985,7 +2004,7 @@ int which_subset; /* when not full, whether to suppress objs and/or traps */
 
         if (unconstrain_map())
             docrt();
-        default_glyph = cmap_to_glyph(level.flags.arboreal ? S_tree : S_stone);
+        default_glyph = cmap_to_glyph(level.lflags.arboreal ? S_tree : S_stone);
 
         for (x = 1; x < COLNO; x++)
             for (y = 0; y < ROWNO; y++) {

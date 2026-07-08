@@ -4459,7 +4459,7 @@ short exploding_wand_typ;
                     msgtxt = "Some water evaporates.";
             } else {
                 rangemod -= 3;
-                lev->typ = ROOM, lev->flags = 0;
+                lev->typ = ROOM, lev->rmflags = 0;
                 t = maketrap(x, y, PIT);
                 if (t)
                     t->tseen = 1;
@@ -4576,7 +4576,7 @@ short exploding_wand_typ;
                     Norep("The %s melt.", defsyms[S_bars].explanation);
                 if (*in_rooms(x, y, SHOPBASE)) {
                     /* in case we ever have a shop bounded by bars */
-                    lev->typ = ROOM, lev->flags = 0;
+                    lev->typ = ROOM, lev->rmflags = 0;
                     if (see_it)
                         newsym(x, y);
                     add_damage(x, y, (type >= 0) ? SHOP_BARS_COST : 0L);

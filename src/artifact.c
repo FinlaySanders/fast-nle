@@ -1768,27 +1768,31 @@ STATIC_OVL unsigned long
 abil_to_spfx(abil)
 long *abil;
 {
+    /* Was 'long *abil' initialized with &Eprop addresses. Since 'u' now
+     * lives in the per-env ctx, those aren't compile-time constants. Store
+     * the property index instead; compute the extrinsic pointer at
+     * comparison time. */
     static const struct abil2spfx_tag {
-        long *abil;
+        int prop_idx;
         unsigned long spfx;
     } abil2spfx[] = {
-        { &ESearching, SPFX_SEARCH },
-        { &EHalluc_resistance, SPFX_HALRES },
-        { &ETelepat, SPFX_ESP },
-        { &EStealth, SPFX_STLTH },
-        { &ERegeneration, SPFX_REGEN },
-        { &ETeleport_control, SPFX_TCTRL },
-        { &EWarn_of_mon, SPFX_WARN },
-        { &EWarning, SPFX_WARN },
-        { &EEnergy_regeneration, SPFX_EREGEN },
-        { &EHalf_spell_damage, SPFX_HSPDAM },
-        { &EHalf_physical_damage, SPFX_HPHDAM },
-        { &EReflecting, SPFX_REFLECT },
+        { SEARCHING, SPFX_SEARCH },
+        { HALLUC_RES, SPFX_HALRES },
+        { TELEPAT, SPFX_ESP },
+        { STEALTH, SPFX_STLTH },
+        { REGENERATION, SPFX_REGEN },
+        { TELEPORT_CONTROL, SPFX_TCTRL },
+        { WARN_OF_MON, SPFX_WARN },
+        { WARNING, SPFX_WARN },
+        { ENERGY_REGENERATION, SPFX_EREGEN },
+        { HALF_SPDAM, SPFX_HSPDAM },
+        { HALF_PHDAM, SPFX_HPHDAM },
+        { REFLECTING, SPFX_REFLECT },
     };
     int k;
 
     for (k = 0; k < SIZE(abil2spfx); k++) {
-        if (abil2spfx[k].abil == abil)
+        if (&u.uprops[abil2spfx[k].prop_idx].extrinsic == abil)
             return abil2spfx[k].spfx;
     }
     return 0L;

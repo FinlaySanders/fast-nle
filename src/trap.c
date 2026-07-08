@@ -421,9 +421,9 @@ int x, y, typ;
         else if (lev->typ == STONE || lev->typ == SCORR)
             lev->typ = CORR;
         else if (IS_WALL(lev->typ) || lev->typ == SDOOR)
-            lev->typ = level.flags.is_maze_lev
+            lev->typ = level.lflags.is_maze_lev
                            ? ROOM
-                           : level.flags.is_cavernous_lev ? CORR : DOOR;
+                           : level.lflags.is_cavernous_lev ? CORR : DOOR;
 
         unearth_objs(x, y);
         break;
@@ -3818,7 +3818,7 @@ drown()
     if ((Teleportation || can_teleport(youmonst.data)) && !Unaware
         && (Teleport_control || rn2(3) < Luck + 2)) {
         You("attempt a teleport spell."); /* utcsri!carroll */
-        if (!level.flags.noteleport) {
+        if (!level.lflags.noteleport) {
             (void) dotele(FALSE);
             if (!is_pool(u.ux, u.uy))
                 return TRUE;

@@ -417,7 +417,7 @@ encodeconduct()
         e |= 1L << 3;
     if (!u.uconduct.weaphit)
         e |= 1L << 4;
-    if (!u.uconduct.killer)
+    if (!u.uconduct.killcount)
         e |= 1L << 5;
     if (!u.uconduct.literate)
         e |= 1L << 6;

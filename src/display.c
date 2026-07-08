@@ -175,7 +175,7 @@ int show;
         else if (lev->typ == CORR && glyph == cmap_to_glyph(S_litcorr))
             glyph = cmap_to_glyph(S_corr);
     }
-    if (level.flags.hero_memory)
+    if (level.lflags.hero_memory)
         lev->glyph = glyph;
     if (show)
         show_glyph(x, y, glyph);
@@ -211,7 +211,7 @@ register int show;
 {
     register int glyph = back_to_glyph(x, y);
 
-    if (level.flags.hero_memory)
+    if (level.lflags.hero_memory)
         levl[x][y].glyph = glyph;
     if (show)
         show_glyph(x, y, glyph);
@@ -231,7 +231,7 @@ register int show;
     register int x = trap->tx, y = trap->ty;
     register int glyph = trap_to_glyph(trap, newsym_rn2);
 
-    if (level.flags.hero_memory)
+    if (level.lflags.hero_memory)
         levl[x][y].glyph = glyph;
     if (show)
         show_glyph(x, y, glyph);
@@ -251,7 +251,7 @@ register int show;
     register int x = obj->ox, y = obj->oy;
     register int glyph = obj_to_glyph(obj, newsym_rn2);
 
-    if (level.flags.hero_memory) {
+    if (level.lflags.hero_memory) {
         /* MRKR: While hallucinating, statues are seen as random monsters */
         /*       but remembered as random objects.                        */
 
@@ -279,7 +279,7 @@ map_invisible(x, y)
 register xchar x, y;
 {
     if (x != u.ux || y != u.uy) { /* don't display I at hero's location */
-        if (level.flags.hero_memory)
+        if (level.lflags.hero_memory)
             levl[x][y].glyph = GLYPH_INVISIBLE;
         show_glyph(x, y, GLYPH_INVISIBLE);
     }
@@ -313,7 +313,7 @@ register int x, y;
 {
     register struct trap *trap;
 
-    if (!level.flags.hero_memory)
+    if (!level.lflags.hero_memory)
         return;
 
     if ((trap = t_at(x, y)) != 0 && trap->tseen && !covers_traps(x, y)) {
@@ -1100,7 +1100,7 @@ int tg, rpt;
 
     rpt *= 2; /* two loop iterations per 'count' */
     glyph[0] = tg;
-    glyph[1] = (level.flags.hero_memory) ? levl[x][y].glyph
+    glyph[1] = (level.lflags.hero_memory) ? levl[x][y].glyph
                                          : back_to_glyph(x, y);
     /* even iteration count (guaranteed) ends with glyph[1] showing;
        caller might want to override that, but no newsym() calls here
@@ -1707,7 +1707,7 @@ xchar x, y;
     switch (ptr->typ) {
     case SCORR:
     case STONE:
-        idx = level.flags.arboreal ? S_tree : S_stone;
+        idx = level.lflags.arboreal ? S_tree : S_stone;
         break;
     case ROOM:
         idx = S_room;
@@ -1907,7 +1907,7 @@ xchar x, y;
         switch (lev->typ) {
         case SCORR:
         case STONE:
-            idx = level.flags.arboreal ? S_tree : S_stone;
+            idx = level.lflags.arboreal ? S_tree : S_stone;
             break;
         case ROOM:
            idx = S_room;

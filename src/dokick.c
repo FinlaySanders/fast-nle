@@ -263,7 +263,7 @@ xchar x, y;
             if (mon->mx != x || mon->my != y) {
                 (void) unmap_invisible(x, y);
                 pline("%s %s, %s evading your %skick.", Monnam(mon),
-                      (!level.flags.noteleport && can_teleport(mon->data))
+                      (!level.lflags.noteleport && can_teleport(mon->data))
                           ? "teleports"
                           : is_floater(mon->data)
                                 ? "floats"

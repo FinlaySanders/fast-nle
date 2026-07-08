@@ -10,27 +10,36 @@ STATIC_DCL void FDECL(m_dowear_type,
                       (struct monst *, long, BOOLEAN_P, BOOLEAN_P));
 STATIC_DCL int FDECL(extra_pref, (struct monst *, struct obj *));
 
+/* Was 'struct obj **w_obj' initialized with &uarm etc. Those now live in
+ * the per-env ctx, so the table stores byte offsets into struct nh_ctx and
+ * every access resolves through nh_cur — one const table, per-env data. */
+#include <stddef.h>
+
 const struct worn {
     long w_mask;
-    struct obj **w_obj;
-} worn[] = { { W_ARM, &uarm },
-             { W_ARMC, &uarmc },
-             { W_ARMH, &uarmh },
-             { W_ARMS, &uarms },
-             { W_ARMG, &uarmg },
-             { W_ARMF, &uarmf },
-             { W_ARMU, &uarmu },
-             { W_RINGL, &uleft },
-             { W_RINGR, &uright },
-             { W_WEP, &uwep },
-             { W_SWAPWEP, &uswapwep },
-             { W_QUIVER, &uquiver },
-             { W_AMUL, &uamul },
-             { W_TOOL, &ublindf },
-             { W_BALL, &uball },
-             { W_CHAIN, &uchain },
+    size_t w_off; /* offsetof(struct nh_ctx, g_uXXX) */
+} worn[] = { { W_ARM, offsetof(struct nh_ctx, g_uarm) },
+             { W_ARMC, offsetof(struct nh_ctx, g_uarmc) },
+             { W_ARMH, offsetof(struct nh_ctx, g_uarmh) },
+             { W_ARMS, offsetof(struct nh_ctx, g_uarms) },
+             { W_ARMG, offsetof(struct nh_ctx, g_uarmg) },
+             { W_ARMF, offsetof(struct nh_ctx, g_uarmf) },
+             { W_ARMU, offsetof(struct nh_ctx, g_uarmu) },
+             { W_RINGL, offsetof(struct nh_ctx, g_uleft) },
+             { W_RINGR, offsetof(struct nh_ctx, g_uright) },
+             { W_WEP, offsetof(struct nh_ctx, g_uwep) },
+             { W_SWAPWEP, offsetof(struct nh_ctx, g_uswapwep) },
+             { W_QUIVER, offsetof(struct nh_ctx, g_uquiver) },
+             { W_AMUL, offsetof(struct nh_ctx, g_uamul) },
+             { W_TOOL, offsetof(struct nh_ctx, g_ublindf) },
+             { W_BALL, offsetof(struct nh_ctx, g_uball) },
+             { W_CHAIN, offsetof(struct nh_ctx, g_uchain) },
              { 0, 0 }
 };
+
+/* Resolve a worn[] entry to this env's obj* slot; sentinel w_off 0 is
+ * never dereferenced (loop guards on w_mask). */
+#define worn_slot(wp) ((struct obj **) ((char *) nh_cur + (wp)->w_off))
 
 /* This only allows for one blocking item per property */
 #define w_blocks(o, m) \
@@ -61,7 +70,7 @@ long mask;
             u.uroleplay.nudist = FALSE;
         for (wp = worn; wp->w_mask; wp++)
             if (wp->w_mask & mask) {
-                oobj = *(wp->w_obj);
+                oobj = *(worn_slot(wp));
                 if (oobj && !(oobj->owornmask & wp->w_mask))
                     impossible("Setworn: mask = %ld.", wp->w_mask);
                 if (oobj) {
@@ -83,7 +92,7 @@ long mask;
                        is pending (via 'A' command for multiple items) */
                     cancel_doff(oobj, wp->w_mask);
                 }
-                *(wp->w_obj) = obj;
+                *(worn_slot(wp)) = obj;
                 if (obj) {
                     obj->owornmask |= wp->w_mask;
                     /* Prevent getting/blocking intrinsics from wielding
@@ -123,12 +132,12 @@ register struct obj *obj;
     if (obj == uwep || obj == uswapwep)
         u.twoweap = 0;
     for (wp = worn; wp->w_mask; wp++)
-        if (obj == *(wp->w_obj)) {
+        if (obj == *(worn_slot(wp))) {
             /* in case wearing or removal is in progress or removal
                is pending (via 'A' command for multiple items) */
             cancel_doff(obj, wp->w_mask);
 
-            *(wp->w_obj) = 0;
+            *(worn_slot(wp)) = 0;
             p = objects[obj->otyp].oc_oprop;
             u.uprops[p].extrinsic = u.uprops[p].extrinsic & ~wp->w_mask;
             obj->owornmask &= ~wp->w_mask;
@@ -149,7 +158,7 @@ long wornmask;
 
     for (wp = worn; wp->w_mask; wp++)
         if (wp->w_mask & wornmask)
-            return *wp->w_obj;
+            return *(worn_slot(wp));
     return (struct obj *) 0;
 }
 
