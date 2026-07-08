@@ -147,6 +147,18 @@ jobs:
             echo "flags [$f]: $r"
           done
 
+      - name: UBSan at -O3 on level gen
+        run: |
+          cmake -S . -B build_ubsan -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_C_FLAGS="-fsanitize=undefined -fno-sanitize-recover=none -g" \
+            -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=undefined" > /dev/null
+          cmake --build build_ubsan --target nethack -j "$(nproc)" > /dev/null 2>&1
+          UBSAN_OPTIONS=print_stacktrace=1 build/replay_golden \
+            build_ubsan/libnethack.so build/dat \
+            tests/goldens/aa_seed7014_7014.golden 2>&1 \
+            | grep -E "runtime error|SUMMARY|#[0-9] |INIT|OK " | head -40
+
       - name: Time sweep - prove divergence tracks ubirthday/257
         run: |
           # shknam.c derives shopkeeper names from
