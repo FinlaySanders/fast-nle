@@ -103,6 +103,13 @@ jobs:
           echo "--- Linux-recorded goldens vs our Linux engine ---"
           build/replay_golden build/libnethack.so build/dat \
             tests/linuxgold/*.golden || true
+          echo "--- 7015 fork frames (step 30919, depth-2 levelgen) ---"
+          mkdir -p /tmp/frame_linux
+          NLE_REPLAY_KEEP_GOING=1 NLE_REPLAY_DUMP_STEPS=30918,30919,30920 \
+            NLE_REPLAY_DUMP_DIR=/tmp/frame_linux build/replay_golden \
+            build/libnethack.so build/dat \
+            tests/linuxgold/aa_seed7015_7015.golden \
+            | grep -E "kg-mismatch|KEEP-GOING" | head -4 || true
           echo "--- repinned 7010: dump frames around the 11222 flicker ---"
           mkdir -p /tmp/frame_linux
           NLE_REPLAY_KEEP_GOING=1 NLE_REPLAY_DUMP_STEPS=11221,11222,11223 \
