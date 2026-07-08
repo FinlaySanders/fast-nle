@@ -52,7 +52,7 @@ jobs:
 
       - name: Dump stock init frame (seed 7014)
         run: |
-          python - <<'PYEOF'
+          cd /tmp && python - <<'PYEOF'
           import numpy as np
           from nle.nethack import Nethack
           import os
