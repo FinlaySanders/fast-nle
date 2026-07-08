@@ -47,7 +47,8 @@ static nle_end_fn lib_end;
 
 struct golden {
     const char *path;
-    unsigned long core, disp;
+    unsigned long core, disp, lgen;
+    int have_lgen;
     char options[32768];
     int fix_moon_phase;
     uint64_t init_hash;
@@ -73,6 +74,8 @@ parse_golden(const char *path, struct golden *g)
             continue;
         if (strncmp(line, "meta core=", 10) == 0) {
             sscanf(line, "meta core=%lu disp=%lu", &g->core, &g->disp);
+        } else if (strncmp(line, "meta lgen=", 10) == 0) {
+            g->have_lgen = (sscanf(line, "meta lgen=%lu", &g->lgen) == 1);
         } else if (strncmp(line, "meta options=", 13) == 0) {
             char *opts = line + 13;
             opts[strcspn(opts, "\n")] = 0;
@@ -206,6 +209,8 @@ env_exec(struct env *e, enum env_op op)
         e->settings.initial_seeds.seeds[1] = e->g->disp;
         e->settings.initial_seeds.reseed = 0;
         e->settings.initial_seeds.use_init_seeds = true;
+        e->settings.initial_seeds.lgen_seed = e->g->lgen;
+        e->settings.initial_seeds.use_lgen_seed = e->g->have_lgen ? true : false;
         if (e->g->fix_moon_phase) {
             e->settings.fix_moon_phase = true;
             e->settings.time_seed = e->g->core + 1;

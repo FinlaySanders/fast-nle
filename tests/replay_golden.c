@@ -149,8 +149,8 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
     nle_settings settings;
     memset(&settings, 0, sizeof(settings));
     settings.spawn_monsters = 1;
-    unsigned long core = 0, disp = 0;
-    int have_seeds = 0, have_options = 0;
+    unsigned long core = 0, disp = 0, lgen = 0;
+    int have_seeds = 0, have_options = 0, have_lgen = 0;
     uint64_t init_hash = 0;
     int have_init = 0;
 
@@ -198,6 +198,8 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
                 break;
             }
             have_seeds = 1;
+        } else if (strncmp(line, "meta lgen=", 10) == 0) {
+            have_lgen = (sscanf(line, "meta lgen=%lu", &lgen) == 1);
         } else if (strncmp(line, "meta options=", 13) == 0) {
             char *opts = line + 13;
             opts[strcspn(opts, "\n")] = 0;
@@ -220,7 +222,8 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
             settings.initial_seeds.seeds[1] = disp;
             settings.initial_seeds.reseed = 0;
             settings.initial_seeds.use_init_seeds = true;
-            settings.initial_seeds.use_lgen_seed = false;
+            settings.initial_seeds.lgen_seed = lgen;
+            settings.initial_seeds.use_lgen_seed = have_lgen ? true : false;
             if (settings.fix_moon_phase) {
                 /* Mirrors pynethack.cc set_initial_seeds: offset by 1 to
                  * decorrelate from the core RNG seed. */

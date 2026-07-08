@@ -50,9 +50,40 @@ every `nle_*` call on a rotating pool thread — any state hiding in a
 thread-local other than the two sanctioned `__thread` ctx pointers
 (`nh_cur`, `current_nle_ctx`) diverges. Both run in CI.
 
-Current corpus: 8 episodes x 500 steps + 2 x up-to-3000 steps (one full
-death) from the scripted random-walk policy. TODO(phase-0b): AutoAscend
-driver for deep-game coverage (shops, combat, prayer, multi-level descent).
+Current corpus: 28 episodes — all 13 roles x 2 seeds x 1500 steps plus two
+6000-step runs; 6 episodes end in death; every 3rd episode also sets a
+level-generation (lgen) seed. The policy pokes most subsystems: movement,
+search, stairs, pickup/drop, eat/quaff/read/wear/wield/throw, kick, cast,
+pray, engrave, open/close, pay — with deterministic prompt handling.
+TODO(phase-0b): AutoAscend driver for genuinely deep games.
+
+### Regenerating / arbitrating the corpus
+
+Goldens must capture STOCK behavior. To (re)record or arbitrate a
+divergence, build a pristine library from the import commit in a worktree
+— no need to touch the working tree:
+
+```
+git worktree add /tmp/fast-nle-stock 2319f298
+cd /tmp/fast-nle-stock && cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build build --target nethack dat -j
+```
+
+then verify `tests/goldens/*.golden` against it ONE FILE PER PROCESS
+(stock keeps process-global state and is not multi-episode safe — that's
+the very thing this fork fixes):
+
+```
+for g in tests/goldens/*.golden; do
+  build/replay_golden /tmp/fast-nle-stock/build/libnethack.so \
+      /tmp/fast-nle-stock/build/dat "$g" || echo "STOCK DIVERGES: $g"
+done
+```
+
+Corpus history: the 28-episode corpus immediately caught two real bugs the
+old 10-episode Monk-only corpus missed — deleted `nle_swap_to_lgen` hooks
+in mklev.c (wholesale old-fork port removed a post-fork stock feature) and
+garbage-initialized nle_ctx_t fields leaking into observations.
 
 ## Benchmark rules (when benchmarks land)
 

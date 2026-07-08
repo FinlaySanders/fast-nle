@@ -21,7 +21,20 @@
 #include <bzlib.h>
 #endif
 
+#ifndef __has_feature
+#define __has_feature(x) 0 /* Compatibility with non-clang compilers. */
+#endif
+
+#if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
+#include <sanitizer/asan_interface.h>
+#endif
+
+#if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
+/* ASan redzones inflate frames ~4-8x; give the game coroutine room. */
+#define STACK_SIZE (1 << 20) /* 1MiB under ASan */
+#else
 #define STACK_SIZE (1 << 16) /* 64KiB */
+#endif
 
 static size_t
 effective_stack_size(void)
@@ -40,14 +53,6 @@ effective_stack_size(void)
     }
     return stack_size;
 }
-
-#ifndef __has_feature
-#define __has_feature(x) 0 /* Compatibility with non-clang compilers. */
-#endif
-
-#if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
-#include <sanitizer/asan_interface.h>
-#endif
 
 extern int unixmain(int, char **);
 
@@ -140,7 +145,11 @@ nle_vt_callback(tmt_msg_t m, TMT *vt, const void *a, void *p)
 nle_ctx_t *
 init_nle(FILE *ttyrec, nle_obs *obs)
 {
-    nle_ctx_t *nle = malloc(sizeof(nle_ctx_t));
+    /* calloc, not malloc: the struct carries per-env game-visible state
+     * (rl_in_yn_function, rl_instance, ...) that stock kept in zero-init
+     * statics; garbage here becomes garbage in the misc[] observation and
+     * in winrl branches. */
+    nle_ctx_t *nle = calloc(1, sizeof(nle_ctx_t));
 
     /* fast-nle: allocate this env's migrated game state and anchor the
      * context pointer before any game code can run. */
