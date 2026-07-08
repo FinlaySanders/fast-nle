@@ -94,6 +94,23 @@ jobs:
           clang -O2 -g -Iinclude \
             -Ibuild/_deps/deboost_context-src/include \
             tests/replay_golden.c -ldl -o build/replay_golden
+      - name: Cross-platform check with seed-derived ubirthday
+        run: |
+          # Engine now derives ubirthday from time_seed, so mac and Linux
+          # see IDENTICAL time inputs. Any remaining divergence from the
+          # mac-recorded goldens is a genuine platform difference
+          # (candidates: libc qsort tie order, etc.), not time.
+          echo "--- repinned 7010 (recorded with pinned clock on mac) ---"
+          NLE_REPLAY_KEEP_GOING=1 build/replay_golden \
+            build/libnethack.so build/dat \
+            tests/msan/aa_seed7010_repinned.golden \
+            | grep -E "kg-mismatch|KEEP-GOING" || true
+          echo "--- aa_7015 (5330 fork check) ---"
+          NLE_REPLAY_KEEP_GOING=1 build/replay_golden \
+            build/libnethack.so build/dat \
+            tests/goldens/aa_seed7015_7015.golden \
+            | grep -E "kg-mismatch|KEEP-GOING" | head -8 || true
+
       - name: Time sweep - prove divergence tracks ubirthday/257
         run: |
           # shknam.c derives shopkeeper names from

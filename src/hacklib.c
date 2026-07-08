@@ -965,6 +965,28 @@ nle_getlt_maybe_fixed()
     return &fixed_tm;
 }
 
+/*
+ * fast-nle: in stock NetHack ubirthday is wall-clock time at reset and
+ * leaks into GAMEPLAY: shopkeeper names (shknam.c buckets it by 257
+ * seconds), used-item price parity (shk.c), scroll label rng (read.c),
+ * mkroom.c %3, and the bones pool (files.c). Same seeds at different
+ * wall-clock times therefore give different games. When seeded, derive
+ * the birthday from time_seed so runs are reproducible from seeds alone.
+ *
+ * Keep the formula in sync with tools/record_autoascend.py, which pins
+ * stock NLE's clock to the same epoch (via the tools/faketime_shim.c
+ * interposer) when recording golden trajectories. The *257 keeps
+ * per-seed variety in shopkeeper names.
+ */
+time_t
+nle_birthday_maybe_fixed()
+{
+    if (!settings.fix_moon_phase || !settings.time_seed_is_set)
+        return getnow();
+    return (time_t) (1600000000L
+                     + (long) (settings.time_seed % 100000UL) * 257L);
+}
+
 int
 getyear()
 {

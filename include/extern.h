@@ -961,6 +961,7 @@ FDECL(fuzzymatch, (const char *, const char *, const char *, BOOLEAN_P));
 E void FDECL(init_random, (int FDECL((*fn), (int))));
 E void FDECL(reseed_random, (int FDECL((*fn), (int))));
 E time_t NDECL(getnow);
+E time_t NDECL(nle_birthday_maybe_fixed);
 E int NDECL(getyear);
 #if 0
 E char *FDECL(yymmdd, (time_t));
