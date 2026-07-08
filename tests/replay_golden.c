@@ -300,8 +300,16 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
             CHECK_OBS_INIT(&obs);
             uint64_t h = obs_hash(&obs);
             if (keep_going) {
-                if (h != want)
+                if (h != want) {
                     kg_mismatches++;
+                    /* first 40 in full; the tail is usually one fork
+                       cascading, not new information */
+                    if (kg_mismatches <= 40)
+                        printf("kg-mismatch step %ld action %d got %016llx "
+                               "want %016llx\n",
+                               steps, action, (unsigned long long) h,
+                               (unsigned long long) want);
+                }
                 if (obs.done)
                     break;
                 continue;

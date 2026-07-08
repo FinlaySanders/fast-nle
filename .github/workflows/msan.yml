@@ -70,3 +70,52 @@ jobs:
         with:
           name: msan-replay-log
           path: /tmp/msan_replay.log
+
+  # Hypothesis probe: the residual hash flickers are ADDRESS-dependent, not
+  # uninitialized (MSan certified every obs byte initialized while flickers
+  # occurred). If a pointer value leaks into game state, per-process ASLR
+  # makes flicker steps differ between two runs of the same binary, and
+  # disabling ASLR (setarch -R) makes them identical.
+  aslr-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install deps
+        run: sudo apt-get update && sudo apt-get install -y clang bison flex
+      - name: Build plain (no sanitizer)
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          cmake --build build --target nethack dat -j "$(nproc)"
+          clang -O2 -g -Iinclude \
+            -Ibuild/_deps/deboost_context-src/include \
+            tests/replay_golden.c -ldl -o build/replay_golden
+      - name: Replay 7010 4x (2x ASLR on, 2x off)
+        run: |
+          g=tests/msan/aa_seed7010_7010.golden
+          for i in 1 2; do
+            NLE_REPLAY_KEEP_GOING=1 build/replay_golden \
+              build/libnethack.so build/dat $g \
+              | grep -E "kg-mismatch|KEEP-GOING" > /tmp/aslr_on_$i.txt
+          done
+          for i in 1 2; do
+            NLE_REPLAY_KEEP_GOING=1 setarch "$(uname -m)" -R \
+              build/replay_golden build/libnethack.so build/dat $g \
+              | grep -E "kg-mismatch|KEEP-GOING" > /tmp/aslr_off_$i.txt
+          done
+          echo "=== ASLR ON run 1 ==="; cat /tmp/aslr_on_1.txt
+          echo "=== ASLR ON run 2 ==="; cat /tmp/aslr_on_2.txt
+          echo "=== ASLR OFF run 1 ==="; cat /tmp/aslr_off_1.txt
+          echo "=== ASLR OFF run 2 ==="; cat /tmp/aslr_off_2.txt
+          echo "=== verdict ==="
+          if cmp -s /tmp/aslr_on_1.txt /tmp/aslr_on_2.txt; then
+            echo "ASLR-on runs IDENTICAL"; else echo "ASLR-on runs DIFFER"; fi
+          if cmp -s /tmp/aslr_off_1.txt /tmp/aslr_off_2.txt; then
+            echo "ASLR-off runs IDENTICAL"; else echo "ASLR-off runs DIFFER"; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: aslr-probe-logs
+          path: /tmp/aslr_*.txt
