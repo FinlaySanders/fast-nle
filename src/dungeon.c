@@ -25,10 +25,23 @@ struct proto_dungeon {
     int n_brs;  /* number of tmpbranch entries */
 };
 
-int n_dgns;     /* number of dungeons (also used in mklev.c and do.c) */
-static branch *branches = (branch *) 0;        /* dungeon branch list */
-
-mapseen *mapseenchn = (struct mapseen *) 0; /*DUNGEON_OVERVIEW*/
+/* Per-env dungeon graph DIRECT in nle_ctx_t. Was process-
+ * global mutable state; with N envs in one process, env A's branch list
+ * and dungeon count were visible to env B's level transitions, causing
+ * save_room(r=NULL) when env B walked env A's half-built dungeon graph.
+ *
+ * The bare global is renamed to `dgn_branches` at access sites because
+ * the preprocessor can't tell the bare identifier from `struct tmpdungeon
+ * ::branches` (a field name in dgn_file.h). For n_dgns and mapseenchn,
+ * the bare identifier is unique, so we can macro it directly. */
+#include "nle.h"
+struct nle_globals; /* forward */
+#define n_dgns        (nh_cur->g_dungeon_c_n_dgns)
+#define dgn_branches  (*(branch **)&nh_cur->g_dungeon_c_branches_p)
+#define mapseenchn    (*(mapseen **)&nh_cur->g_dungeon_c_mapseenchn_p)
+/* Add_branch branch_id counter — monotonic IDs would otherwise
+ * collide across envs. Reuse pre-existing Cluster-AT-C s_branch_id_ctr slot. */
+#define branch_id     (nh_cur->g_dungeon_c_branch_id_ctr)
 
 struct lchoice {
     int idx;
@@ -112,7 +125,7 @@ dumpit()
         getchar();
     }
     fprintf(stderr, "\nBranches:\n");
-    for (br = branches; br; br = br->next) {
+    for (br = dgn_branches; br; br = br->next) {
         fprintf(stderr, "%d: %s, end1 %d %d, end2 %d %d, %s\n", br->id,
                 br->type == BR_STAIR
                     ? "stair"
@@ -149,11 +162,11 @@ boolean perform_write, free_data;
         bwrite(fd, (genericptr_t) &dungeon_topology, sizeof dungeon_topology);
         bwrite(fd, (genericptr_t) tune, sizeof tune);
 
-        for (count = 0, curr = branches; curr; curr = curr->next)
+        for (count = 0, curr = dgn_branches; curr; curr = curr->next)
             count++;
         bwrite(fd, (genericptr_t) &count, sizeof(count));
 
-        for (curr = branches; curr; curr = curr->next)
+        for (curr = dgn_branches; curr; curr = curr->next)
             bwrite(fd, (genericptr_t) curr, sizeof(branch));
 
         count = maxledgerno();
@@ -172,11 +185,11 @@ boolean perform_write, free_data;
     }
 
     if (free_data) {
-        for (curr = branches; curr; curr = next) {
+        for (curr = dgn_branches; curr; curr = next) {
             next = curr->next;
             free((genericptr_t) curr);
         }
-        branches = 0;
+        dgn_branches = 0;
         for (curr_ms = mapseenchn; curr_ms; curr_ms = next_ms) {
             next_ms = curr_ms->next;
             if (curr_ms->custom)
@@ -203,7 +216,7 @@ int fd;
     mread(fd, (genericptr_t) &dungeon_topology, sizeof dungeon_topology);
     mread(fd, (genericptr_t) tune, sizeof tune);
 
-    last = branches = (branch *) 0;
+    last = dgn_branches = (branch *) 0;
 
     mread(fd, (genericptr_t) &count, sizeof(count));
     for (i = 0; i < count; i++) {
@@ -213,7 +226,7 @@ int fd;
         if (last)
             last->next = curr;
         else
-            branches = curr;
+            dgn_branches = curr;
         last = curr;
     }
 
@@ -299,7 +312,7 @@ struct proto_dungeon *pd;
         branch *br;
         const char *dnam;
 
-        for (br = branches; br; br = br->next) {
+        for (br = dgn_branches; br; br = br->next) {
             dnam = dungeons[br->end2.dnum].dname;
             if (!strcmpi(dnam, s)
                 || (!strncmpi(dnam, "The ", 4) && !strcmpi(dnam + 4, s)))
@@ -399,7 +412,7 @@ struct proto_dungeon *pd;
     do {
         if (++i >= num)
             i = 0;
-        for (curr = branches; curr; curr = curr->next)
+        for (curr = dgn_branches; curr; curr = curr->next)
             if ((curr->end1.dnum == dnum && curr->end1.dlevel == base + i)
                 || (curr->end2.dnum == dnum && curr->end2.dlevel == base + i))
                 break;
@@ -441,7 +454,7 @@ boolean extract_first;
     long new_val, curr_val, prev_val;
 
     if (extract_first) {
-        for (prev = 0, curr = branches; curr; prev = curr, curr = curr->next)
+        for (prev = 0, curr = dgn_branches; curr; prev = curr, curr = curr->next)
             if (curr == new_branch)
                 break;
 
@@ -450,7 +463,7 @@ boolean extract_first;
         if (prev)
             prev->next = curr->next;
         else
-            branches = curr->next;
+            dgn_branches = curr->next;
     }
     new_branch->next = (branch *) 0;
 
@@ -466,7 +479,7 @@ boolean extract_first;
     prev = (branch *) 0;
     prev_val = -1;
     new_val = branch_val(new_branch);
-    for (curr = branches; curr;
+    for (curr = dgn_branches; curr;
          prev_val = curr_val, prev = curr, curr = curr->next) {
         curr_val = branch_val(curr);
         if (prev_val < new_val && new_val <= curr_val)
@@ -476,8 +489,8 @@ boolean extract_first;
         new_branch->next = curr;
         prev->next = new_branch;
     } else {
-        new_branch->next = branches;
-        branches = new_branch;
+        new_branch->next = dgn_branches;
+        dgn_branches = new_branch;
     }
 }
 
@@ -488,7 +501,7 @@ int dgn;
 int child_entry_level;
 struct proto_dungeon *pd;
 {
-    static int branch_id = 0;
+    /* Branch_id migrated to nh_cur->g_dungeon_c_branch_id_ctr. */
     int branch_num;
     branch *new_branch;
 
@@ -678,9 +691,9 @@ struct proto_dungeon *pd;
     return FALSE;
 }
 
-/* Was 'd_level *lev_spec' initialized with &air_level etc. — addresses
- * inside the migrated dungeon_topology, no longer compile-time constants.
- * The table stores an enum index; lev_map_spec() resolves it at runtime. */
+/* Stage 6': &air_level etc. are no longer compile-time constants
+ * (dungeon_topology lives in nle_ctx_t per-env). The table stores an
+ * enum index; lev_map_spec() resolves to the live address at runtime. */
 enum lev_map_idx {
     LM_AIR, LM_ASMODEUS, LM_ASTRAL, LM_BAALZ, LM_BIGRM, LM_CASTLE,
     LM_EARTH, LM_FAKEWIZ1, LM_FIRE, LM_JUIBLEX, LM_KNOX, LM_MEDUSA,
@@ -689,10 +702,11 @@ enum lev_map_idx {
     LM_QSTART, LM_QLOCATE, LM_NEMESIS,
     LM_NONE
 };
-static const struct level_map {
+struct level_map {
     const char *lev_name;
     enum lev_map_idx lev_idx;
-} level_map[] = { { "air", LM_AIR },
+};
+static const struct level_map level_map[] = { { "air", LM_AIR },
                   { "asmodeus", LM_ASMODEUS },
                   { "astral", LM_ASTRAL },
                   { "baalz", LM_BAALZ },
@@ -719,10 +733,8 @@ static const struct level_map {
                   { X_LOCATE, LM_QLOCATE },
                   { X_GOAL, LM_NEMESIS },
                   { "", LM_NONE } };
-
 static d_level *
-lev_map_spec(idx)
-enum lev_map_idx idx;
+lev_map_spec(enum lev_map_idx idx)
 {
     switch (idx) {
     case LM_AIR:       return &air_level;
@@ -751,8 +763,9 @@ enum lev_map_idx idx;
     case LM_QSTART:    return &qstart_level;
     case LM_QLOCATE:   return &qlocate_level;
     case LM_NEMESIS:   return &nemesis_level;
-    default:           return (d_level *) 0;
+    case LM_NONE:      break;
     }
+    return (d_level *) 0;
 }
 
 /* initialize the "dungeon" structs */
@@ -763,7 +776,7 @@ init_dungeons()
     register int i, cl = 0, cb = 0;
     register s_level *x;
     struct proto_dungeon pd;
-    const struct level_map *lev_map;
+    struct level_map *lev_map;
     struct version_info vers_info;
 
     pd.n_levs = pd.n_brs = 0;
@@ -822,7 +835,7 @@ init_dungeons()
             && (pd.tmpdungeon[i].chance <= rn2(100))) {
             int j;
 
-            /* skip over any levels or branches */
+            /* skip over any levels or dgn_branches */
             for (j = 0; j < pd.tmpdungeon[i].levels; j++)
                 Fread((genericptr_t) &pd.tmplevel[cl],
                       sizeof(struct tmplevel), 1, dgn_file);
@@ -953,7 +966,7 @@ init_dungeons()
 
         pd.n_brs += pd.tmpdungeon[i].branches;
         if (pd.n_brs > BRANCH_LIMIT)
-            panic("init_dungeon: too many branches");
+            panic("init_dungeon: too many dgn_branches");
         for (; cb < pd.n_brs; cb++)
             Fread((genericptr_t) &pd.tmpbranch[cb], sizeof(struct tmpbranch),
                   1, dgn_file);
@@ -987,7 +1000,7 @@ init_dungeons()
                  * its entrance (end1) has a bogus dnum, namely
                  * n_dgns.
                  */
-                for (br = branches; br; br = br->next)
+                for (br = dgn_branches; br; br = br->next)
                     if (on_level(&br->end2, &knox_level))
                         break;
 
@@ -1172,7 +1185,7 @@ d_level *lev;
 {
     branch *curr;
 
-    for (curr = branches; curr; curr = curr->next) {
+    for (curr = dgn_branches; curr; curr = curr->next) {
         if (on_level(lev, &curr->end1) || on_level(lev, &curr->end2))
             return curr;
     }
@@ -1187,7 +1200,7 @@ d_level *lev;
     dungeon *dptr = &dungeons[lev->dnum];
     /*
      * FIXME:  this misclassifies a single level branch reached via stairs
-     * from below.  Saving grace is that no such branches currently exist.
+     * from below.  Saving grace is that no such dgn_branches currently exist.
      */
     return (boolean) (dptr->num_dunlevs > 1
                       && dptr->entry_lev == dptr->num_dunlevs);
@@ -1218,7 +1231,7 @@ boolean at_stairs;
 {
     if (at_stairs && u.ux == sstairs.sx && u.uy == sstairs.sy) {
         /* Taking an up dungeon branch. */
-        /* KMH -- Upwards branches are okay if not level 1 */
+        /* KMH -- Upwards dgn_branches are okay if not level 1 */
         /* (Just make sure it doesn't go above depth 1) */
         if (!u.uz.dnum && u.uz.dlevel == 1 && !u.uhave.amulet)
             done(ESCAPED);
@@ -1432,7 +1445,7 @@ int levnum;
                  * This assumes that end2 is always the "child" and it is
                  * unique.
                  */
-                for (br = branches; br; br = br->next)
+                for (br = dgn_branches; br; br = br->next)
                     if (br->end2.dnum == dgn)
                         break;
                 if (!br)
@@ -1484,7 +1497,7 @@ const char *s;
     dnum = dname_to_dnum(s);
 
     /* Find the branch that connects to dungeon i's branch. */
-    for (br = branches; br; br = br->next)
+    for (br = dgn_branches; br; br = br->next)
         if (br->end2.dnum == dnum)
             break;
 
@@ -1777,10 +1790,10 @@ struct dungeon *dptr;
     branch *br;
     int idx = (int) (dptr - dungeons);
 
-    /* if other floating branches are added, this will need to change */
+    /* if other floating dgn_branches are added, this will need to change */
     if (idx != knox_level.dnum)
         return FALSE;
-    for (br = branches; br; br = br->next)
+    for (br = dgn_branches; br; br = br->next)
         if (br->end1.dnum == n_dgns && br->end2.dnum == idx)
             return TRUE;
     return FALSE;
@@ -1861,7 +1874,7 @@ d_level *dlev;
     return u.uz.dnum == dlev->dnum && u.uz.dlevel == dlev->dlevel ? '*' : ' ';
 }
 
-/* Print all child branches between the lower and upper bounds. */
+/* Print all child dgn_branches between the lower and upper bounds. */
 STATIC_OVL void
 print_branch(win, dnum, lower_bound, upper_bound, bymenu, lchoices_p)
 winid win;
@@ -1875,7 +1888,7 @@ struct lchoice *lchoices_p;
     char buf[BUFSZ];
 
     /* This assumes that end1 is the "parent". */
-    for (br = branches; br; br = br->next) {
+    for (br = dgn_branches; br; br = br->next) {
         if (br->end1.dnum == dnum && lower_bound < br->end1.dlevel
             && br->end1.dlevel <= upper_bound) {
             Sprintf(buf, "%c %s to %s: %d",
@@ -1950,7 +1963,7 @@ xchar *rdgn;
             if (slev->dlevel.dnum != i)
                 continue;
 
-            /* print any branches before this level */
+            /* print any dgn_branches before this level */
             print_branch(win, i, last_level, slev->dlevel.dlevel, bymenu,
                          &lchoices);
 
@@ -1967,7 +1980,7 @@ xchar *rdgn;
 
             last_level = slev->dlevel.dlevel;
         }
-        /* print branches after the last special level */
+        /* print dgn_branches after the last special level */
         print_branch(win, i, last_level, MAXLEVEL, bymenu, &lchoices);
     }
 
@@ -1991,12 +2004,12 @@ xchar *rdgn;
         return 0;
     }
 
-    /* Print out floating branches (if any). */
-    for (first = TRUE, br = branches; br; br = br->next) {
+    /* Print out floating dgn_branches (if any). */
+    for (first = TRUE, br = dgn_branches; br; br = br->next) {
         if (br->end1.dnum == n_dgns) {
             if (first) {
                 putstr(win, 0, "");
-                putstr(win, 0, "Floating branches");
+                putstr(win, 0, "Floating dgn_branches");
                 first = FALSE;
             }
             Sprintf(buf, "   %s to %s", br_string(br->type),
@@ -2064,8 +2077,8 @@ d_level *dest;
     if (source->dnum == dest->dnum)
         return;
 
-    /* we only care about forward branches */
-    for (br = branches; br; br = br->next) {
+    /* we only care about forward dgn_branches */
+    for (br = dgn_branches; br; br = br->next) {
         if (on_level(source, &br->end1) && on_level(dest, &br->end2))
             break;
         if (on_level(source, &br->end2) && on_level(dest, &br->end1))
@@ -2078,7 +2091,7 @@ d_level *dest;
 
     if ((mptr = find_mapseen(source)) != 0) {
         if (mptr->br && br != mptr->br)
-            impossible("Two branches on the same level?");
+            impossible("Two dgn_branches on the same level?");
         mptr->br = br;
     } else {
         impossible("Can't note branch for unseen level (%d, %d)",
@@ -2245,7 +2258,7 @@ mapseen *mptr;
     branch *curr;
     int brindx;
 
-    for (brindx = 0, curr = branches; curr; curr = curr->next, ++brindx)
+    for (brindx = 0, curr = dgn_branches; curr; curr = curr->next, ++brindx)
         if (curr == mptr->br)
             break;
     bwrite(fd, (genericptr_t) &brindx, sizeof brindx);
@@ -2271,7 +2284,7 @@ int fd;
     load = (mapseen *) alloc(sizeof *load);
 
     mread(fd, (genericptr_t) &branchnum, sizeof branchnum);
-    for (brindx = 0, curr = branches; curr; curr = curr->next, ++brindx)
+    for (brindx = 0, curr = dgn_branches; curr; curr = curr->next, ++brindx)
         if (brindx == branchnum)
             break;
     load->br = curr;
@@ -2452,6 +2465,16 @@ mapseen *mptr;
 void
 recalc_mapseen()
 {
+    /* exp_039: recalc_mapseen was ~6% of user CPU at iter-5 puffer N=128.
+     * It updates the player's "discovered rooms/features" annotations used
+     * by the in-game overview map and travel-by-click — not consumed by
+     * the RL agent (the observation gets chars/glyphs from level.locations
+     * directly via fill_obs). Skip entirely under the RL window-port.
+     * If a future caller needs it (e.g., for replay rendering), gate via
+     * !iflags.status_updates instead. */
+    if (!iflags.status_updates)
+        return;
+    {
     mapseen *mptr;
     struct monst *mtmp;
     struct cemetery *bp, **bonesaddr;
@@ -2706,6 +2729,7 @@ recalc_mapseen()
             bp->bonesknown = TRUE;
             mptr->mflags.knownbones = 1;
         }
+    } /* exp_039: close gated-block */
 }
 
 /*ARGUSED*/
@@ -3105,7 +3129,7 @@ boolean printdun;
         putstr(win, 0, buf);
     }
 
-    /* print out branches */
+    /* print out dgn_branches */
     if (mptr->br) {
         Sprintf(buf, "%s%s to %s", PREFIX, br_string2(mptr->br),
                 dungeons[mptr->br->end2.dnum].dname);

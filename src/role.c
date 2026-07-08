@@ -770,10 +770,13 @@ const struct Align aligns[] = {
 };
 
 /* Filters */
-static struct {
+struct nle_rfilter {
     boolean roles[SIZE(roles)];
     short mask;
-} rfilter;
+};
+#define rfilter (*(struct nle_rfilter *) (nh_cur->nh_lazy[53] \
+        ? nh_cur->nh_lazy[53] \
+        : (nh_cur->nh_lazy[53] = calloc(1, sizeof(struct nle_rfilter)))))
 
 STATIC_DCL int NDECL(randrole_filtered);
 STATIC_DCL char *FDECL(promptsep, (char *, int));
@@ -781,7 +784,7 @@ STATIC_DCL int FDECL(role_gendercount, (int));
 STATIC_DCL int FDECL(race_alignmentcount, (int));
 
 /* used by str2XXX() */
-static char NEARDATA randomstr[] = "random";
+static const char randomstr[] = "random";
 
 boolean
 validrole(rolenum)
@@ -1486,7 +1489,7 @@ int buflen, rolenum, racenum, gendnum, alignnum;
 {
     int k, gendercount = 0, aligncount = 0;
     char buf[BUFSZ];
-    static char err_ret[] = " character's";
+    static const char err_ret[] = " character's";
     boolean donefirst = FALSE;
 
     if (!suppliedbuf || buflen < 1)

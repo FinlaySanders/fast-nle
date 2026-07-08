@@ -7,6 +7,12 @@
 
 #include "mfndpos.h"
 
+/* Notonhead per-env via nle_ctx_t (was extern boolean). */
+
+/* Pet-goal state per-env (was STATIC_VAR xchar gtyp,gx,gy). */
+#define gtyp (nh_cur->g_dogmove_c_gtyp)
+#define gx   (nh_cur->g_dogmove_c_gx)
+#define gy   (nh_cur->g_dogmove_c_gy)
 
 STATIC_DCL boolean FDECL(dog_hunger, (struct monst *, struct edog *));
 STATIC_DCL int FDECL(dog_invent, (struct monst *, struct edog *, int));
@@ -15,6 +21,8 @@ STATIC_DCL struct monst *FDECL(find_targ, (struct monst *, int, int, int));
 STATIC_OVL int FDECL(find_friends, (struct monst *, struct monst *, int));
 STATIC_DCL struct monst *FDECL(best_target, (struct monst *));
 STATIC_DCL long FDECL(score_targ, (struct monst *, struct monst *));
+STATIC_DCL boolean FDECL(creach_core, (struct monst *, XCHAR_P, XCHAR_P,
+                                       XCHAR_P, XCHAR_P, char *));
 STATIC_DCL boolean FDECL(can_reach_location, (struct monst *, XCHAR_P,
                                               XCHAR_P, XCHAR_P, XCHAR_P));
 STATIC_DCL boolean FDECL(could_reach_item, (struct monst *, XCHAR_P, XCHAR_P));
@@ -118,10 +126,10 @@ struct monst *mon;
     return (struct obj *) 0; /* don't drop anything */
 }
 
-static NEARDATA const char nofetch[] = { BALL_CLASS, CHAIN_CLASS, ROCK_CLASS,
+static const char nofetch[] = { BALL_CLASS, CHAIN_CLASS, ROCK_CLASS,
                                          0 };
 
-STATIC_VAR xchar gtyp, gx, gy; /* type and position of dog's current goal */
+/* Gtyp/gx/gy migrated to nle_ctx_t (see top of file). */
 
 STATIC_PTR void FDECL(wantdoor, (int, int, genericptr_t));
 
@@ -1284,10 +1292,18 @@ xchar nx, ny;
  * Since the maximum food distance is 5, this should never be more than 5
  * calls deep.
  */
+/* Core of can_reach_location with memoization. Whether a cell can reach
+ * (fx,fy) along a strictly-dist2-decreasing path is a pure function of the
+ * cell (and level state), so a cell that failed once fails always within
+ * one query; cells can't repeat along a path (dist2 strictly decreases), so
+ * marking a cell seen at entry never changes the result — it only removes
+ * the exponential re-exploration the memo-less version suffered on open
+ * floor (perf: was ~8% of total step time at N=1024 from dog_move alone). */
 STATIC_OVL boolean
-can_reach_location(mon, mx, my, fx, fy)
+creach_core(mon, mx, my, fx, fy, seen)
 struct monst *mon;
 xchar mx, my, fx, fy;
+char *seen; /* [COLNO*ROWNO], 1 = already explored from */
 {
     int i, j;
     int dist;
@@ -1304,6 +1320,8 @@ xchar mx, my, fx, fy;
                 continue;
             if (dist2(i, j, fx, fy) >= dist)
                 continue;
+            if (seen[i * ROWNO + j])
+                continue;
             if (IS_ROCK(levl[i][j].typ) && !passes_walls(mon->data)
                 && (!may_dig(i, j) || !tunnels(mon->data)))
                 continue;
@@ -1312,11 +1330,36 @@ xchar mx, my, fx, fy;
                 continue;
             if (!could_reach_item(mon, i, j))
                 continue;
-            if (can_reach_location(mon, i, j, fx, fy))
+            seen[i * ROWNO + j] = 1;
+            if (creach_core(mon, i, j, fx, fy, seen))
                 return TRUE;
         }
     }
     return FALSE;
+}
+
+STATIC_OVL boolean
+can_reach_location(mon, mx, my, fx, fy)
+struct monst *mon;
+xchar mx, my, fx, fy;
+{
+    char seen[COLNO * ROWNO];
+    int d2, r, ilo, ihi, jlo, jhi, i;
+
+    /* Every cell creach_core marks satisfies dist2(cell, target) <
+     * dist2(start, target), so only the window of radius
+     * ceil(sqrt(d2)) around the target needs clearing — typically a
+     * ~11x11 patch instead of the whole 80x21 map. */
+    d2 = dist2(mx, my, fx, fy);
+    for (r = 0; r * r < d2; r++)
+        ;
+    ilo = fx - r; if (ilo < 0) ilo = 0;
+    ihi = fx + r; if (ihi > COLNO - 1) ihi = COLNO - 1;
+    jlo = fy - r; if (jlo < 0) jlo = 0;
+    jhi = fy + r; if (jhi > ROWNO - 1) jhi = ROWNO - 1;
+    for (i = ilo; i <= ihi; i++)
+        (void) memset(&seen[i * ROWNO + jlo], 0, (size_t) (jhi - jlo + 1));
+    return creach_core(mon, mx, my, fx, fy, seen);
 }
 
 /* do_clear_area client */

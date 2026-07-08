@@ -5,3 +5,37 @@ nh_cur	# the per-env context pointer itself: the ONE writable symbol the design 
 windowprocs_init_state	# atomic once-only guard for the process-global windowprocs table (write-once function-pointer table, identical for every env; see windows.c choose_windows)
 mon_trace_enabled.cached	# process-level getenv("NLE_TRACE_MON") cache; debug tracing only, no game state
 rest_mon_trace_enabled.cached	# same, restore-path trace cache
+# --- NLE-layer per-env-via-dlopen-copy; migrate with the single-lib multi-env milestone ---
+nh_cur	# the per-env game-state ctx pointer (becomes the single __thread pointer)
+current_nle_ctx	# stock NLE coroutine ctx pointer (same milestone; pairs with nh_cur)
+settings	# nle_settings copy for the env; moves into nle_ctx_t with the milestone
+_ZN10nethack_rl9NetHackRL8instanceE	# winrl.cc per-env window-port object; moves into nle_ctx_t with the milestone
+_ZN10nethack_rl14win_proc_callsE	# winrl.cc debug call-stack deque; same milestone
+_ZN10nethack_rl9in_getlinE	# winrl.cc prompt flag; same milestone
+_ZN10nethack_rl14in_yn_functionE	# winrl.cc prompt flag; same milestone
+# --- process-level, write-once or identical across envs ---
+windowprocs	# window-proc function-pointer table; set once per process (guarded by windowprocs_init_state)
+winchoices	# window-system registry; ini_routine pointers written once at process init
+hup_procs	# HANGUP window-proc stub table (never used in NLE embedding)
+sysopt	# sysconf options; process-wide config, set once before any env
+configfile	# config file path string; process-level
+default_configfile	# ditto
+# --- real-terminal / process-identity state (unused in the NLE embedding) ---
+termio	# tty termios of the controlling terminal
+tc_lcl_data	# termcap local data (real terminal only)
+erase_char	# tty control chars (real terminal only)
+intr_char	# ditto
+kill_char	# ditto
+get_login_name.buf	# process user name cache
+get_unix_pw.pw	# process passwd cache
+wiz_error_flag	# wizard-mode auth latch (process user identity)
+sflock	# unix flock latch for score file
+# --- debug/diagnostic only; worst case garbled debug text, no game state ---
+ptrbuf	# fmt_ptr() rotating %p format buffers (panic/debug paths)
+ptrbufidx	# ditto
+regex_error_desc.buf	# posixregex error message scratch
+render_status.once_only	# wintty warn-once latch
+# --- third-party ---
+BZ2_crc32Table	# bzip2 CRC table (read-only after lib init)
+BZ2_rNums	# bzip2 randomization table (read-only)
+defattrs	# libtmt default attrs; written only by terminal escape parsing (tty obs cosmetic)

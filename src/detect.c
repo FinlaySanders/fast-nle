@@ -11,7 +11,7 @@
 #include "hack.h"
 #include "artifact.h"
 
-extern boolean known; /* from read.c */
+#define known (nh_cur->g_read_c_known) /* per-env; was read.c global */
 
 STATIC_DCL boolean NDECL(unconstrain_map);
 STATIC_DCL void NDECL(reconstrain_map);

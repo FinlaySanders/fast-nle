@@ -84,7 +84,7 @@ STATIC_OVL NEARDATA const char allobj[] = {
  * nh_cur->g_eat_c_force_save_hs via macro at top of file. */
 
 /* see hunger states in hack.h - texts used on bottom line */
-const char *hu_stat[] = { "Satiated", "        ", "Hungry  ", "Weak    ",
+const char *const hu_stat[] = { "Satiated", "        ", "Hungry  ", "Weak    ",
                           "Fainting", "Fainted ", "Starved " };
 
 /*

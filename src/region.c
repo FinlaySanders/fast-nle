@@ -11,9 +11,11 @@
  * structure eventually.
  */
 
-static NhRegion **regions;
-static int n_regions = 0;
-static int max_regions = 0;
+/* Per-env region storage. Was process-global + __thread —
+ * env A's gas clouds leaked into env B's effect-of-being-in-cloud check. */
+#define regions     (*(NhRegion ***)&nh_cur->g_region_c_regions_p)
+#define n_regions   (nh_cur->g_region_c_n_regions)
+#define max_regions (nh_cur->g_region_c_max_regions)
 
 #define NO_CALLBACK (-1)
 

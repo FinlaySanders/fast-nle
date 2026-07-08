@@ -6,7 +6,9 @@
 #include "hack.h"
 #include "artifact.h"
 
-STATIC_VAR NEARDATA struct obj *mon_currwep = (struct obj *) 0;
+/* Combat tick per-env (mhitu.c statics). */
+#define mon_currwep (nh_cur->g_mhitu_c_mon_currwep)
+#define dieroll     (nh_cur->g_mhitu_c_dieroll)
 
 STATIC_DCL boolean FDECL(u_slip_free, (struct monst *, struct attack *));
 STATIC_DCL int FDECL(passiveum, (struct permonst *, struct monst *,
@@ -24,7 +26,8 @@ STATIC_DCL void FDECL(hitmsg, (struct monst *, struct attack *));
 
 /* See comment in mhitm.c.  If we use this a lot it probably should be */
 /* changed to a parameter to mhitu. */
-static int dieroll;
+/* (dieroll migrated to nh_cur->g_mhitu_c_dieroll
+ * via macro at top of file; original `static int dieroll;` removed.) */
 
 STATIC_OVL void
 hitmsg(mtmp, mattk)

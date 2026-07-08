@@ -10,6 +10,11 @@
  */
 #include "hack.h"
 
+/* File-static migrated to nle_ctx_t (note British
+ * spelling 'propellor'). Defined mid-file in vanilla; macro is hoisted
+ * to TU scope per the migration pattern. */
+#define propellor (nh_cur->g_weapon_c_propellor)
+
 STATIC_DCL void FDECL(give_may_advance_msg, (int));
 STATIC_DCL boolean FDECL(could_advance, (int));
 STATIC_DCL boolean FDECL(peaked_skill, (int));
@@ -62,7 +67,7 @@ STATIC_VAR NEARDATA const char *const barehands_or_martial[] = {
                ? barehands_or_martial[martial_bonus()]  \
                : odd_skill_names[-skill_names_indices[type]])
 
-static NEARDATA const char kebabable[] = { S_XORN, S_DRAGON, S_JABBERWOCK,
+static const char kebabable[] = { S_XORN, S_DRAGON, S_JABBERWOCK,
                                            S_NAGA, S_GIANT,  '\0' };
 
 STATIC_OVL void
@@ -485,7 +490,7 @@ int x;
 }
 
 /* TODO: have monsters use aklys' throw-and-return */
-static NEARDATA const int rwep[] = {
+static const int rwep[] = {
     DWARVISH_SPEAR, SILVER_SPEAR, ELVEN_SPEAR, SPEAR, ORCISH_SPEAR, JAVELIN,
     SHURIKEN, YA, SILVER_ARROW, ELVEN_ARROW, ARROW, ORCISH_ARROW,
     CROSSBOW_BOLT, SILVER_DAGGER, ELVEN_DAGGER, DAGGER, ORCISH_DAGGER, KNIFE,
@@ -493,13 +498,13 @@ static NEARDATA const int rwep[] = {
     /* BOOMERANG, */ CREAM_PIE
 };
 
-static NEARDATA const int pwep[] = { HALBERD,       BARDICHE, SPETUM,
+static const int pwep[] = { HALBERD,       BARDICHE, SPETUM,
                                      BILL_GUISARME, VOULGE,   RANSEUR,
                                      GUISARME,      GLAIVE,   LUCERN_HAMMER,
                                      BEC_DE_CORBIN, FAUCHARD, PARTISAN,
                                      LANCE };
 
-static struct obj *propellor;
+/* propellor migrated to nh_cur->g_weapon_c_propellor. */
 
 /* select a ranged weapon for the monster */
 struct obj *
@@ -843,13 +848,9 @@ register struct monst *mon;
             newly_welded = mwelded(obj);
             obj->owornmask &= ~W_WEP;
             if (newly_welded) {
-                const char *mon_hand = mbodypart(mon, HAND);
-
-                if (bimanual(obj))
-                    mon_hand = makeplural(mon_hand);
                 pline("%s %s to %s %s!", Tobjnam(obj, "weld"),
                       is_plural(obj) ? "themselves" : "itself",
-                      s_suffix(mon_nam(mon)), mon_hand);
+                      s_suffix(mon_nam(mon)), mbodypart(mon, HAND));
                 obj->bknown = 1;
             }
         }

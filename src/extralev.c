@@ -13,14 +13,23 @@ struct rogueroom {
     xchar dx, dy;
     boolean real;
     uchar doortable;
-    int nle_room_idx; /* renamed from nroom: collides with the migrated global; only meaningful for "real" rooms */
+    int nle_room_idx; /* renamed from `nroom` for macro safety */
 };
 #define UP 1
 #define DOWN 2
 #define LEFT 4
 #define RIGHT 8
 
-static NEARDATA struct rogueroom r[3][3];
+/* Misc-2: r[3][3] migrated to nle_ctx_t.s_extralev_r.
+ * Lazy heap alloc; calloc zero-init matches the original BSS-zeroed static. */
+static struct rogueroom (*_au8_get_r(void))[3]
+{
+    if (!nh_cur->g_extralev_c_r_p)
+        nh_cur->g_extralev_c_r_p =
+            (struct rogueroom *) calloc(9, sizeof(struct rogueroom));
+    return (struct rogueroom (*)[3]) nh_cur->g_extralev_c_r_p;
+}
+#define r (_au8_get_r())
 STATIC_DCL void FDECL(roguejoin, (int, int, int, int, int));
 STATIC_DCL void FDECL(roguecorr, (int, int, int));
 STATIC_DCL void FDECL(miniwalk, (int, int));

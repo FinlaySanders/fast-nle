@@ -12,4 +12,6 @@
 #define lockptr (nh_cur->g_files_c_lockptr)
 #define wizkit (nh_cur->g_files_c_wizkit)
 #define lock (nh_cur->g_files_c_lock)
+#define chosen_symset_start (nh_cur->g_files_c_chosen_symset_start)
+#define chosen_symset_end (nh_cur->g_files_c_chosen_symset_end)
 #endif /* NH_CTX_FILE_FILES_C_H */

@@ -6,7 +6,9 @@
 #include "hack.h"
 #include "lev.h"
 
-STATIC_VAR NEARDATA struct engr *head_engr;
+/* File-static migrated to nle_ctx_t. */
+#define head_engr (nh_cur->g_engrave_c_head_engr)
+
 STATIC_DCL const char *NDECL(blengr);
 
 char *
@@ -434,7 +436,7 @@ freehand()
             || (!bimanual(uwep) && (!uarms || !uarms->cursed)));
 }
 
-static NEARDATA const char styluses[] = { ALL_CLASSES, ALLOW_NONE,
+static const char styluses[] = { ALL_CLASSES, ALLOW_NONE,
                                           TOOL_CLASS,  WEAPON_CLASS,
                                           WAND_CLASS,  GEM_CLASS,
                                           RING_CLASS,  0 };
@@ -1139,7 +1141,7 @@ doengrave()
     /* Chop engraving down to size if necessary */
     if (len > maxelen) {
         for (sp = ebuf; maxelen && *sp; sp++)
-            if (!(*sp == ' '))
+            if (*sp == ' ')
                 maxelen--;
         if (!maxelen && *sp) {
             *sp = '\0';

@@ -4,6 +4,14 @@
 
 #include "hack.h"
 
+/* Per-env prayer-in-flight state. Were three
+ * file-statics (p_aligntyp, p_trouble, p_type) set when prayer started
+ * and read when the deferred prayer_done callback fired; across envs
+ * one env's prayer could complete with another env's god. */
+#define p_aligntyp (nh_cur->g_pray_c_p_aligntyp)
+#define p_trouble  (nh_cur->g_pray_c_p_trouble)
+#define p_type     (nh_cur->g_pray_c_p_type)
+
 STATIC_PTR int NDECL(prayer_done);
 STATIC_DCL struct obj *NDECL(worst_cursed_item);
 STATIC_DCL int NDECL(in_trouble);
@@ -47,10 +55,8 @@ static const char *godvoices[] = {
     "booms out", "thunders", "rings out", "booms",
 };
 
-/* values calculated when prayer starts, and used when completed */
-static aligntyp p_aligntyp;
-static int p_trouble;
-static int p_type; /* (-1)-3: (-1)=really naughty, 3=really good */
+/* values calculated when prayer starts, and used when completed
+ * — migrated to nle_ctx_t; see macros at top of file. */
 
 #define PIOUS 20
 #define DEVOUT 14
@@ -337,7 +343,7 @@ int trouble;
     int i;
     struct obj *otmp = 0;
     const char *what = (const char *) 0;
-    static NEARDATA const char leftglow[] = "Your left ring softly glows",
+    static const char leftglow[] = "Your left ring softly glows",
                                rightglow[] = "Your right ring softly glows";
 
     switch (trouble) {
@@ -1148,7 +1154,7 @@ aligntyp g_align;
             break;
         }
         case 5: {
-            static NEARDATA const char msg[] =
+            static const char msg[] =
                 "\"and thus I grant thee the gift of %s!\"";
 
             godvoice(u.ualign.type,
@@ -1326,7 +1332,7 @@ register struct obj *otmp;
 int
 dosacrifice()
 {
-    static NEARDATA const char cloud_of_smoke[] =
+    static const char cloud_of_smoke[] =
         "A cloud of %s smoke surrounds you...";
     register struct obj *otmp;
     int value = 0, pm;

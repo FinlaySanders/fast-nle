@@ -585,7 +585,7 @@ static const menu_cmd_t default_menu_cmd_info[] = {
  * The accelerator list must be a valid C string.
  */
 #define MAX_MENU_MAPPED_CMDS 32 /* some number */
-char mapped_menu_cmds[MAX_MENU_MAPPED_CMDS + 1]; /* exported */
+#define mapped_menu_cmds (nh_cur->g_options_c_mapped_menu_cmds) /* shared with wintty.c */
 /* mapped_menu_op migrated to nle_options() */
 /* Per-env. Was __thread; OMP coroutine-resume hazard. */
 #define n_menu_mapped (nh_cur->g_options_c_n_menu_mapped)
@@ -2919,7 +2919,7 @@ boolean tinitial, tfrom_file;
             return retval;
         } else if ((op = string_for_env_opt(fullname, opts, FALSE))
                                             != empty_optstr) {
-            static char gpcoords[] = { GPCOORDS_NONE, GPCOORDS_COMPASS,
+            static const char gpcoords[] = { GPCOORDS_NONE, GPCOORDS_COMPASS,
                                        GPCOORDS_COMFULL, GPCOORDS_MAP,
                                        GPCOORDS_SCREEN, '\0' };
             char c = lowc(*op);
@@ -3441,7 +3441,7 @@ boolean tinitial, tfrom_file;
         num = 0;
         prefix_val = -1;
         while (*op && num < sizeof flags.end_disclose - 1) {
-            static char valid_settings[] = {
+            static const char valid_settings[] = {
                 DISCLOSE_PROMPT_DEFAULT_YES, DISCLOSE_PROMPT_DEFAULT_NO,
                 DISCLOSE_PROMPT_DEFAULT_SPECIAL,
                 DISCLOSE_YES_WITHOUT_PROMPT, DISCLOSE_NO_WITHOUT_PROMPT,
@@ -4630,9 +4630,9 @@ boolean dolist;
 #define OPTIONS_HEADING "NETHACKOPTIONS"
 #endif
 
-static char fmtstr_doset[] = "%s%-15s [%s]   ";
-static char fmtstr_doset_tab[] = "%s\t[%s]";
-static char n_currently_set[] = "(%d currently set)";
+#define fmtstr_doset (nh_cur->g_options_c_fmtstr_doset) /* fixup-seeded */
+static const char fmtstr_doset_tab[] = "%s\t[%s]";
+static const char n_currently_set[] = "(%d currently set)";
 
 /* doset('O' command) menu entries for compound options */
 STATIC_OVL void
@@ -4741,7 +4741,7 @@ static struct other_opts {
 int
 doset() /* changing options via menu by Per Liboriussen */
 {
-    static boolean made_fmtstr = FALSE;
+#define made_fmtstr (nh_cur->g_options_c_made_fmtstr)
     char buf[BUFSZ];
     const char *name;
     int i = 0, pass, boolcount, pick_cnt, pick_idx, opt_indx;
@@ -4995,7 +4995,7 @@ int numtotal;
     return opt_idx;
 }
 
-struct symsetentry *symset_list = 0; /* files.c will populate this with
+/* symset_list is a per-env ctx global now; files.c populates it with
                                       * list of available sets */
 
 STATIC_OVL boolean
@@ -6458,7 +6458,7 @@ const char *strval; /* up to 4*BUFSZ-1 long; only first few chars matter */
 }
 
 /* data for option_help() */
-static const char *opt_intro[] = {
+static const char *const nh_tmpl_opt_intro[10] = {
     "",
     "                 NetHack Options Help:", "",
 #define CONFIG_SLOT 3 /* fill in next value at run-time */
@@ -6476,6 +6476,9 @@ static const char *opt_intro[] = {
     (char *) 0
 };
 
+/* per-env working copy: CONFIG_SLOT gets patched per call */
+#define opt_intro (nh_cur->g_options_c_opt_intro)
+
 static const char *opt_epilog[] = {
     "",
     "Some of the options can be set only before the game is started; those",
@@ -6491,6 +6494,7 @@ option_help()
     winid datawin;
 
     datawin = create_nhwindow(NHW_TEXT);
+    memcpy(opt_intro, nh_tmpl_opt_intro, sizeof(opt_intro));
     Sprintf(buf, "Set options as OPTIONS=<options> in %s", configfile);
     opt_intro[CONFIG_SLOT] = (const char *) buf;
     for (i = 0; opt_intro[i]; i++)
@@ -6534,12 +6538,12 @@ next_opt(datawin, str)
 winid datawin;
 const char *str;
 {
-    static char *buf = 0;
+#define buf (*(char **) &nh_cur->nh_lazy[49]) /* slot 49: next_opt line buf */
     int i;
     char *s;
 
     if (!buf)
-        *(buf = (char *) alloc(BUFSZ)) = '\0';
+        *(buf = (char *) calloc(1, BUFSZ)) = '\0';
 
     if (!*str) {
         s = eos(buf);
@@ -6563,6 +6567,7 @@ const char *str;
     }
     return;
 }
+#undef buf
 
 /* Returns the fid of the fruit type; if that type already exists, it
  * returns the fid of that one; if it does not exist, it adds a new fruit

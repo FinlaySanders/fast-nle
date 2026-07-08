@@ -2130,7 +2130,7 @@ basics_enlightenment(mode, final)
 int mode UNUSED;
 int final;
 {
-    static char Power[] = "energy points (spell power)";
+    static const char Power[] = "energy points (spell power)";
     char buf[BUFSZ];
     int pw = u.uen, hp = (Upolyd ? u.mh : u.uhp),
         pwmax = u.uenmax, hpmax = (Upolyd ? u.mhmax : u.uhpmax);
@@ -6020,7 +6020,7 @@ readchar()
 STATIC_PTR int
 dotravel(VOID_ARGS)
 {
-    static char cmd[2];
+#define cmd (nh_cur->g_cmd_c_travelcmd)
     coord cc;
 
     /* [FIXME?  Supporting the ability to disable traveling via mouse
@@ -6065,6 +6065,7 @@ dotravel(VOID_ARGS)
     readchar_queue = cmd;
     return 0;
 }
+#undef cmd
 
 /*
  *   Parameter validator for generic yes/no function to prevent

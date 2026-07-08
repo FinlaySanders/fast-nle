@@ -9,6 +9,25 @@
 #include "hack.h"
 #include "dlb.h"
 
+/* Per-env pager.c state. Replaces function-local statics. */
+struct nle_pager_state {
+    char _look_buf[BUFSZ];
+    boolean _once;
+};
+static struct nle_pager_state *
+nle_pager(void)
+{
+    if (!nh_cur) return NULL;
+    struct nle_pager_state *s = (struct nle_pager_state *) nh_cur->nh_lazy[48] /* pager state */;
+    if (!s) {
+        s = (struct nle_pager_state *) calloc(1, sizeof(struct nle_pager_state));
+        nh_cur->nh_lazy[48] /* pager state */ = s;
+    }
+    return s;
+}
+#define look_buf  (nle_pager()->_look_buf)
+#define once      (nle_pager()->_once)
+
 STATIC_DCL boolean FDECL(is_swallow_sym, (int));
 STATIC_DCL int FDECL(append_str, (char *, const char *));
 STATIC_DCL void FDECL(look_at_object, (char *, int, int, int));
@@ -49,34 +68,27 @@ int c;
     return FALSE;
 }
 
-/* Append " or "+new_str to the end of buf if new_str doesn't already exist
-   as a substring of buf.  Return 1 if the string was appended, 0 otherwise.
-   It is expected that buf is of size BUFSZ. */
+/*
+ * Append new_str to the end of buf if new_str doesn't already exist as
+ * a substring of buf.  Return 1 if the string was appended, 0 otherwise.
+ * It is expected that buf is of size BUFSZ.
+ */
 STATIC_OVL int
 append_str(buf, new_str)
 char *buf;
 const char *new_str;
 {
-    static const char sep[] = " or ";
-    size_t oldlen, space_left;
- 
-    if (strstri(buf, new_str))
-        return 0; /* already present */
+    int space_left; /* space remaining in buf */
 
-    oldlen = strlen(buf);
-    if (oldlen >= BUFSZ - 1) {
-        if (oldlen > BUFSZ - 1)
-            impossible("append_str: 'buf' contains %lu characters.",
-                       (unsigned long) oldlen);
-        return 0; /* no space available */
-    }
- 
-    /* some space available, but not necessarily enough for full append */
-    space_left = BUFSZ - 1 - oldlen;  /* space remaining in buf */
-    (void) strncat(buf, sep, space_left);
-    if (space_left > sizeof sep - 1)
-        (void) strncat(buf, new_str, space_left - (sizeof sep - 1));
-    return 1; /* something was appended, possibly just part of " or " */
+    if (strstri(buf, new_str))
+        return 0;
+
+    space_left = BUFSZ - strlen(buf) - 1;
+    if (space_left < 1)
+        return 0;
+    (void) strncat(buf, " or ", space_left);
+    (void) strncat(buf, new_str, space_left - 4);
+    return 1;
 }
 
 /* shared by monster probing (via query_objlist!) as well as lookat() */
@@ -825,7 +837,6 @@ struct permonst **for_supplement;
 {
     static const char mon_interior[] = "the interior of a monster",
                       unreconnoitered[] = "unreconnoitered";
-    static char look_buf[BUFSZ];
     char prefix[BUFSZ];
     int i, alt_i, j, glyph = NO_GLYPH,
         skipped_venom = 0, found = 0; /* count of matching syms found */
@@ -1873,7 +1884,6 @@ char *cbuf;
 int
 dowhatdoes()
 {
-    static boolean once = FALSE;
     char bufr[BUFSZ];
     char q, *reslt;
 

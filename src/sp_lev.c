@@ -216,7 +216,7 @@ extern struct engr *head_engr;
 /* SpLev_Map — per-env special-level positions migrated to nle_ctx_t. */
 #define SpLev_Map (nh_cur->g_sp_lev_c_splev_map)
 
-static aligntyp ralign[3] = { AM_CHAOTIC, AM_NEUTRAL, AM_LAWFUL };
+#define ralign (nh_cur->g_sp_lev_c_ralign) /* fixup-seeded {chaos,neutral,law} */
 /* Per-env special-level bounding box (was static NEARDATA).
  * Two envs concurrently generating a special level on the same OS thread
  * would clobber the TLS box → out-of-bounds levl[][] write. */

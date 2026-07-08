@@ -5,6 +5,10 @@
 
 #include "hack.h"
 
+/* File-statics migrated to nle_ctx_t. */
+#define obj_zapped  (nh_cur->g_zap_c_obj_zapped)
+#define poly_zapped (nh_cur->g_zap_c_poly_zapped)
+
 /* Disintegration rays have special treatment; corpses are never left.
  * But the routine which calculates the damage is separate from the routine
  * which kills the monster.  The damage routine returns this cookie to
@@ -12,12 +16,10 @@
  */
 #define MAGIC_COOKIE 1000
 
-static NEARDATA boolean obj_zapped;
-static NEARDATA int poly_zapped;
+/* Notonhead per-env via nle_ctx_t (was extern boolean). */
 
-
-/* kludge to use mondied instead of killed */
-#define m_using (nh_cur->g_muse_c_m_using) /* per-env ctx */
+/* M_using per-env (was extern from muse.c). */
+#define m_using (nh_cur->g_muse_c_m_using)
 
 STATIC_DCL void FDECL(polyuse, (struct obj *, int, int));
 STATIC_DCL void FDECL(create_polymon, (struct obj *, int));
@@ -2210,7 +2212,7 @@ struct obj *otmp;
     useup(otmp);
 }
 
-static NEARDATA const char zap_syms[] = { WAND_CLASS, 0 };
+static const char zap_syms[] = { WAND_CLASS, 0 };
 
 /* 'z' command (or 'y' if numbed_pad==-1) */
 int
@@ -5227,7 +5229,7 @@ STATIC_OVL void
 wishcmdassist(triesleft)
 int triesleft;
 {
-    static NEARDATA const char *
+    static const char *
         wishinfo[] = {
   "Wish details:",
   "",

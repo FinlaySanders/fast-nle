@@ -313,13 +313,23 @@ extern const struct symdef def_warnsyms[WARNCOUNT];
 #else
 extern int currentgraphics;
 #endif /* from drawing.c */
+#ifndef NLE_OBJECTS_GLOBAL
+/* per-env ctx fields (symset options are per-env); util tools keep the
+ * plain globals from drawing.c */
+#define showsyms        (nh_cur->g_drawing_c_showsyms)
+#define primary_syms    (nh_cur->g_drawing_c_primary_syms)
+#define rogue_syms      (nh_cur->g_drawing_c_rogue_syms)
+#define ov_primary_syms (nh_cur->g_drawing_c_ov_primary_syms)
+#define ov_rogue_syms   (nh_cur->g_drawing_c_ov_rogue_syms)
+#define symset          (nh_cur->g_drawing_c_symset_store)
+#else
 extern nhsym showsyms[];
 extern nhsym primary_syms[];
 extern nhsym rogue_syms[];
 extern nhsym ov_primary_syms[];
 extern nhsym ov_rogue_syms[];
-
 extern struct symsetentry symset[NUM_GRAPHICS]; /* from drawing.c */
+#endif
 #define SYMHANDLING(ht) (symset[currentgraphics].handling == (ht))
 
 /*

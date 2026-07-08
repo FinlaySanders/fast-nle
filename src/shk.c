@@ -4433,7 +4433,7 @@ long cost;
 }
 
 /* First 4 supplied by Ronen and Tamar, remainder by development team */
-const char *Izchak_speaks[] = {
+const char *const Izchak_speaks[] = {
     "%s says: 'These shopping malls give me a headache.'",
     "%s says: 'Slow down.  Think clearly.'",
     "%s says: 'You need to take things one at a time.'",

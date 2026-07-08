@@ -19,6 +19,16 @@
 
 #include "hack.h"
 
+/* Per-env return buffer */
+#define wholebuf (nh_cur->g_dbridge_c_wholebuf)
+
+/* Misc-2: occupants[ENTITIES] migrated to
+ * nle_ctx_t.s_occupants. struct entity is forward-declared in nle.h; full
+ * definition is local to this file (below), so we use lazy heap alloc.
+ * The helper is declared (not defined) here; definition follows struct entity. */
+static struct entity *_au8_get_occupants(void);
+#define occupants (_au8_get_occupants())
+
 STATIC_DCL void FDECL(get_wall_for_db, (int *, int *));
 STATIC_DCL struct entity *FDECL(e_at, (int, int));
 STATIC_DCL void FDECL(m_to_e, (struct monst *, int, int, struct entity *));
@@ -290,7 +300,15 @@ struct entity {
 
 #define ENTITIES 2
 
-static NEARDATA struct entity occupants[ENTITIES];
+/* Misc-2: occupants[ENTITIES] now per-env on heap. */
+static struct entity *
+_au8_get_occupants(void)
+{
+    if (!nh_cur->g_dbridge_c_occupants_p)
+        nh_cur->g_dbridge_c_occupants_p =
+            (struct entity *) calloc(ENTITIES, sizeof(struct entity));
+    return nh_cur->g_dbridge_c_occupants_p;
+}
 
 STATIC_OVL
 struct entity *
@@ -379,7 +397,7 @@ E_phrase(etmp, verb)
 struct entity *etmp;
 const char *verb;
 {
-    static char wholebuf[80];
+    /* Wholebuf migrated to nle_ctx_t */
 
     Strcpy(wholebuf, is_u(etmp) ? "You" : Monnam(etmp->emon));
     if (!verb || !*verb)

@@ -39,7 +39,11 @@ E NEARDATA int nsubroom;
 E NEARDATA int occtime;
 
 #define WARNCOUNT 6 /* number of different warning levels */
+#ifndef NLE_OBJECTS_GLOBAL
+#define warnsyms (nh_cur->g_drawing_c_warnsyms) /* per-env ctx */
+#else
 E nhsym warnsyms[WARNCOUNT];
+#endif
 E NEARDATA int warn_obj_cnt; /* count of monsters meeting criteria */
 
 E int x_maze_max, y_maze_max;

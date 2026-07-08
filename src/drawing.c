@@ -17,18 +17,22 @@
 #define C(n)
 #endif
 
+#ifdef NLE_OBJECTS_GLOBAL
 struct symsetentry symset[NUM_GRAPHICS];
+#endif
 
 #ifdef NLE_OBJECTS_GLOBAL
 int currentgraphics = 0;
 #endif
 
+#ifdef NLE_OBJECTS_GLOBAL
 nhsym showsyms[SYM_MAX] = DUMMY; /* symbols to be displayed */
 nhsym primary_syms[SYM_MAX] = DUMMY;   /* primary symbols          */
 nhsym rogue_syms[SYM_MAX] = DUMMY;   /* rogue symbols           */
 nhsym ov_primary_syms[SYM_MAX] = DUMMY;   /* overides via config SYMBOL */
 nhsym ov_rogue_syms[SYM_MAX] = DUMMY;   /* overides via config ROGUESYMBOL */
 nhsym warnsyms[WARNCOUNT] = DUMMY; /* the current warning display symbols */
+#endif /* NLE_OBJECTS_GLOBAL: per-env ctx fields otherwise (see rm.h/decl.h) */
 const char invisexplain[] = "remembered, unseen, creature",
            altinvisexplain[] = "unseen creature"; /* for clairvoyance */
            
@@ -608,7 +612,7 @@ boolean name_too;
  * H_XXX macro in include/rm.h and add the name
  * to this array at the matching offset.
  */
-const char *known_handling[] = {
+const char *const known_handling[] = {
     "UNKNOWN", /* H_UNK  */
     "IBM",     /* H_IBM  */
     "DEC",     /* H_DEC  */
@@ -630,7 +634,7 @@ const char *known_handling[] = {
  *      under the case 5 sections of the same SYM_CONTROL idx switches.
  *    - add the field to clear_symsetentry()
  */
-const char *known_restrictions[] = {
+const char *const known_restrictions[] = {
     "primary", "rogue", (const char *) 0,
 };
 

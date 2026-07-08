@@ -21,11 +21,11 @@ jobs:
       - name: Build engine + data
         run: cmake --build build --target nethack dat -j "$(nproc)"
 
-      # Oracle (a), transitional form: no NEW mutable globals vs baseline.
-      # The migration shrinks tools/global_baseline.txt monotonically; once
-      # it's empty, switch this to the strict whitelist gate.
-      - name: Check no new mutable globals (ratchet)
-        run: tools/check_no_globals.sh --ratchet build/libnethack.so
+      # Oracle (a), strict form: every writable symbol in the library must
+      # be in tools/global_whitelist.txt with a justification. The migration
+      # is complete; any new global fails CI.
+      - name: Check no mutable globals (strict)
+        run: tools/check_no_globals.sh build/libnethack.so
 
       # Oracle (b): golden trajectories recorded from stock NLE must replay
       # bit-identically. Any engine change that alters game behavior fails

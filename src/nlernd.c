@@ -4,13 +4,8 @@
 #include <string.h>
 #include <time.h>
 
-/* See rng.c. */
-struct rnglist_t {
-    int FDECL((*fn), (int) );
-    boolean init;
-    isaac64_ctx rng_state;
-};
-extern struct rnglist_t rnglist[];
+/* See rnd.c: per-env RNG state accessors. */
+extern isaac64_ctx *FDECL(nle_rng_state, (int));
 extern int FDECL(whichrng, (int FDECL((*fn), (int) )));
 
 /* See hacklib.c. */
@@ -52,20 +47,20 @@ init_random(int FDECL((*fn), (int) ))
 /* Base LGEN RNG state, initialised via the seed &
    used in turn to sample seed values for the RNGs
    for each dungeon. */
-static struct isaac64_ctx nle_lgen_base;
+#define nle_lgen_base (nh_cur->g_nlernd_c_lgen_base)
 
 /* RNG States for level generation, one for each dungeon */
-static struct isaac64_ctx nle_lgen_state[NLE_NUM_DUNGEONS];
+#define nle_lgen_state (nh_cur->g_nlernd_c_lgen_state)
 
 /* State of the NetHack CORE RNG, used to remember what
    it was before we created the level and then restored
    after the level is ready. This allows for randomness
    during exploration / combat in-level. */
-static struct isaac64_ctx nle_core_state;
+#define nle_core_state (nh_cur->g_nlernd_c_core_state)
 
 /* Some flags to help manage the lgen seed */
-static bool lgen_initialised = false;
-static bool lgen_active = false;
+#define lgen_initialised (nh_cur->g_nlernd_c_lgen_initialised)
+#define lgen_active (nh_cur->g_nlernd_c_lgen_active)
 
 /* Seeding function to initialise a fixed-level RNG state.
    Borrowed from init_isaac64 in NetHack's rnd.c */
@@ -111,10 +106,10 @@ nle_swap_to_lgen(int dungeon_num)
         int core_rng = whichrng(rn2);
 
         /* stash the current core state */
-        nle_core_state = rnglist[core_rng].rng_state;
+        nle_core_state = *nle_rng_state(core_rng);
 
         /* copy the current lgen state */
-        rnglist[core_rng].rng_state = nle_lgen_state[dungeon_num];
+        *nle_rng_state(core_rng) = nle_lgen_state[dungeon_num];
 
         /* since we want nle_swap_to_lgen and swap_to_core to be
            called in the correct sequence we ignore subsequent
@@ -130,10 +125,10 @@ nle_swap_to_core(int dungeon_num)
         int core_rng = whichrng(rn2);
 
         /* stash the current lgen state */
-        nle_lgen_state[dungeon_num] = rnglist[core_rng].rng_state;
+        nle_lgen_state[dungeon_num] = *nle_rng_state(core_rng);
 
         /* restore the core state */
-        rnglist[core_rng].rng_state = nle_core_state;
+        *nle_rng_state(core_rng) = nle_core_state;
 
         /* since we want nle_swap_to_lgen and swap_to_core to be
            called in the correct sequence we ignore subsequent

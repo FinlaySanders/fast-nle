@@ -38,7 +38,7 @@
  *              @...X   +4
  *
  */
-char circle_data[] = {
+const char circle_data[] = {
     /*  0*/ 1,  1,
     /*  2*/ 2,  2,  1,
     /*  5*/ 3,  3,  2,  1,
@@ -61,7 +61,7 @@ char circle_data[] = {
  * These are the starting indexes into the circle_data[] array for a
  * circle of a given radius.
  */
-char circle_start[] = {
+const char circle_start[] = {
     /*  */ 0, /* circles of radius zero are not used */
     /* 1*/ 0,
     /* 2*/ 2,
@@ -529,7 +529,7 @@ int control;
     register int col;  /* inner loop counter */
     register struct rm *lev; /* pointer to current pos */
     struct rm *flev; /* pointer to position in "front" of current pos */
-    extern unsigned char seenv_matrix[3][3]; /* from display.c */
+    extern const unsigned char seenv_matrix[3][3]; /* from display.c */
     /* Colbump migrated to nle_ctx_t */
     unsigned char *sv;                       /* ptr to seen angle bits */
     int oldseenv;                            /* previous seenv value */

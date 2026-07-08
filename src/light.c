@@ -42,14 +42,17 @@
 #define LSF_SHOW 0x1        /* display the light source */
 #define LSF_NEEDS_FIXUP 0x2 /* need oid fixup */
 
-static light_source *light_base = 0;
+/* Per-env (not __thread) light source list. Single-threaded
+ * vecenv: env A's lights leaked into env B's vision_recalc → vision
+ * recursion would read stale light data → corruption. */
+#define light_base (*(light_source **)&nh_cur->g_light_c_light_base)
 
 STATIC_DCL void FDECL(write_ls, (int, light_source *));
 STATIC_DCL int FDECL(maybe_write_ls, (int, int, BOOLEAN_P));
 
 /* imported from vision.c, for small circles */
-extern char circle_data[];
-extern char circle_start[];
+extern const char circle_data[];
+extern const char circle_start[];
 
 /* Create a new light source.  */
 void

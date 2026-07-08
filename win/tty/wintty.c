@@ -72,7 +72,7 @@ extern short glyph2tile[];
 #define HUPSKIP_RESULT(RES) /*empty*/
 #endif /* ?HANGUP_HANDLING */
 
-extern char mapped_menu_cmds[]; /* From options.c */
+/* mapped_menu_cmds: per-env ctx (see options.c) */
 
 /* Interface definition, for windows.c — read-only fn-ptr table. */
 const struct window_procs tty_procs = {
@@ -193,8 +193,8 @@ nle_wintty(void)
 #endif
 #endif
 
-static char winpanicstr[] = "Bad window id %d";
-char defmorestr[] = "--More--";
+static const char winpanicstr[] = "Bad window id %d";
+const char defmorestr[] = "--More--";
 
 #ifdef CLIPPING
 #if defined(USE_TILES) && defined(MSDOS)
@@ -2048,7 +2048,7 @@ struct WinDesc *cw;
             Strcat(resp, " ");                  /* Next page or end */
             Strcat(resp, "0123456789\033\n\r"); /* Counts, quit */
             Strcat(resp, gacc);                 /* Group accelerators */
-            Strcat(resp, mapped_menu_cmds);
+            Strcat(resp, nh_cur->g_options_c_mapped_menu_cmds);
 
             if (cw->npages > 1)
                 Sprintf(cw->morestr, "(%d of %d)", curr_page + 1,

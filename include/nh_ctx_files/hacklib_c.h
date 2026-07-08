@@ -8,4 +8,6 @@
 #define datestr (nh_cur->g_hacklib_c_datestr)
 #define visctrl_nbuf (nh_cur->g_hacklib_c_visctrl_nbuf)
 #define visctrl_bufs (nh_cur->g_hacklib_c_visctrl_bufs)
+#define s_suffix_buf (nh_cur->g_hacklib_c_s_suffix_buf)
+#define sitoa_buf (nh_cur->g_hacklib_c_sitoa_buf)
 #endif /* NH_CTX_FILE_HACKLIB_C_H */

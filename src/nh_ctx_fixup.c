@@ -22,4 +22,17 @@ nh_ctx_fixup(struct nh_ctx *nh)
      * = WIN_ERR; */
     nh->g_invent_c_lastinvnr = 51;
     nh->g_invent_c_cached_pickinv_win = WIN_ERR;
+
+    /* rnd.c: static unsigned seed = 1; (rn2_on_display_rng's non-ISAAC
+     * fallback LCG must not start at 0) */
+    nh->g_rnd_c_rn2disprng_seed = 1;
+
+    /* options.c: static char fmtstr_doset[] = "%s%-15s [%s]   "; */
+    strcpy(nh->g_options_c_fmtstr_doset, "%s%-15s [%s]   ");
+
+    /* sp_lev.c: static aligntyp ralign[3] = {chaotic, neutral, lawful};
+     * (values shuffled per special level) */
+    nh->g_sp_lev_c_ralign[0] = AM_CHAOTIC;
+    nh->g_sp_lev_c_ralign[1] = AM_NEUTRAL;
+    nh->g_sp_lev_c_ralign[2] = AM_LAWFUL;
 }

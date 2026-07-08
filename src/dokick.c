@@ -9,11 +9,30 @@
     (martial_bonus() || is_bigfoot(youmonst.data) \
      || (uarmf && uarmf->otyp == KICKING_BOOTS))
 
-static NEARDATA struct rm *maploc, nowhere;
-static NEARDATA const char *gate_str;
+/* Per-env dokick.c state. maploc / nowhere / gate_str bundled into one struct. */
+struct nle_dokick_state {
+    struct rm *_maploc;
+    struct rm  _nowhere;
+    const char *_gate_str;
+};
+static struct nle_dokick_state *
+nle_dokick(void)
+{
+    if (!nh_cur) return NULL;
+    struct nle_dokick_state *s = (struct nle_dokick_state *) nh_cur->nh_lazy[43];
+    if (!s) {
+        s = (struct nle_dokick_state *) calloc(1, sizeof(struct nle_dokick_state));
+        nh_cur->nh_lazy[43] = s;
+    }
+    return s;
+}
+#define maploc   (nle_dokick()->_maploc)
+#define nowhere  (nle_dokick()->_nowhere)
+#define gate_str (nle_dokick()->_gate_str)
 
 /* kickedobj (decl.c) tracks a kicked object until placed or destroyed */
 
+/* Notonhead per-env via nle_ctx_t (was extern boolean). */
 
 STATIC_DCL void FDECL(kickdmg, (struct monst *, BOOLEAN_P));
 STATIC_DCL boolean FDECL(maybe_kick_monster, (struct monst *,
@@ -654,7 +673,7 @@ xchar x, y;
             kickedobj = splitobj(kickedobj, 1L);
         } else {
             if (rn2(20)) {
-                static NEARDATA const char *const flyingcoinmsg[] = {
+                static const char *const flyingcoinmsg[] = {
                     "scatter the coins", "knock coins all over the place",
                     "send coins flying in all directions",
                 };

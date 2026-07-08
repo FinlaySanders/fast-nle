@@ -1129,7 +1129,8 @@ rl_update_positionbar(char *chrs)
 
 } // namespace nethack_rl
 
-struct window_procs rl_procs = {
+extern const struct window_procs rl_procs; /* C++ const needs explicit extern linkage */
+const struct window_procs rl_procs = {
     "rl",
     (WC_COLOR | WC_HILITE_PET | WC_INVERSE | WC_EIGHT_BIT_IN
      | WC_PERM_INVENT),

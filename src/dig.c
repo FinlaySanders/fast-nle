@@ -5,7 +5,8 @@
 
 #include "hack.h"
 
-static NEARDATA boolean did_dig_msg;
+/* File-static migrated to nle_ctx_t. */
+#define did_dig_msg (nh_cur->g_dig_c_did_dig_msg)
 
 STATIC_DCL boolean NDECL(rm_waslit);
 STATIC_DCL void FDECL(mkcavepos,

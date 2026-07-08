@@ -5,14 +5,15 @@
 
 #include "hack.h"
 
+/* File-static migrated to nle_ctx_t.
+ * non-null when teleporting via having read this scroll. */
+#define telescroll (nh_cur->g_teleport_c_telescroll)
+
 STATIC_DCL boolean FDECL(tele_jump_ok, (int, int, int, int));
 STATIC_DCL boolean FDECL(teleok, (int, int, BOOLEAN_P));
 STATIC_DCL void NDECL(vault_tele);
 STATIC_DCL boolean FDECL(rloc_pos_ok, (int, int, struct monst *));
 STATIC_DCL void FDECL(mvault_tele, (struct monst *));
-
-/* non-null when teleporting via having read this scroll */
-STATIC_VAR struct obj *telescroll = 0;
 
 /*
  * Is (x,y) a good position of mtmp?  If mtmp is NULL, then is (x,y) good

@@ -66,7 +66,20 @@ extern FILE *FDECL(fopen_datafile, (const char *, const char *, int));
  */
 
 #define MAX_LIBS 4
+#ifdef NLE_OBJECTS_GLOBAL
+/* util `dlb` binary: plain process statics */
 static library dlb_libs[MAX_LIBS];
+static boolean dlb_initialized_store = FALSE;
+#define dlb_initialized dlb_initialized_store
+#else
+/* libnethack: per-env open data-library handles (each env has its own
+ * nhdat FILE*, so concurrent envs can't race on seek/read). Helpers live
+ * in src/nle_dlbstate.c which can see struct nh_ctx. */
+extern library *nle_dlb_libs(void);
+extern boolean *nle_dlb_initialized(void);
+#define dlb_libs (nle_dlb_libs())
+#define dlb_initialized (*nle_dlb_initialized())
+#endif
 
 STATIC_DCL boolean FDECL(readlibdir, (library * lp));
 STATIC_DCL boolean FDECL(find_file, (const char *name, library **lib,
@@ -453,7 +466,6 @@ const dlb_procs_t rsrc_dlb_procs = { rsrc_dlb_init,  rsrc_dlb_cleanup,
 #define do_dlb_ftell (*dlb_procs->dlb_ftell_proc)
 
 static const dlb_procs_t *dlb_procs;
-static boolean dlb_initialized = FALSE;
 
 boolean
 dlb_init()

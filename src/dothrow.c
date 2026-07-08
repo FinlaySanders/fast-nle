@@ -7,6 +7,10 @@
 
 #include "hack.h"
 
+/* Function-local statics migrated to nle_ctx_t */
+#define lastmovetime  (nh_cur->g_dothrow_c_breakobj_lastmovetime)
+#define peaceful_shk  (nh_cur->g_dothrow_c_breakobj_peaceful_shk)
+
 STATIC_DCL int FDECL(throw_obj, (struct obj *, int));
 STATIC_DCL boolean FDECL(ok_to_throw, (int *));
 STATIC_DCL void NDECL(autoquiver);
@@ -20,14 +24,15 @@ STATIC_DCL boolean FDECL(toss_up, (struct obj *, BOOLEAN_P));
 STATIC_DCL void FDECL(sho_obj_return_to_u, (struct obj * obj));
 STATIC_DCL boolean FDECL(mhurtle_step, (genericptr_t, int, int));
 
-static NEARDATA const char toss_objs[] = { ALLOW_COUNT, COIN_CLASS,
+static const char toss_objs[] = { ALLOW_COUNT, COIN_CLASS,
                                            ALL_CLASSES, WEAPON_CLASS, 0 };
 /* different default choices when wielding a sling (gold must be included) */
-static NEARDATA const char bullets[] = { ALLOW_COUNT, COIN_CLASS, ALL_CLASSES,
+static const char bullets[] = { ALLOW_COUNT, COIN_CLASS, ALL_CLASSES,
                                          GEM_CLASS, 0 };
 
 /* thrownobj (decl.c) tracks an object until it lands */
 
+/* Notonhead per-env via nle_ctx_t (was extern boolean). */
 
 /* Throw the selected object, asking for direction */
 STATIC_OVL int
@@ -1806,11 +1811,11 @@ register struct obj *obj;
     boolean is_buddy = sgn(mon->data->maligntyp) == sgn(u.ualign.type);
     boolean is_gem = objects[obj->otyp].oc_material == GEMSTONE;
     int ret = 0;
-    static NEARDATA const char nogood[] = " is not interested in your junk.";
-    static NEARDATA const char acceptgift[] = " accepts your gift.";
-    static NEARDATA const char maybeluck[] = " hesitatingly";
-    static NEARDATA const char noluck[] = " graciously";
-    static NEARDATA const char addluck[] = " gratefully";
+    static const char nogood[] = " is not interested in your junk.";
+    static const char acceptgift[] = " accepts your gift.";
+    static const char maybeluck[] = " hesitatingly";
+    static const char noluck[] = " graciously";
+    static const char addluck[] = " gratefully";
 
     Strcpy(buf, Monnam(mon));
     mon->mpeaceful = 1;
@@ -2025,8 +2030,7 @@ boolean from_invent;
             struct monst *shkp = shop_keeper(*o_shop);
 
             if (shkp) { /* (implies *o_shop != '\0') */
-                static NEARDATA long lastmovetime = 0L;
-                static NEARDATA boolean peaceful_shk = FALSE;
+                /* Lastmovetime, peaceful_shk migrated to nle_ctx_t */
                 /*  We want to base shk actions on her peacefulness
                     at start of this turn, so that "simultaneous"
                     multiple breakage isn't drastically worse than

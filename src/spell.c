@@ -1279,10 +1279,13 @@ int
 tport_spell(what)
 int what;
 {
-    static struct tport_hideaway {
+    struct tport_hideaway {
         struct spell savespell;
         int tport_indx;
-    } save_tport;
+    };
+#define save_tport (*(struct tport_hideaway *) (nh_cur->nh_lazy[51] \
+        ? nh_cur->nh_lazy[51] \
+        : (nh_cur->nh_lazy[51] = calloc(1, sizeof(struct tport_hideaway)))))
     int i;
 /* also defined in teleport.c */
 #define NOOP_SPELL  0

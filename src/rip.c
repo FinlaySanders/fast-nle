@@ -69,7 +69,7 @@ static const char *rip_txt[] = {
 #define DEATH_LINE 8 /* *char[] line # for death description */
 #define YEAR_LINE 12 /* *char[] line # for year */
 
-static char **rip;
+#define rip (*(char ***) &nh_cur->nh_lazy[50]) /* slot 50: tombstone text */
 
 STATIC_OVL void
 center(line, text)

@@ -1,19 +1,47 @@
-/* NetHack 3.6	o_init.c	$NHDT-Date: 1674864731 2023/01/28 00:12:11 $  $NHDT-Branch: NetHack-3.6 $:$NHDT-Revision: 1.27 $ */
+/* NetHack 3.6	o_init.c	$NHDT-Date: 1545383615 2018/12/21 09:13:35 $  $NHDT-Branch: NetHack-3.6.2-beta01 $:$NHDT-Revision: 1.25 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2011. */
 /* NetHack may be freely redistributed.  See license for details. */
 
 #include "hack.h"
+
+/* Per-env writable copies of objects[]/obj_descr[] (lazy slots 40/41),
+ * seeded from the const baselines in objects.c. The tables are shuffled
+ * per game (description randomization), so they can't be process-shared.
+ * NUM_OBJECTS + 1 covers the terminator entry. */
+struct objclass *
+nle_objects(void)
+{
+    if (!nh_cur->nh_lazy[40]) {
+        void *p = calloc(NUM_OBJECTS + 1, sizeof(struct objclass));
+        memcpy(p, objects_baseline,
+               (NUM_OBJECTS + 1) * sizeof(struct objclass));
+        nh_cur->nh_lazy[40] = p;
+    }
+    return (struct objclass *) nh_cur->nh_lazy[40];
+}
+
+struct objdescr *
+nle_obj_descr(void)
+{
+    if (!nh_cur->nh_lazy[41]) {
+        void *p = calloc(NUM_OBJECTS + 1, sizeof(struct objdescr));
+        memcpy(p, obj_descr_baseline,
+               (NUM_OBJECTS + 1) * sizeof(struct objdescr));
+        nh_cur->nh_lazy[41] = p;
+    }
+    return (struct objdescr *) nh_cur->nh_lazy[41];
+}
 #include "lev.h" /* save & restore info */
 
 STATIC_DCL void FDECL(setgemprobs, (d_level *));
 STATIC_DCL void FDECL(shuffle, (int, int, BOOLEAN_P));
 STATIC_DCL void NDECL(shuffle_all);
 STATIC_DCL boolean FDECL(interesting_to_discover, (int));
-STATIC_DCL void FDECL(disco_append_typename, (char *, int));
 STATIC_DCL char *FDECL(oclass_to_name, (CHAR_P, char *));
 
-static NEARDATA short disco[NUM_OBJECTS] = DUMMY;
+/* disco[] — per-env object discovery list. Migrated to nle_ctx_t. */
+#define disco (nh_cur->g_o_init_c_disco)
 
 #ifdef USE_TILES
 STATIC_DCL void NDECL(shuffle_tiles);
@@ -417,32 +445,6 @@ static short uniq_objs[] = {
     BELL_OF_OPENING,
 };
 
-/* append typename(dis) to buf[], possibly truncating in the process */
-STATIC_OVL void
-disco_append_typename(buf, dis)
-char *buf;
-int dis;
-{
-    unsigned len = (unsigned) strlen(buf);
-    char *p, *typnm = obj_typename(dis);
-
-    if (len + (unsigned) strlen(typnm) < BUFSZ) {
-        /* ordinary */
-        Strcat(buf, typnm);
-    } else if ((p = rindex(typnm, '(')) != 0
-               && p > typnm && p[-1] == ' ' && index(p, ')') != 0) {
-        /* typename() returned "really long user-applied name (actual type)"
-           and we want to truncate from "really long user-applied name" while
-           keeping " (actual type)" intact */
-        --p; /* back up to space in front of open paren */
-        (void) strncat(buf, typnm, BUFSZ - 1 - (len + (unsigned) strlen(p)));
-        Strcat(buf, p);
-    } else {
-        /* unexpected; just truncate from end of typename */
-        (void) strncat(buf, typnm, BUFSZ - 1 - len);
-    }
-}
-
 /* the '\' command - show discovered object types */
 int
 dodiscovered() /* free after Robert Viduya */
@@ -486,8 +488,9 @@ dodiscovered() /* free after Robert Viduya */
                            let_to_name(oclass, FALSE, FALSE));
                     prev_class = oclass;
                 }
-                Strcpy(buf, objects[dis].oc_pre_discovered ? "* " : "  ");
-                disco_append_typename(buf, dis);
+                Sprintf(buf, "%s %s",
+                        (objects[dis].oc_pre_discovered ? "*" : " "),
+                        obj_typename(dis));
                 putstr(tmpwin, 0, buf);
             }
         }
@@ -519,7 +522,7 @@ char *buf;
 int
 doclassdisco()
 {
-    static NEARDATA const char
+    static const char
         prompt[] = "View discoveries for which sort of objects?",
         havent_discovered_any[] = "haven't discovered any %s yet.",
         unique_items[] = "unique items",
@@ -667,8 +670,9 @@ doclassdisco()
         for (i = bases[(int) oclass];
              i < NUM_OBJECTS && objects[i].oc_class == oclass; ++i) {
             if ((dis = disco[i]) != 0 && interesting_to_discover(dis)) {
-                Strcpy(buf, objects[dis].oc_pre_discovered ? "* " : "  ");
-                disco_append_typename(buf, dis);
+                Sprintf(buf, "%s %s",
+                        objects[dis].oc_pre_discovered ? "*" : " ",
+                        obj_typename(dis));
                 putstr(tmpwin, 0, buf);
                 ++ct;
             }

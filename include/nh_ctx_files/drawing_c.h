@@ -5,4 +5,11 @@
 #ifndef NH_CTX_FILE_DRAWING_C_H
 #define NH_CTX_FILE_DRAWING_C_H
 #define currentgraphics (nh_cur->g_drawing_c_currentgraphics)
+#define symset_store (nh_cur->g_drawing_c_symset_store)
+#define showsyms (nh_cur->g_drawing_c_showsyms)
+#define primary_syms (nh_cur->g_drawing_c_primary_syms)
+#define rogue_syms (nh_cur->g_drawing_c_rogue_syms)
+#define ov_primary_syms (nh_cur->g_drawing_c_ov_primary_syms)
+#define ov_rogue_syms (nh_cur->g_drawing_c_ov_rogue_syms)
+#define warnsyms (nh_cur->g_drawing_c_warnsyms)
 #endif /* NH_CTX_FILE_DRAWING_C_H */

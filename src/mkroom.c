@@ -17,6 +17,10 @@
 
 #include "hack.h"
 
+/* Shrine_pos()'s `static coord buf;` migrated to two xchar
+ * fields in nle_ctx_t (coord.h can't be included by nle.h). The function
+ * reconstitutes a coord in a thread-local return slot for caller use. */
+
 STATIC_DCL boolean FDECL(isbig, (struct mkroom *));
 STATIC_DCL struct mkroom *FDECL(pick_room, (BOOLEAN_P));
 STATIC_DCL void NDECL(mkshop), FDECL(mkzoo, (int)), NDECL(mkswamp);
@@ -553,7 +557,8 @@ STATIC_OVL coord *
 shrine_pos(roomno)
 int roomno;
 {
-    static coord buf;
+    /* per-env return slot (was `static coord buf;`) */
+#define shrine_buf (nh_cur->g_mkroom_c_shrine_buf)
     int delta;
     struct mkroom *troom = &rooms[roomno - ROOMOFFSET];
 
@@ -561,14 +566,15 @@ int roomno;
        if either or both are even, center point is a hypothetical spot
        between map locations and placement will be adjacent to that */
     delta = troom->hx - troom->lx;
-    buf.x = troom->lx + delta / 2;
+    shrine_buf.x = troom->lx + delta / 2;
     if ((delta % 2) && rn2(2))
-        buf.x++;
+        shrine_buf.x++;
     delta = troom->hy - troom->ly;
-    buf.y = troom->ly + delta / 2;
+    shrine_buf.y = troom->ly + delta / 2;
     if ((delta % 2) && rn2(2))
-        buf.y++;
-    return &buf;
+        shrine_buf.y++;
+    return &shrine_buf;
+#undef shrine_buf
 }
 
 STATIC_OVL void

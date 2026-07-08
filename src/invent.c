@@ -82,7 +82,7 @@ struct obj *obj;
        with sortloot instead of only when the 'sortpack' option isn't
        set; it is similar to sortpack's inv_order but items most
        likely to be picked up are moved to the front */
-    static char def_srt_order[MAXOCLASSES] = {
+    static const char def_srt_order[MAXOCLASSES] = {
         COIN_CLASS, AMULET_CLASS, RING_CLASS, WAND_CLASS, POTION_CLASS,
         SCROLL_CLASS, SPBOOK_CLASS, GEM_CLASS, FOOD_CLASS, TOOL_CLASS,
         WEAPON_CLASS, ARMOR_CLASS, ROCK_CLASS, BALL_CLASS, CHAIN_CLASS, 0,

@@ -40,6 +40,7 @@ target_compile_definitions(lev_comp PRIVATE NLE_OBJECTS_GLOBAL)
 add_executable(dlb ${DLB_SRC})
 target_include_directories(dlb PRIVATE ${NLE_INC} ${NLE_INC_GEN}
                                        ${NLE_UTIL_GEN})
+target_compile_definitions(dlb PRIVATE NLE_OBJECTS_GLOBAL)
 add_executable(recover recover.c)
 target_include_directories(recover PRIVATE ${NLE_INC} ${NLE_INC_GEN}
                                            ${NLE_UTIL_GEN})

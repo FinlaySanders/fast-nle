@@ -17,8 +17,18 @@ STATIC_DCL boolean FDECL(intersect, (NhRect *, NhRect *, NhRect *));
 #define XLIM 4
 #define YLIM 3
 
-static NhRect rect[MAXRECT + 1];
-static int rect_cnt;
+/* Misc-2: rect[MAXRECT+1] / rect_cnt migrated to
+ * nle_ctx_t.s_rect / s_rect_cnt. s_rect is void* in nle.h (avoids dragging
+ * rect.h into nle.h); we lazy-alloc here and cast. */
+static NhRect *_au8_get_rect(void)
+{
+    if (!nh_cur->nh_lazy[42])
+        nh_cur->nh_lazy[42] =
+            (void *) calloc(MAXRECT + 1, sizeof(NhRect));
+    return (NhRect *) nh_cur->nh_lazy[42];
+}
+#define rect      (_au8_get_rect())
+#define rect_cnt  (nh_cur->g_rect_c_rect_cnt)
 
 /*
  * Initialisation of internal structures. Should be called for every

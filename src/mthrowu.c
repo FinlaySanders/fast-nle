@@ -5,6 +5,14 @@
 
 #include "hack.h"
 
+/* Combat tick per-env (mthrowu.c statics). */
+#define mesg_given (nh_cur->g_mthrowu_c_mesg_given)
+/* Notonhead/target/archer per-env via nle_ctx_t.
+ * `target` and `archer` were file-local STATIC_OVL; original definitions
+ * removed below. `notonhead` was an extern boolean (cross-file). */
+#define target            (nh_cur->g_mthrowu_c_target)
+#define archer            (nh_cur->g_mthrowu_c_archer)
+
 STATIC_DCL int FDECL(monmulti, (struct monst *, struct obj *, struct obj *));
 STATIC_DCL void FDECL(monshoot, (struct monst *, struct obj *, struct obj *));
 STATIC_DCL int FDECL(drop_throw, (struct obj *, BOOLEAN_P, int, int));
@@ -26,7 +34,9 @@ STATIC_OVL NEARDATA const char *breathwep[] = {
     "strange breath #9"
 };
 
-STATIC_VAR int mesg_given; /* for m_throw()/thitu() 'miss' message */
+/* (mesg_given migrated to nh_cur->g_mthrowu_c_mesg_given
+ * via macro at top of file; original `STATIC_VAR int mesg_given;` removed.)
+ * (notonhead migrated; extern declaration removed.) */
 
 /* hero is hit by something other than a monster */
 int
@@ -146,10 +156,9 @@ int x, y;
     return retvalu;
 }
 
-/* The monster that's being shot at when one monster shoots at another */
-STATIC_OVL struct monst *target = 0;
-/* The monster that's doing the shooting/throwing */
-STATIC_OVL struct monst *archer = 0;
+/* Target/archer migrated to current_nle_ctx->s_mthrowu_*;
+ * macros at top of file. Originals (STATIC_OVL struct monst *target/archer)
+ * removed. The monster being shot at / the shooter. */
 
 /* calculate multishot volley count for mtmp throwing otmp (if not ammo) or
    shooting otmp with mwep (if otmp is ammo and mwep appropriate launcher) */

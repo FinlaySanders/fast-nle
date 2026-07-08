@@ -1217,7 +1217,7 @@ const char *txt;
     useup(obj);
 }
 
-const char *bottlenames[] = { "bottle", "phial", "flagon", "carafe",
+const char *const bottlenames[] = { "bottle", "phial", "flagon", "carafe",
                               "flask",  "jar",   "vial" };
 
 const char *

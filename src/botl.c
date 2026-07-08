@@ -12,7 +12,7 @@
 #include <limits.h>
 #endif
 
-extern const char *hu_stat[]; /* defined in eat.c */
+extern const char *const hu_stat[]; /* defined in eat.c */
 
 const char *const enc_stat[] = { "",         "Burdened",  "Stressed",
                                  "Strained", "Overtaxed", "Overloaded" };

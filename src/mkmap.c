@@ -21,9 +21,13 @@ STATIC_DCL void FDECL(finish_map,
 STATIC_DCL void FDECL(remove_room, (unsigned));
 void FDECL(mkmap, (lev_init *));
 
-static char *new_locations;
-int min_rx, max_rx, min_ry, max_ry; /* rectangle bounds for regions */
-static int n_loc_filled;
+#define new_locations (*(char **) &nh_cur->nh_lazy[44]) /* slot 44; alloc'd in mkmap(), freed with ctx */
+/* rectangle bounds for regions — shared with sp_lev.c; per-env ctx */
+#define min_rx (nh_cur->g_sp_lev_c_min_rx)
+#define max_rx (nh_cur->g_sp_lev_c_max_rx)
+#define min_ry (nh_cur->g_sp_lev_c_min_ry)
+#define max_ry (nh_cur->g_sp_lev_c_max_ry)
+#define n_loc_filled (nh_cur->g_mkmap_c_n_loc_filled)
 
 STATIC_OVL void
 init_map(bg_typ)
@@ -486,6 +490,7 @@ lev_init *init_lev;
         level.lflags.is_cavernous_lev = TRUE;
     }
     free(new_locations);
+    new_locations = (char *) 0; /* slot 44: avoid double-free at ctx teardown */
 }
 
 /*mkmap.c*/

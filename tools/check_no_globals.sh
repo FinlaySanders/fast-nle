@@ -42,8 +42,10 @@ list_writable() {
     Darwin)
         # nm -m: "<addr> (__SEG,__sect) [external] _name"
         # Writable = __DATA/__DATA_DIRTY data|bss|common (NOT __const).
+        # ltmpN are assembler section-start labels, not real symbols
         nm -m "$lib" 2>/dev/null \
             | awk '$2 ~ /^\(__DATA[^,]*,__(data|bss|common)\)$/ \
+                   && $NF !~ /^ltmp[0-9]+$/ \
                    { sym = $NF; sub(/^_/, "", sym);
                      print sym "\t0\t" substr($2, 2, length($2)-2) }' \
             | sort -u

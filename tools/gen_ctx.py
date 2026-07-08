@@ -68,7 +68,7 @@ def file_key(scope):
 def gen_struct_header(entries):
     out = [HEADER]
     out.append("#ifndef NH_CTX_GEN_H\n#define NH_CTX_GEN_H\n")
-    out.append("#define NH_LAZY_SLOTS 48")
+    out.append("#define NH_LAZY_SLOTS 64")
     out.append("struct nh_ctx {")
     out.append("    /* hot: touched every step; keep packed at the front so the")
     out.append("     * per-step working set spans the fewest cache lines. */")

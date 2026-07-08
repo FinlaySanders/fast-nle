@@ -463,3 +463,106 @@ makemon.c | cold | void * | align_shift_lev_p | | 0
 makemon.c | cold | long | align_shift_oldmoves | | 0
 # end.c (lazy slot 39 = Schroedingers_cat)
 end.c | cold | int | vanq_sortmode | | 0
+# rnd.c — ISAAC64 RNG state, THE per-env determinism core (fixup: disprng seed = 1)
+rnd.c | hot | isaac64_ctx | rng_state | [2] | 0
+rnd.c | hot | int | rng_init | [2] | 0
+rnd.c | cold | unsigned | rn2disprng_seed | | 0
+# nlernd.c — level-generation RNG (heiner/nle feature; not in old fork)
+nlernd.c | cold | isaac64_ctx | lgen_base | | 0
+nlernd.c | cold | isaac64_ctx | lgen_state | [8] | 0   # NLE_NUM_DUNGEONS
+nlernd.c | cold | isaac64_ctx | core_state | | 0
+nlernd.c | cold | int | lgen_initialised | | 0
+nlernd.c | cold | int | lgen_active | | 0
+# engrave.c / light.c / timeout.c — per-level chains and timers
+engrave.c | cold | struct engr * | head_engr | | 0
+light.c | cold | void * | light_base | | 0
+timeout.c | cold | void * | timer_base | | 0
+timeout.c | cold | unsigned long | timer_id | | 0
+# region.c (regions array is realloc'd, keep as raw pointer field)
+region.c | cold | void * | regions_p | | 0
+region.c | cold | int | n_regions | | 0
+region.c | cold | int | max_regions | | 0
+# worm.c — MAXWORM=32 arrays inline
+worm.c | cold | struct wseg * | wheads | [32] | 0
+worm.c | cold | struct wseg * | wtails | [32] | 0
+worm.c | cold | long | wgrowtime | [32] | 0
+# dungeon.c
+dungeon.c | cold | void * | branches_p | | 0
+dungeon.c | cold | int | branch_id_ctr | | 0
+dungeon.c | cold | void * | mapseenchn_p | | 0
+# mklev.c
+mklev.c | cold | char | made_branch | | 0
+mklev.c | cold | schar | vault_x | | 0
+mklev.c | cold | schar | vault_y | | 0
+# rect.c (lazy slot 42 = rect array)
+rect.c | cold | int | rect_cnt | | 0
+# dogmove.c (lazy slot 43 = dokick state)
+dogmove.c | cold | schar | gtyp | | 0
+dogmove.c | cold | schar | gx | | 0
+dogmove.c | cold | schar | gy | | 0
+# mthrowu.c
+mthrowu.c | cold | int | mesg_given | | 0
+mthrowu.c | cold | struct monst * | archer | | 0
+mthrowu.c | cold | struct monst * | target | | 0
+# mhitu.c
+mhitu.c | cold | int | dieroll | | 0
+mhitu.c | cold | struct obj * | mon_currwep | | 0
+# drawing.c — per-env symbol tables (symset options are per-env)
+drawing.c | cold | struct symsetentry | symset_store | [2] | 0    # NUM_GRAPHICS
+drawing.c | hot | nhsym | showsyms | [SYM_MAX] | 0
+drawing.c | cold | nhsym | primary_syms | [SYM_MAX] | 0
+drawing.c | cold | nhsym | rogue_syms | [SYM_MAX] | 0
+drawing.c | cold | nhsym | ov_primary_syms | [SYM_MAX] | 0
+drawing.c | cold | nhsym | ov_rogue_syms | [SYM_MAX] | 0
+drawing.c | cold | nhsym | warnsyms | [6] | 0    # WARNCOUNT
+mkmap.c | cold | int | n_loc_filled | | 0
+# steal.c / weapon.c / pray.c / zap.c / uhitm.c (slot 45=state) etc.
+steal.c | cold | unsigned | stealmid | | 0
+steal.c | cold | unsigned | stealoid | | 0
+weapon.c | cold | struct obj * | propellor | | 0
+pray.c | cold | schar | p_aligntyp | | 0
+pray.c | cold | int | p_trouble | | 0
+pray.c | cold | int | p_type | | 0
+zap.c | cold | boolean | obj_zapped | | 0
+zap.c | cold | int | poly_zapped | | 0
+uhitm.c | cold | boolean | cleave_clockwise | | 0
+uhitm.c | cold | char | msgbuf | [256] | 0
+teleport.c | cold | struct obj * | telescroll | | 0
+polyself.c | cold | int | sex_change_ok | | 0
+read.c | cold | void * | gremlins_p | | 0
+read.c | cold | boolean | known | | 0
+ball.c | cold | void * | bcp_p | | 0
+ball.c | cold | void * | bcu_p | | 0
+ball.c | cold | int | bcrestriction | | 0
+dig.c | cold | boolean | did_dig_msg | | 0
+dbridge.c | cold | char | wholebuf | [80] | 0
+dbridge.c | cold | void * | occupants_p | | 0
+do_wear.c | cold | char | offdelaybuf | [60] | 0
+do_wear.c | cold | boolean | initial_don | | 0
+dog.c | cold | int | petname_used | | 0
+o_init.c | cold | short | disco | [NUM_OBJECTS] | 0
+objnam.c | cold | char | obufs | [12][256] | 0    # NUMOBUF x BUFSZ
+topten.c | cold | long | final_fpos | | 0
+topten.c | cold | void * | tt_buf_p | | 0
+topten.c | cold | int | toptenwin | | 0
+topten.c | cold | void * | tt_head_p | | 0
+extralev.c | cold | void * | r_p | | 0
+mapglyph.c | cold | char | encbuf | [20] | 0
+mkobj.c | cold | char | unknown | [32] | 0
+priest.c | cold | char | piousness_buf | [32] | 0
+dothrow.c | cold | long | breakobj_lastmovetime | | 0
+dothrow.c | cold | boolean | breakobj_peaceful_shk | | 0
+# options.c residuals (slot 49 = next_opt buffer)
+options.c | cold | const char * | opt_intro | [10] | 0    # seeded from template at use
+options.c | cold | char | fmtstr_doset | [24] | 0         # fixup: "%s%-15s [%s]   "
+options.c | cold | boolean | made_fmtstr | | 0
+global | cold | struct symsetentry * | symset_list | | 0
+sp_lev.c | cold | aligntyp | ralign | [3] | 0   # fixup: {AM_CHAOTIC, AM_NEUTRAL, AM_LAWFUL}
+cmd.c | cold | char | travelcmd | [2] | 0
+hacklib.c | cold | char | s_suffix_buf | [256] | 0   # BUFSZ
+hacklib.c | cold | char | sitoa_buf | [13] | 0
+mkroom.c | cold | coord | shrine_buf | | 0
+options.c | cold | char | mapped_menu_cmds | [33] | 0   # MAX_MENU_MAPPED_CMDS+1
+files.c | cold | boolean | chosen_symset_start | | 0
+files.c | cold | boolean | chosen_symset_end | | 0
+dlb.c | cold | boolean | initialized | | 0

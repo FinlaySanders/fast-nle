@@ -15,4 +15,5 @@
 #define en_win (nh_cur->g_cmd_c_en_win)
 #define en_via_menu (nh_cur->g_cmd_c_en_via_menu)
 #define readchar_queue (nh_cur->g_cmd_c_readchar_queue)
+#define travelcmd (nh_cur->g_cmd_c_travelcmd)
 #endif /* NH_CTX_FILE_CMD_C_H */

@@ -3,6 +3,9 @@
 /* NetHack may be freely redistributed.  See license for details. */
 
 #include "hack.h"
+
+/* Per-env return buffer */
+#define encbuf (nh_cur->g_mapglyph_c_encbuf)
 #if defined(TTY_GRAPHICS)
 #include "wintty.h" /* for prototype of has_color() only */
 #endif
@@ -257,7 +260,7 @@ char *
 encglyph(glyph)
 int glyph;
 {
-    static char encbuf[20]; /* 10+1 would suffice */
+    /* Encbuf migrated to nle_ctx_t */
 
     Sprintf(encbuf, "\\G%04X%04X", context.rndencode, glyph);
     return encbuf;

@@ -540,7 +540,9 @@ enum bodypart_types {
 
 /* fast-nle: per-env context (struct nh_ctx, nh_cur, global accessors).
  * Included last so every game type is complete when the struct is defined.
+ * isaac64.h supplies the RNG state type for the ctx fields.
  * See docs/DESIGN.md §2 and tools/globals.def. */
+#include "isaac64.h"
 #include "nh_ctx_gen.h"
 
 #endif /* HACK_H */

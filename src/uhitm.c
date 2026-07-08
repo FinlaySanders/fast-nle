@@ -5,6 +5,12 @@
 
 #include "hack.h"
 
+/* Per-env return buffer */
+#define msgbuf (nh_cur->g_uhitm_c_msgbuf)
+
+/* Function-local statics migrated to nle_ctx_t */
+#define clockwise     (nh_cur->g_uhitm_c_cleave_clockwise)
+
 STATIC_DCL boolean FDECL(known_hitum, (struct monst *, struct obj *, int *,
                                        int, int, struct attack *, int));
 STATIC_DCL boolean FDECL(theft_petrifies, (struct obj *));
@@ -24,9 +30,21 @@ STATIC_DCL boolean FDECL(hmonas, (struct monst *));
 STATIC_DCL void FDECL(nohandglow, (struct monst *));
 STATIC_DCL boolean FDECL(shade_aware, (struct obj *));
 
+/* Notonhead per-env via nle_ctx_t (was extern boolean). */
 
-/* Used to flag attacks caused by Stormbringer's maliciousness. */
-static boolean override_confirmation = FALSE;
+/* Used to flag attacks caused by Stormbringer's maliciousness.
+ * per-env. */
+struct nle_uhitm_state { boolean _override_confirmation; };
+static struct nle_uhitm_state *nle_uhitm(void) {
+    if (!nh_cur) return NULL;
+    struct nle_uhitm_state *s = (struct nle_uhitm_state *) nh_cur->nh_lazy[45];
+    if (!s) {
+        s = (struct nle_uhitm_state *) calloc(1, sizeof(struct nle_uhitm_state));
+        nh_cur->nh_lazy[45] = s;
+    }
+    return s;
+}
+#define override_confirmation (nle_uhitm()->_override_confirmation)
 
 #define PROJECTILE(obj) ((obj) && is_ammo(obj))
 
@@ -527,7 +545,7 @@ struct attack *uattk; /* ... but we don't enforce that here; Null works ok */
        are non-consecutive, hero will sometimes start a series of attacks
        with a backswing--that doesn't impact actual play, just spoils the
        simulation attempt a bit */
-    static boolean clockwise = FALSE;
+    /* Clockwise migrated to nle_ctx_t */
     unsigned i;
     coord save_bhitpos;
     int count, umort, x = u.ux, y = u.uy;
@@ -2111,11 +2129,9 @@ gulpum(mdef, mattk)
 register struct monst *mdef;
 register struct attack *mattk;
 {
-#ifdef LINT /* static char msgbuf[BUFSZ]; */
-    char msgbuf[BUFSZ];
-#else
-    static char msgbuf[BUFSZ]; /* for nomovemsg */
-#endif
+    /* Msgbuf migrated to nle_ctx_t (per-env). nomovemsg stores
+     * a pointer into msgbuf; with per-env storage that pointer is stable
+     * for the env's own subsequent step (it was racy across envs before). */
     register int tmp;
     register int dam = d((int) mattk->damn, (int) mattk->damd);
     boolean fatal_gulp;

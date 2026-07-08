@@ -5,16 +5,19 @@
 
 #include "hack.h"
 
-static NEARDATA const char see_yourself[] = "see yourself";
-static NEARDATA const char unknown_type[] = "Unknown type of %s (%d)";
-static NEARDATA const char c_armor[] = "armor", c_suit[] = "suit",
+/* Per-env return buffer */
+#define offdelaybuf (nh_cur->g_do_wear_c_offdelaybuf)
+
+static const char see_yourself[] = "see yourself";
+static const char unknown_type[] = "Unknown type of %s (%d)";
+static const char c_armor[] = "armor", c_suit[] = "suit",
                            c_shirt[] = "shirt", c_cloak[] = "cloak",
                            c_gloves[] = "gloves", c_boots[] = "boots",
                            c_helmet[] = "helmet", c_shield[] = "shield",
                            c_weapon[] = "weapon", c_sword[] = "sword",
                            c_axe[] = "axe", c_that_[] = "that";
 
-static NEARDATA const long takeoff_order[] = {
+static const long takeoff_order[] = {
     WORN_BLINDF, W_WEP,      WORN_SHIELD, WORN_GLOVES, LEFT_RING,
     RIGHT_RING,  WORN_CLOAK, WORN_HELMET, WORN_AMUL,   WORN_ARMOR,
     WORN_SHIRT,  WORN_BOOTS, W_SWAPWEP,   W_QUIVER,    0L
@@ -83,7 +86,8 @@ struct obj *otmp;
 
 /* starting equipment gets auto-worn at beginning of new game,
    and we don't want stealth or displacement feedback then */
-static boolean initial_don = FALSE; /* manipulated in set_wear() */
+/* Per-env. Was __thread; OMP coroutine-resume hazard. */
+#define initial_don (nh_cur->g_do_wear_c_initial_don)
 
 /* putting on or taking off an item which confers stealth;
    give feedback and discover it iff stealth state is changing */
@@ -1391,13 +1395,30 @@ struct obj *stolenobj; /* no message if stolenobj is already being doffing */
 
 /* both 'clothes' and 'accessories' now include both armor and accessories;
    TOOL_CLASS is for eyewear, FOOD_CLASS is for MEAT_RING */
-static NEARDATA const char clothes[] = {
+static const char clothes[] = {
     ARMOR_CLASS, RING_CLASS, AMULET_CLASS, TOOL_CLASS, FOOD_CLASS, 0
 };
-static NEARDATA const char accessories[] = {
+static const char accessories[] = {
     RING_CLASS, AMULET_CLASS, TOOL_CLASS, FOOD_CLASS, ARMOR_CLASS, 0
 };
-STATIC_VAR NEARDATA int Narmorpieces, Naccessories;
+/* Per-env do_wear.c state. Narmorpieces / Naccessories bundled. */
+struct nle_do_wear_state {
+    int _Narmorpieces;
+    int _Naccessories;
+};
+static struct nle_do_wear_state *
+nle_do_wear(void)
+{
+    if (!nh_cur) return NULL;
+    struct nle_do_wear_state *s = (struct nle_do_wear_state *) nh_cur->nh_lazy[46];
+    if (!s) {
+        s = (struct nle_do_wear_state *) calloc(1, sizeof(struct nle_do_wear_state));
+        nh_cur->nh_lazy[46] = s;
+    }
+    return s;
+}
+#define Narmorpieces  (nle_do_wear()->_Narmorpieces)
+#define Naccessories  (nle_do_wear()->_Naccessories)
 
 /* assign values to Narmorpieces and Naccessories */
 STATIC_OVL void
@@ -1577,7 +1598,7 @@ int
 armoroff(otmp)
 struct obj *otmp;
 {
-    static char offdelaybuf[60];
+    /* Offdelaybuf migrated to nle_ctx_t */
     int delay = -objects[otmp->otyp].oc_delay;
     const char *what = 0;
 
@@ -2791,7 +2812,7 @@ struct obj *obj;
 const char *verb; /* "dip" or "grease", or null to avoid messages */
 boolean only_if_known_cursed; /* ignore covering unless known to be cursed */
 {
-    static NEARDATA const char need_to_take_off_outer_armor[] =
+    static const char need_to_take_off_outer_armor[] =
         "need to take off %s to %s %s.";
     char buf[BUFSZ];
     boolean anycovering = !only_if_known_cursed; /* more comprehensible... */

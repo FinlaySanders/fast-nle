@@ -101,7 +101,11 @@ void NDECL(monst_init);
  */
 
 #ifndef SPLITMON_2
-NEARDATA struct permonst mons[] = {
+/* mons[] is const: role_init no longer mutates it (quest leader/nemesis
+ * data is already right in the source table; see role.c), and the seduce
+ * sysopt write has been dead (#if 0) since 3.6. Const puts it in rodata,
+ * shared-safe across all envs in a single libnethack. */
+const struct permonst mons[] = {
     /*
      * ants
      */

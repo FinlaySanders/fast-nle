@@ -99,7 +99,7 @@ const struct propname {
 };
 
 /* He is being petrified - dialogue by inmet!tower */
-static NEARDATA const char *const stoned_texts[] = {
+static const char *const stoned_texts[] = {
     "You are slowing down.",            /* 5 */
     "Your limbs are stiffening.",       /* 4 */
     "Your limbs have turned to stone.", /* 3 */
@@ -159,7 +159,7 @@ stoned_dialogue()
 }
 
 /* hero is getting sicker and sicker prior to vomiting */
-static NEARDATA const char *const vomiting_texts[] = {
+static const char *const vomiting_texts[] = {
     "are feeling mildly nauseated.", /* 14 */
     "feel slightly confused.",       /* 11 */
     "can't seem to think straight.", /* 8 */
@@ -232,7 +232,7 @@ vomiting_dialogue()
     exercise(A_CON, FALSE);
 }
 
-static NEARDATA const char *const choke_texts[] = {
+static const char *const choke_texts[] = {
     "You find it hard to breathe.",
     "You're gasping for air.",
     "You can no longer breathe.",
@@ -240,7 +240,7 @@ static NEARDATA const char *const choke_texts[] = {
     "You suffocate."
 };
 
-static NEARDATA const char *const choke_texts2[] = {
+static const char *const choke_texts2[] = {
     "Your %s is becoming constricted.",
     "Your blood is having trouble reaching your brain.",
     "The pressure on your %s increases.",
@@ -268,7 +268,7 @@ choke_dialogue()
     exercise(A_STR, FALSE);
 }
 
-static NEARDATA const char *const levi_texts[] = {
+static const char *const levi_texts[] = {
     "You float slightly lower.",
     "You wobble unsteadily %s the %s."
 };
@@ -300,7 +300,7 @@ levitation_dialogue()
     }
 }
 
-static NEARDATA const char *const slime_texts[] = {
+static const char *const slime_texts[] = {
     "You are turning a little %s.",   /* 5 */
     "Your limbs are getting oozy.",   /* 4 */
     "Your skin begins to peel away.", /* 3 */
@@ -441,7 +441,7 @@ struct kinfo *kptr;
    Message given is "you feel much slimmer" as a joke hint that you can
    move between things which are closely packed--like the substance of
    solid rock! */
-static NEARDATA const char *const phaze_texts[] = {
+static const char *const phaze_texts[] = {
     "You start to feel bloated.",
     "You are feeling rather flabby.",
 };
@@ -1692,9 +1692,12 @@ STATIC_DCL boolean FDECL(mon_is_local, (struct monst *));
 STATIC_DCL boolean FDECL(timer_is_local, (timer_element *));
 STATIC_DCL int FDECL(maybe_write_timer, (int, int, BOOLEAN_P));
 
-/* ordered timer list */
-static timer_element *timer_base; /* "active" */
-static unsigned long timer_id = 1;
+/* timer_base + timer_id moved to nle_ctx_t (per-env, not
+ * per-thread). __thread was wrong for vecenv: env A's pending timers
+ * leak into env B's run_timers and panic on "object lost" because the
+ * object belongs to env A's level which is currently swapped out. */
+#define timer_base (*(timer_element **)&nh_cur->g_timeout_c_timer_base)
+#define timer_id   (nh_cur->g_timeout_c_timer_id)
 
 /* If defined, then include names when printing out the timer queue */
 #define VERBOSE_TIMER

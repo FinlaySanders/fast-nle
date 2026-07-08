@@ -64,7 +64,7 @@ const long nh_tmpl_monstermoves = 1L;
 NEARDATA const struct obj zeroobj = DUMMY;
 NEARDATA const struct monst zeromonst = DUMMY;
 /* used to zero out union any; initializer deliberately omitted */
-NEARDATA const anything zeroany;
+NEARDATA const anything zeroany = { 0 }; /* explicit init: keeps it in rodata, not common */
 
 /* fast-nle: the five arrays/structs below are never written; const-ified
  * (matching decl.h) instead of migrated, so they live in rodata. */

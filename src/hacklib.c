@@ -316,7 +316,7 @@ char *
 s_suffix(s)
 const char *s;
 {
-    Static char buf[BUFSZ];
+#define buf (nh_cur->g_hacklib_c_s_suffix_buf)
 
     Strcpy(buf, s);
     if (!strcmpi(buf, "it")) /* it -> its */
@@ -329,6 +329,7 @@ const char *s;
         Strcat(buf, "'s");
     return buf;
 }
+#undef buf
 
 /* construct a gerund (a verb formed by appending "ing" to a noun) */
 char *
@@ -562,11 +563,12 @@ char *
 sitoa(n)
 int n;
 {
-    Static char buf[13];
+#define buf (nh_cur->g_hacklib_c_sitoa_buf)
 
     Sprintf(buf, (n < 0) ? "%d" : "+%d", n);
     return buf;
 }
+#undef buf
 
 /* return the sign of a number: -1, 0, or 1 */
 int
@@ -953,7 +955,9 @@ extern nle_settings settings;
 STATIC_OVL struct tm *
 nle_getlt_maybe_fixed()
 {
-    static struct tm fixed_tm;
+#define fixed_tm (*(struct tm *) (nh_cur->nh_lazy[52] \
+        ? nh_cur->nh_lazy[52] \
+        : (nh_cur->nh_lazy[52] = calloc(1, sizeof(struct tm)))))
 
     if (!settings.fix_moon_phase || !settings.time_seed_is_set)
         return getlt();

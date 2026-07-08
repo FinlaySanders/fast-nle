@@ -5,6 +5,17 @@
 
 #include "hack.h"
 
+/* File-static migrated to nle_ctx_t.
+ * 'struct litmon' is defined further down in this TU (~line 1899); the
+ * macro is just textual, the type only needs to be visible at the
+ * point of use (which is below the local struct definition). */
+#define gremlins (*(struct litmon **) &nh_cur->g_read_c_gremlins_p)
+
+/* Scroll-id "known" flag per-env (was NON-static cross-TU
+ * boolean, extern in detect.c). Renamed to scr_known across read.c and
+ * detect.c to avoid macro-clashing with struct field `obj->known`. */
+#define scr_known (nh_cur->g_read_c_known)
+
 #define Your_Own_Role(mndx)  \
     ((mndx) == urole.malenum \
      || (urole.femalenum != NON_PM && (mndx) == urole.femalenum))
@@ -12,9 +23,10 @@
     ((mndx) == urace.malenum \
      || (urace.femalenum != NON_PM && (mndx) == urace.femalenum))
 
-boolean known;
+/* Scr_known (was `boolean known`) migrated to nle_ctx_t.
+ * Macro defined at top of file. */
 
-static NEARDATA const char readable[] = { ALL_CLASSES, SCROLL_CLASS,
+static const char readable[] = { ALL_CLASSES, SCROLL_CLASS,
                                           SPBOOK_CLASS, 0 };
 static const char all_count[] = { ALLOW_COUNT, ALL_CLASSES, 0 };
 
@@ -189,7 +201,7 @@ doread()
     register struct obj *scroll;
     boolean confused, nodisappear;
 
-    known = FALSE;
+    scr_known = FALSE;
     if (check_capacity((char *) 0))
         return 0;
     scroll = getobj(readable, "read");
@@ -396,7 +408,7 @@ doread()
     }
     if (!seffects(scroll)) {
         if (!objects[scroll->otyp].oc_name_known) {
-            if (known)
+            if (scr_known)
                 learnscroll(scroll);
             else if (!objects[scroll->otyp].oc_uname)
                 docall(scroll);
@@ -801,7 +813,7 @@ int howmuch;
     if (Sokoban)
         return;
 
-    known = TRUE;
+    scr_known = TRUE;
     for (zx = 0; zx < COLNO; zx++)
         for (zy = 0; zy < ROWNO; zy++)
             if (howmuch & ALL_MAP || rn2(7)) {
@@ -1013,7 +1025,7 @@ struct obj *sobj; /* scroll, or fake spellbook object for scroll-like spell */
     switch (otyp) {
 #ifdef MAIL
     case SCR_MAIL:
-        known = TRUE;
+        scr_known = TRUE;
         if (sobj->spe == 2)
             /* "stamped scroll" created via magic marker--without a stamp */
             pline("This scroll is marked \"postage due\".");
@@ -1142,7 +1154,7 @@ struct obj *sobj; /* scroll, or fake spellbook object for scroll-like spell */
         if (s) {
             otmp->spe += s;
             adj_abon(otmp, s);
-            known = otmp->known;
+            scr_known = otmp->known;
             /* update shop bill to reflect new higher price */
             if (s > 0 && otmp->unpaid)
                 alter_cost(otmp, 0L);
@@ -1184,7 +1196,7 @@ struct obj *sobj; /* scroll, or fake spellbook object for scroll-like spell */
                 exercise(A_CON, FALSE);
                 break;
             } else
-                known = TRUE;
+                scr_known = TRUE;
         } else { /* armor and scroll both cursed */
             pline("%s.", Yobjnam2(otmp, "vibrate"));
             if (otmp->spe >= -6) {
@@ -1264,7 +1276,7 @@ struct obj *sobj; /* scroll, or fake spellbook object for scroll-like spell */
             You("don't remember there being any magic words on this scroll.");
         else
             pline("This scroll seems to be blank.");
-        known = TRUE;
+        scr_known = TRUE;
         break;
     case SCR_REMOVE_CURSE:
     case SPE_REMOVE_CURSE: {
@@ -1354,7 +1366,7 @@ struct obj *sobj; /* scroll, or fake spellbook object for scroll-like spell */
                             confused ? &mons[PM_ACID_BLOB]
                                      : (struct permonst *) 0,
                             FALSE))
-            known = TRUE;
+            scr_known = TRUE;
         /* no need to flush monsters; we ask for identification only if the
          * monsters are not visible
          */
@@ -1434,14 +1446,14 @@ struct obj *sobj; /* scroll, or fake spellbook object for scroll-like spell */
                       vis_results ? "is" : "seems",
                       (results < 0) ? "un" : "");
             if (vis_results > 0)
-                known = TRUE;
+                scr_known = TRUE;
         }
         break;
     }
     case SCR_GENOCIDE:
         if (!already_known)
             You("have found a scroll of genocide!");
-        known = TRUE;
+        scr_known = TRUE;
         if (sblessed)
             do_class_genocide();
         else
@@ -1450,11 +1462,11 @@ struct obj *sobj; /* scroll, or fake spellbook object for scroll-like spell */
     case SCR_LIGHT:
         if (!confused || rn2(5)) {
             if (!Blind)
-                known = TRUE;
+                scr_known = TRUE;
             litroom(!confused && !scursed, sobj);
             if (!confused && !scursed) {
                 if (lightdamage(sobj, TRUE, 5))
-                    known = TRUE;
+                    scr_known = TRUE;
             }
         } else {
             /* could be scroll of create monster, don't set known ...*/
@@ -1467,7 +1479,7 @@ struct obj *sobj; /* scroll, or fake spellbook object for scroll-like spell */
         if (confused || scursed) {
             level_tele();
         } else {
-            known = scrolltele(sobj);
+            scr_known = scrolltele(sobj);
         }
         break;
     case SCR_GOLD_DETECTION:
@@ -1560,7 +1572,7 @@ struct obj *sobj; /* scroll, or fake spellbook object for scroll-like spell */
                         cvt_sdoor_to_door(&levl[x][y]);
             /* do_mapping() already reveals secret passages */
         }
-        known = TRUE;
+        scr_known = TRUE;
         /*FALLTHRU*/
     case SPE_MAGIC_MAPPING:
         if (level.lflags.nommap) {
@@ -1580,7 +1592,7 @@ struct obj *sobj; /* scroll, or fake spellbook object for scroll-like spell */
         }
         break;
     case SCR_AMNESIA:
-        known = TRUE;
+        scr_known = TRUE;
         forget((!sblessed ? ALL_SPELLS : 0)
                | (!confused || scursed ? ALL_MAP : 0));
         if (Hallucination) /* Ommmmmm! */
@@ -1661,7 +1673,7 @@ struct obj *sobj; /* scroll, or fake spellbook object for scroll-like spell */
             else
                 pline_The("%s rumbles %s you!", ceiling(u.ux, u.uy),
                           sblessed ? "around" : "above");
-            known = 1;
+            scr_known = 1;
             sokoban_guilt();
 
             /* Loop through the surrounding squares */
@@ -1686,7 +1698,7 @@ struct obj *sobj; /* scroll, or fake spellbook object for scroll-like spell */
         }
         break;
     case SCR_PUNISHMENT:
-        known = TRUE;
+        scr_known = TRUE;
         if (confused || sblessed) {
             You_feel("guilty.");
             break;
@@ -1698,7 +1710,7 @@ struct obj *sobj; /* scroll, or fake spellbook object for scroll-like spell */
 
         if (!already_known)
             You("have found a scroll of stinking cloud!");
-        known = TRUE;
+        scr_known = TRUE;
         pline("Where do you want to center the %scloud?",
               already_known ? "stinking " : "");
         cc.x = u.ux;
@@ -1899,7 +1911,8 @@ struct litmon {
     struct monst *mon;
     struct litmon *nxt;
 };
-STATIC_VAR struct litmon *gremlins = 0;
+/* gremlins migrated to nh_cur->g_read_c_gremlins_p.
+ * Zero-initialization preserved by calloc() of nle_ctx_t. */
 
 /*
  * Low-level lit-field update routine.

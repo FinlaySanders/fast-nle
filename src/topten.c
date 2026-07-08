@@ -5,6 +5,21 @@
 
 #include "hack.h"
 #include "dlb.h"
+
+/* Per-env replacements for two topten.c file-statics.
+ * `toptenwin` collides with `iflags.toptenwin` (flag.h boolean field), so
+ * the macro is named `nle_toptenwin` and the call sites in this TU were
+ * rewritten manually. `final_fpos` is under #ifdef UPDATE_RECORD_IN_PLACE
+ * (VMS-only) — dead on UNIX, migrated for completeness. */
+#define nle_toptenwin   (nh_cur->g_topten_c_toptenwin)
+#define final_fpos      (nh_cur->g_topten_c_final_fpos)
+
+/* Function-local static tt_buf in get_rnd_toptenentry()
+ * promoted to a per-env lazily-alloc'd struct (struct toptenentry is
+ * ~hundreds of bytes; embedding inline would bloat nle_ctx_t). The macro
+ * expands to the dereferenced lvalue so existing `tt = &tt_buf;` works.
+ * Call site allocs the struct on first call (see get_rnd_toptenentry). */
+#define tt_buf          (*(struct toptenentry *) nh_cur->g_topten_c_tt_buf_p)
 #ifdef SHORT_FILENAMES
 #include "patchlev.h"
 #else
@@ -23,9 +38,9 @@
  * way to truncate it).  The trailing junk is harmless and the code
  * which reads the scores will ignore it.
  */
-#ifdef UPDATE_RECORD_IN_PLACE
-static long final_fpos;
-#endif
+/* final_fpos moved into nle_ctx_t — macro above.
+ * Storage is unconditional on nle_ctx_t but only referenced under
+ * #ifdef UPDATE_RECORD_IN_PLACE (not defined on UNIX builds). */
 
 #define done_stopprint program_state.stopprint
 
@@ -58,7 +73,8 @@ struct toptenentry {
     char plalign[ROLESZ + 1];
     char name[NAMSZ + 1];
     char death[DTHSZ + 1];
-} * tt_head;
+};
+#define tt_head (*(struct toptenentry **)&nh_cur->g_topten_c_tt_head_p)
 /* size big enough to read in all the string fields at once; includes
    room for separating space or trailing newline plus string terminator */
 #define SCANBUFSZ (4 * (ROLESZ + 1) + (NAMSZ + 1) + (DTHSZ + 1) + 1)
@@ -85,7 +101,12 @@ STATIC_DCL void FDECL(nsb_mung_line, (char *));
 STATIC_DCL void FDECL(nsb_unmung_line, (char *));
 #endif
 
-static winid toptenwin = WIN_ERR;
+/* toptenwin moved into nle_ctx_t.s_toptenwin.
+ * Cannot use a `toptenwin` macro here because `iflags.toptenwin` is a
+ * separate boolean field in struct instance_flags and would be clobbered
+ * by token replacement. All `toptenwin` references in this TU rewritten
+ * to `nle_toptenwin`. The WIN_ERR default is set in init_nle (nle.c)
+ * since calloc would leave it 0, not -1. */
 
 /* "killed by",&c ["an"] 'killer.name' */
 void
@@ -95,7 +116,7 @@ unsigned siz;
 int how;
 boolean incl_helpless;
 {
-    static NEARDATA const char *const killed_by_prefix[] = {
+    static const char *const killed_by_prefix[] = {
         /* DIED, CHOKING, POISONING, STARVING, */
         "killed by ", "choked on ", "poisoned by ", "died of ",
         /* DROWNING, BURNING, DISSOLVED, CRUSHING, */
@@ -164,20 +185,20 @@ STATIC_OVL void
 topten_print(x)
 const char *x;
 {
-    if (toptenwin == WIN_ERR)
+    if (nle_toptenwin == WIN_ERR)
         raw_print(x);
     else
-        putstr(toptenwin, ATR_NONE, x);
+        putstr(nle_toptenwin, ATR_NONE, x);
 }
 
 STATIC_OVL void
 topten_print_bold(x)
 const char *x;
 {
-    if (toptenwin == WIN_ERR)
+    if (nle_toptenwin == WIN_ERR)
         raw_print_bold(x);
     else
-        putstr(toptenwin, ATR_BOLD, x);
+        putstr(nle_toptenwin, ATR_BOLD, x);
 }
 
 int
@@ -523,8 +544,15 @@ time_t when;
     if (program_state.panicking)
         return;
 
+    /* First-use idempotent init. Original was
+     * `static winid toptenwin = WIN_ERR;`. calloc gives 0 (== BASE_WINDOW)
+     * which would mis-route topten_print() output through putstr() instead
+     * of raw_print(). Set WIN_ERR at entry; the iflags.toptenwin branch
+     * below overrides via create_nhwindow. Idempotent: rerunning topten()
+     * after destroywin re-resets correctly. */
+    nle_toptenwin = WIN_ERR;
     if (iflags.toptenwin) {
-        toptenwin = create_nhwindow(NHW_TEXT);
+        nle_toptenwin = create_nhwindow(NHW_TEXT);
     }
 
 #if defined(UNIX) || defined(VMS) || defined(__EMX__)
@@ -776,13 +804,13 @@ time_t when;
 
 showwin:
     if (iflags.toptenwin && !done_stopprint)
-        display_nhwindow(toptenwin, 1);
+        display_nhwindow(nle_toptenwin, 1);
 destroywin:
     if (!t0_used)
         dealloc_ttentry(t0);
     if (iflags.toptenwin) {
-        destroy_nhwindow(toptenwin);
-        toptenwin = WIN_ERR;
+        destroy_nhwindow(nle_toptenwin);
+        nle_toptenwin = WIN_ERR;
     }
 }
 
@@ -1191,7 +1219,12 @@ get_rnd_toptenentry()
     int rank, i;
     FILE *rfile;
     register struct toptenentry *tt;
-    static struct toptenentry tt_buf;
+
+    /* Lazy-alloc per-env tt_buf storage (replaces file-local
+     * static). Once allocated, the buffer persists for the env's lifetime;
+     * cleared each call via readentry(). */
+    if (!nh_cur->g_topten_c_tt_buf_p)
+        nh_cur->g_topten_c_tt_buf_p = calloc(1, sizeof(struct toptenentry));
 
     rfile = fopen_datafile(RECORD, "r", SCOREPREFIX);
     if (!rfile) {

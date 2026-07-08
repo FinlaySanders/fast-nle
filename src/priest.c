@@ -3,6 +3,10 @@
 /* NetHack may be freely redistributed.  See license for details. */
 
 #include "hack.h"
+
+/* Per-env return buffer for piousness() (renamed from `buf`
+ * to avoid collision with the `char buf[BUFSZ]` local elsewhere in this TU). */
+#define piousness_buf (nh_cur->g_priest_c_piousness_buf)
 #include "mfndpos.h"
 
 /* these match the categorizations shown by enlightenment */
@@ -622,7 +626,7 @@ register struct monst *priest;
                    && (!(HProtection & INTRINSIC)
                        || (u.ublessed < 20
                            && (u.ublessed < 9 || !rn2(u.ublessed))))) {
-            verbalize("Thou hast been rewarded for thy devotion.");
+            verbalize("Thy devotion has been rewarded.");
             if (!(HProtection & INTRINSIC)) {
                 HProtection |= FROMOUTSIDE;
                 if (!u.ublessed)
@@ -894,7 +898,7 @@ piousness(showneg, suffix)
 boolean showneg;
 const char *suffix;
 {
-    static char buf[32]; /* bigger than "insufficiently neutral" */
+    /* Piousness_buf (was `buf[32]`) migrated to nle_ctx_t */
     const char *pio;
 
     /* note: piousness 20 matches MIN_QUEST_ALIGN (quest.h) */
@@ -921,13 +925,13 @@ const char *suffix;
     else
         pio = "transgressed";
 
-    Sprintf(buf, "%s", pio);
+    Sprintf(piousness_buf, "%s", pio);
     if (suffix && (!showneg || u.ualign.record >= 0)) {
         if (u.ualign.record != 3)
-            Strcat(buf, " ");
-        Strcat(buf, suffix);
+            Strcat(piousness_buf, " ");
+        Strcat(piousness_buf, suffix);
     }
-    return buf;
+    return piousness_buf;
 }
 
 /* stethoscope or probing applied to monster -- one-line feedback */

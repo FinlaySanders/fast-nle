@@ -5,6 +5,9 @@
 
 #include "hack.h"
 
+/* Function-local statics promoted to nle_ctx_t fields. */
+#define petname_used    (nh_cur->g_dog_c_petname_used)
+
 STATIC_DCL int NDECL(pet_type);
 
 void
@@ -155,7 +158,8 @@ makedog()
     register struct obj *otmp;
     const char *petname;
     int pettype;
-    static int petname_used = 0;
+    /* Petname_used moved to nle_ctx_t
+     * (s_makedog_petname_used). See macro at top of file. */
 
     if (preferred_pet == 'n')
         return ((struct monst *) 0);

@@ -1,4 +1,4 @@
-/* NetHack 3.6	objnam.c	$NHDT-Date: 1674864732 2023/01/28 00:12:12 $  $NHDT-Branch: NetHack-3.6 $:$NHDT-Revision: 1.259 $ */
+/* NetHack 3.6	objnam.c	$NHDT-Date: 1583315888 2020/03/04 09:58:08 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.293 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2011. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -16,7 +16,6 @@ STATIC_DCL short FDECL(rnd_otyp_by_namedesc, (const char *, CHAR_P, int));
 STATIC_DCL boolean FDECL(wishymatch, (const char *, const char *, BOOLEAN_P));
 STATIC_DCL char *NDECL(nextobuf);
 STATIC_DCL void FDECL(releaseobuf, (char *));
-STATIC_DCL void FDECL(xcalled, (char *, int, const char *, const char *));
 STATIC_DCL char *FDECL(minimal_xname, (struct obj *));
 STATIC_DCL void FDECL(add_erosion_words, (struct obj *, char *));
 STATIC_DCL char *FDECL(doname_base, (struct obj *obj, unsigned));
@@ -78,9 +77,27 @@ register const char *pref;
     return s;
 }
 
-/* manage a pool of BUFSZ buffers, so callers don't have to */
-static char NEARDATA obufs[NUMOBUF][BUFSZ];
-static int obufidx = 0;
+/* manage a pool of BUFSZ buffers, so callers don't have to.
+ * obufs migrated to nle_ctx_t (per-env heap, NUMOBUF*BUFSZ bytes). */
+#define obufs (nh_cur->g_objnam_c_obufs)
+/* Obufidx + distantname per-env. */
+struct nle_objnam_state {
+    int _obufidx;
+    int _distantname;
+};
+static struct nle_objnam_state *
+nle_objnam(void)
+{
+    if (!nh_cur) return NULL;
+    struct nle_objnam_state *s = (struct nle_objnam_state *) nh_cur->nh_lazy[47];
+    if (!s) {
+        s = (struct nle_objnam_state *) calloc(1, sizeof(struct nle_objnam_state));
+        nh_cur->nh_lazy[47] = s;
+    }
+    return s;
+}
+#define obufidx     (nle_objnam()->_obufidx)
+#define distantname (nle_objnam()->_distantname)
 
 STATIC_OVL char *
 nextobuf()
@@ -117,7 +134,6 @@ register int otyp;
 
     if (Role_if(PM_SAMURAI) && Japanese_item_name(otyp))
         actualn = Japanese_item_name(otyp);
-    buf[0] = '\0';
     switch (ocl->oc_class) {
     case COIN_CLASS:
         Strcpy(buf, "coin");
@@ -148,7 +164,7 @@ register int otyp;
         else
             Strcpy(buf, "amulet");
         if (un)
-            xcalled(buf, BUFSZ - (dn ? (int) strlen(dn) + 3 : 0), "", un);
+            Sprintf(eos(buf), " called %s", un);
         if (dn)
             Sprintf(eos(buf), " (%s)", dn);
         return buf;
@@ -157,8 +173,8 @@ register int otyp;
             Strcpy(buf, actualn);
             if (GemStone(otyp))
                 Strcat(buf, " stone");
-            if (un) /* 3: length of " (" + ")" which will enclose 'dn' */
-                xcalled(buf, BUFSZ - (dn ? (int) strlen(dn) + 3 : 0), "", un);
+            if (un)
+                Sprintf(eos(buf), " called %s", un);
             if (dn)
                 Sprintf(eos(buf), " (%s)", dn);
         } else {
@@ -167,7 +183,7 @@ register int otyp;
                 Strcat(buf,
                        (ocl->oc_material == MINERAL) ? " stone" : " gem");
             if (un)
-                xcalled(buf, BUFSZ, "", un);
+                Sprintf(eos(buf), " called %s", un);
         }
         return buf;
     }
@@ -178,8 +194,8 @@ register int otyp;
         else
             Sprintf(eos(buf), " of %s", actualn);
     }
-    if (un) /* 3: length of " (" + ")" which will enclose 'dn' */
-        xcalled(buf, BUFSZ - (dn ? (int) strlen(dn) + 3 : 0), "", un);
+    if (un)
+        Sprintf(eos(buf), " called %s", un);
     if (dn)
         Sprintf(eos(buf), " (%s)", dn);
     return buf;
@@ -239,7 +255,7 @@ struct obj *obj;
 /* used by distant_name() to pass extra information to xname_flags();
    it would be much cleaner if this were a parameter, but that would
    require all of the xname() and doname() calls to be modified */
-static int distantname = 0;
+/* Distantname is per-env via nle_objnam_state (above). */
 
 /* Give the name of an object seen at a distance.  Unlike xname/doname,
  * we don't want to set dknown if it's not set already.
@@ -412,24 +428,6 @@ boolean forward;
     }
 }
 
-/* add "<pfx> called <sfx>" to end of buf, truncating if necessary */
-STATIC_OVL void
-xcalled(buf, siz, pfx, sfx)
-char *buf;       /* eos(obuf) or eos(&obuf[PREFIX]) */
-int siz;         /* BUFSZ or BUFSZ-PREFIX */
-const char *pfx; /* usually class string, sometimes more specific */
-const char *sfx; /* user assigned type name */
-{
-    int bufsiz = siz - 1 - (int) strlen(buf),
-        pfxlen = (int) (strlen(pfx) + sizeof " called " - sizeof "");
-
-    if (pfxlen > bufsiz)
-        panic("xcalled: not enough room for prefix (%d > %d)",
-              pfxlen, bufsiz);
-
-    Sprintf(eos(buf), "%s called %.*s", pfx, bufsiz - pfxlen, sfx);
-}
-
 char *
 xname(obj)
 struct obj *obj;
@@ -455,7 +453,7 @@ unsigned cxn_flags; /* bitmask of CXN_xxx values */
     buf = nextobuf() + PREFIX; /* leave room for "17 -3 " */
     if (Role_if(PM_SAMURAI) && Japanese_item_name(typ))
         actualn = Japanese_item_name(typ);
-    /* 3.6.2: this used to be part of 'dn's initialization, but it
+    /* As of 3.6.2: this used to be part of 'dn's initialization, but it
        needs to come after possibly overriding 'actualn' */
     if (!dn)
         dn = actualn;
@@ -498,7 +496,7 @@ unsigned cxn_flags; /* bitmask of CXN_xxx values */
         else if (nn)
             Strcpy(buf, actualn);
         else if (un)
-            xcalled(buf, BUFSZ - PREFIX, "amulet", un);
+            Sprintf(buf, "amulet called %s", un);
         else
             Sprintf(buf, "%s amulet", dn);
         break;
@@ -517,9 +515,11 @@ unsigned cxn_flags; /* bitmask of CXN_xxx values */
             Strcat(buf, dn);
         else if (nn)
             Strcat(buf, actualn);
-        else if (un)
-            xcalled(buf, BUFSZ - PREFIX, dn, un);
-        else
+        else if (un) {
+            Strcat(buf, dn);
+            Strcat(buf, " called ");
+            Strcat(buf, un);
+        } else
             Strcat(buf, dn);
 
         if (typ == FIGURINE && omndx != NON_PM) {
@@ -649,7 +649,8 @@ unsigned cxn_flags; /* bitmask of CXN_xxx values */
                 }
                 Strcat(buf, actualn);
             } else {
-                xcalled(buf, BUFSZ - PREFIX, "", un);
+                Strcat(buf, " called ");
+                Strcat(buf, un);
             }
         } else {
             Strcat(buf, dn);
@@ -664,7 +665,8 @@ unsigned cxn_flags; /* bitmask of CXN_xxx values */
             Strcat(buf, " of ");
             Strcat(buf, actualn);
         } else if (un) {
-            xcalled(buf, BUFSZ - PREFIX, "", un);
+            Strcat(buf, " called ");
+            Strcat(buf, un);
         } else if (ocl->oc_magic) {
             Strcat(buf, " labeled ");
             Strcat(buf, dn);
@@ -679,7 +681,7 @@ unsigned cxn_flags; /* bitmask of CXN_xxx values */
         else if (nn)
             Sprintf(buf, "wand of %s", actualn);
         else if (un)
-            xcalled(buf, BUFSZ - PREFIX, "wand", un);
+            Sprintf(buf, "wand called %s", un);
         else
             Sprintf(buf, "%s wand", dn);
         break;
@@ -690,7 +692,7 @@ unsigned cxn_flags; /* bitmask of CXN_xxx values */
             else if (nn)
                 Strcpy(buf, actualn);
             else if (un)
-                xcalled(buf, BUFSZ - PREFIX, "novel", un);
+                Sprintf(buf, "novel called %s", un);
             else
                 Sprintf(buf, "%s book", dn);
             break;
@@ -702,7 +704,7 @@ unsigned cxn_flags; /* bitmask of CXN_xxx values */
                 Strcpy(buf, "spellbook of ");
             Strcat(buf, actualn);
         } else if (un) {
-            xcalled(buf, BUFSZ - PREFIX, "spellbook", un);
+            Sprintf(buf, "spellbook called %s", un);
         } else
             Sprintf(buf, "%s spellbook", dn);
         break;
@@ -712,7 +714,7 @@ unsigned cxn_flags; /* bitmask of CXN_xxx values */
         else if (nn)
             Sprintf(buf, "ring of %s", actualn);
         else if (un)
-            xcalled(buf, BUFSZ - PREFIX, "ring", un);
+            Sprintf(buf, "ring called %s", un);
         else
             Sprintf(buf, "%s ring", dn);
         break;
@@ -723,7 +725,7 @@ unsigned cxn_flags; /* bitmask of CXN_xxx values */
             Strcpy(buf, rock);
         } else if (!nn) {
             if (un)
-                xcalled(buf, BUFSZ - PREFIX, rock, un);
+                Sprintf(buf, "%s called %s", rock, un);
             else
                 Sprintf(buf, "%s %s", dn, rock);
         } else {
@@ -748,8 +750,7 @@ unsigned cxn_flags; /* bitmask of CXN_xxx values */
     if (has_oname(obj) && dknown) {
         Strcat(buf, " named ");
  nameit:
-        (void) strncat(buf, ONAME(obj),
-                       BUFSZ - 1 - PREFIX - (unsigned) strlen(buf));
+        Strcat(buf, ONAME(obj));
     }
 
     if (!strncmpi(buf, "the ", 4))
@@ -1701,7 +1702,7 @@ const char *str;
         return strcpy(buf, "an []");
     }
     (void) just_an(buf, str);
-    return strncat(buf, str, BUFSZ - 1 - (unsigned) strlen(buf));
+    return strcat(buf, str);
 }
 
 char *
@@ -1769,7 +1770,9 @@ const char *str;
         Strcpy(buf, "the ");
     else
         buf[0] = '\0';
-    return strncat(buf, str, BUFSZ - 1 - (unsigned) strlen(buf));
+    Strcat(buf, str);
+
+    return buf;
 }
 
 char *
@@ -2153,7 +2156,7 @@ struct sing_plur {
 /* word pairs that don't fit into formula-based transformations;
    also some suffices which have very few--often one--matches or
    which aren't systematically reversible (knives, staves) */
-static struct sing_plur one_off[] = {
+static const struct sing_plur one_off[] = {
     { "child",
       "children" },      /* (for wise guys who give their food funny names) */
     { "cubus", "cubi" }, /* in-/suc-cubus */
@@ -2673,7 +2676,7 @@ const char *u_str;      /* from user, so might be variant spelling */
 const char *o_str;      /* from objects[], so is in canonical form */
 boolean retry_inverted; /* optional extra "of" handling */
 {
-    static NEARDATA const char detect_SP[] = "detect ",
+    static const char detect_SP[] = "detect ",
                                SP_detection[] = " detection";
     char *p, buf[BUFSZ];
 
@@ -2766,7 +2769,8 @@ struct o_range {
 };
 
 /* wishable subranges of objects */
-STATIC_OVL NEARDATA const struct o_range o_ranges[] = {
+/* read-only table: not __thread, just rodata. */
+STATIC_OVL const struct o_range o_ranges[] = {
     { "bag", TOOL_CLASS, SACK, BAG_OF_TRICKS },
     { "lamp", TOOL_CLASS, OIL_LAMP, MAGIC_LAMP },
     { "candle", TOOL_CLASS, TALLOW_CANDLE, WAX_CANDLE },
@@ -3181,12 +3185,10 @@ struct obj *no_wish;
      */
     if ((p = strstri(bp, " named ")) != 0) {
         *p = 0;
-        /* note: if 'name' is too long, oname() will truncate it */
         name = p + 7;
     }
     if ((p = strstri(bp, " called ")) != 0) {
         *p = 0;
-        /* note: if 'un' is too long, obj lookup just won't match anything */
         un = p + 8;
         /* "helmet called telepathy" is not "helmet" (a specific type)
          * "shield called reflection" is not "shield" (a general type)

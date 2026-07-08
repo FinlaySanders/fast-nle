@@ -5,4 +5,8 @@
 #ifndef NH_CTX_FILE_OPTIONS_C_H
 #define NH_CTX_FILE_OPTIONS_C_H
 #define n_menu_mapped (nh_cur->g_options_c_n_menu_mapped)
+#define opt_intro (nh_cur->g_options_c_opt_intro)
+#define fmtstr_doset (nh_cur->g_options_c_fmtstr_doset)
+#define made_fmtstr (nh_cur->g_options_c_made_fmtstr)
+#define mapped_menu_cmds (nh_cur->g_options_c_mapped_menu_cmds)
 #endif /* NH_CTX_FILE_OPTIONS_C_H */

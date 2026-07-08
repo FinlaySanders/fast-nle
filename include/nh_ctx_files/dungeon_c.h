@@ -5,4 +5,7 @@
 #ifndef NH_CTX_FILE_DUNGEON_C_H
 #define NH_CTX_FILE_DUNGEON_C_H
 #define n_dgns (nh_cur->g_dungeon_c_n_dgns)
+#define branches_p (nh_cur->g_dungeon_c_branches_p)
+#define branch_id_ctr (nh_cur->g_dungeon_c_branch_id_ctr)
+#define mapseenchn_p (nh_cur->g_dungeon_c_mapseenchn_p)
 #endif /* NH_CTX_FILE_DUNGEON_C_H */

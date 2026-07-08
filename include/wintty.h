@@ -100,7 +100,7 @@ extern const struct window_procs tty_procs;
 #define wins        (nh_cur->g_wintty_c_wins)
 #define ttyDisplay  (nh_cur->g_wintty_c_ttydisplay)
 #define morc        (nh_cur->g_wintty_c_morc)
-extern char defmorestr[]; /* default --more-- prompt */
+extern const char defmorestr[]; /* default --more-- prompt */
 
 /* port specific external function references */
 

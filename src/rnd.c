@@ -7,24 +7,33 @@
 #ifdef USE_ISAAC64
 #include "isaac64.h"
 
-#if 0
-static isaac64_ctx rng_state;
-#endif
-
-struct rnglist_t {
-    int FDECL((*fn), (int));
-    boolean init;
-    isaac64_ctx rng_state;
-};
+/* nle_state refactor stage 1: RNG state moved out of static storage and
+ * into per-instance nle_ctx_t. The (constant) function-pointer side of
+ * each entry stays static because it's the same across all instances. */
 
 enum { CORE = 0, DISP = 1 };
 
-/* For NLE purposes, remove the static storage class so
-   that we can see the RNG states from our own functions. */
-struct rnglist_t rnglist[] = {
-    { rn2, FALSE, { 0 } },                      /* CORE */
-    { rn2_on_display_rng, FALSE, { 0 } },       /* DISP */
+static int FDECL((*rnglist_fn[2]), (int)) = {
+    rn2,                  /* CORE */
+    rn2_on_display_rng,   /* DISP */
 };
+
+
+/* Per-env RNG state accessors (state lives in struct nh_ctx; nlernd.c
+ * also uses these to swap core/lgen states). */
+isaac64_ctx *
+nle_rng_state(idx)
+int idx;
+{
+    return &nh_cur->g_rnd_c_rng_state[idx];
+}
+
+int *
+nle_rng_init_flag(idx)
+int idx;
+{
+    return &nh_cur->g_rnd_c_rng_init[idx];
+}
 
 int
 whichrng(fn)
@@ -32,8 +41,8 @@ int FDECL((*fn), (int));
 {
     int i;
 
-    for (i = 0; i < SIZE(rnglist); ++i)
-        if (rnglist[i].fn == fn)
+    for (i = 0; i < 2; ++i)
+        if (rnglist_fn[i] == fn)
             return i;
     return -1;
 }
@@ -54,14 +63,14 @@ int FDECL((*fn), (int));
         new_rng_state[i] = (unsigned char) (seed & 0xFF);
         seed >>= 8;
     }
-    isaac64_init(&rnglist[rngindx].rng_state, new_rng_state,
+    isaac64_init(nle_rng_state(rngindx), new_rng_state,
                  (int) sizeof seed);
 }
 
 static int
 RND(int x)
 {
-    return (isaac64_next_uint64(&rnglist[CORE].rng_state) % x);
+    return (isaac64_next_uint64(nle_rng_state(CORE)) % x);
 }
 
 /* 0 <= rn2(x) < x, but on a different sequence from the "main" rn2;
@@ -71,7 +80,7 @@ int
 rn2_on_display_rng(x)
 register int x;
 {
-    return (isaac64_next_uint64(&rnglist[DISP].rng_state) % x);
+    return (isaac64_next_uint64(nle_rng_state(DISP)) % x);
 }
 
 #else   /* USE_ISAAC64 */
@@ -92,9 +101,12 @@ int
 rn2_on_display_rng(x)
 register int x;
 {
-    static unsigned seed = 1;
-    seed *= 2739110765;
-    return (int)((seed >> 16) % (unsigned)x);
+    /* Function-local `static unsigned seed = 1;` migrated
+     * to nh_cur->g_rnd_c_rn2disprng_seed (initialized to 1 in init_nle).
+     * Direct access here rather than a #define seed macro because `seed`
+     * collides with init_isaac64's parameter name above. */
+    nh_cur->g_rnd_c_rn2disprng_seed *= 2739110765;
+    return (int)((nh_cur->g_rnd_c_rn2disprng_seed >> 16) % (unsigned)x);
 }
 #endif  /* USE_ISAAC64 */
 

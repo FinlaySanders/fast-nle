@@ -24,4 +24,5 @@
 #define mines_prize_count (nh_cur->g_sp_lev_c_mines_prize_count)
 #define soko_prize_count (nh_cur->g_sp_lev_c_soko_prize_count)
 #define floodfillchk_match_under_typ (nh_cur->g_sp_lev_c_floodfillchk_match_under_typ)
+#define ralign (nh_cur->g_sp_lev_c_ralign)
 #endif /* NH_CTX_FILE_SP_LEV_C_H */

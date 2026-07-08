@@ -3,7 +3,7 @@
 #ifndef NH_CTX_GEN_H
 #define NH_CTX_GEN_H
 
-#define NH_LAZY_SLOTS 48
+#define NH_LAZY_SLOTS 64
 struct nh_ctx {
     /* hot: touched every step; keep packed at the front so the
      * per-step working set spans the fewest cache lines. */
@@ -32,6 +32,9 @@ struct nh_ctx {
     char g_display_c_gbuf_start[ROWNO]; /* display.c: gbuf_start */
     char g_display_c_gbuf_stop[ROWNO]; /* display.c: gbuf_stop */
     int g_xwaitingforspace; /* global: xwaitingforspace */
+    isaac64_ctx g_rnd_c_rng_state[2]; /* rnd.c: rng_state */
+    int g_rnd_c_rng_init[2]; /* rnd.c: rng_init */
+    nhsym g_drawing_c_showsyms[SYM_MAX]; /* drawing.c: showsyms */
     /* --- cold --- */
     int g_track_c_utcnt; /* track.c: utcnt */
     int g_track_c_utpnt; /* track.c: utpnt */
@@ -388,6 +391,92 @@ struct nh_ctx {
     void * g_makemon_c_align_shift_lev_p; /* makemon.c: align_shift_lev_p */
     long g_makemon_c_align_shift_oldmoves; /* makemon.c: align_shift_oldmoves */
     int g_end_c_vanq_sortmode; /* end.c: vanq_sortmode */
+    unsigned g_rnd_c_rn2disprng_seed; /* rnd.c: rn2disprng_seed */
+    isaac64_ctx g_nlernd_c_lgen_base; /* nlernd.c: lgen_base */
+    isaac64_ctx g_nlernd_c_lgen_state[8]; /* nlernd.c: lgen_state */
+    isaac64_ctx g_nlernd_c_core_state; /* nlernd.c: core_state */
+    int g_nlernd_c_lgen_initialised; /* nlernd.c: lgen_initialised */
+    int g_nlernd_c_lgen_active; /* nlernd.c: lgen_active */
+    struct engr * g_engrave_c_head_engr; /* engrave.c: head_engr */
+    void * g_light_c_light_base; /* light.c: light_base */
+    void * g_timeout_c_timer_base; /* timeout.c: timer_base */
+    unsigned long g_timeout_c_timer_id; /* timeout.c: timer_id */
+    void * g_region_c_regions_p; /* region.c: regions_p */
+    int g_region_c_n_regions; /* region.c: n_regions */
+    int g_region_c_max_regions; /* region.c: max_regions */
+    struct wseg * g_worm_c_wheads[32]; /* worm.c: wheads */
+    struct wseg * g_worm_c_wtails[32]; /* worm.c: wtails */
+    long g_worm_c_wgrowtime[32]; /* worm.c: wgrowtime */
+    void * g_dungeon_c_branches_p; /* dungeon.c: branches_p */
+    int g_dungeon_c_branch_id_ctr; /* dungeon.c: branch_id_ctr */
+    void * g_dungeon_c_mapseenchn_p; /* dungeon.c: mapseenchn_p */
+    char g_mklev_c_made_branch; /* mklev.c: made_branch */
+    schar g_mklev_c_vault_x; /* mklev.c: vault_x */
+    schar g_mklev_c_vault_y; /* mklev.c: vault_y */
+    int g_rect_c_rect_cnt; /* rect.c: rect_cnt */
+    schar g_dogmove_c_gtyp; /* dogmove.c: gtyp */
+    schar g_dogmove_c_gx; /* dogmove.c: gx */
+    schar g_dogmove_c_gy; /* dogmove.c: gy */
+    int g_mthrowu_c_mesg_given; /* mthrowu.c: mesg_given */
+    struct monst * g_mthrowu_c_archer; /* mthrowu.c: archer */
+    struct monst * g_mthrowu_c_target; /* mthrowu.c: target */
+    int g_mhitu_c_dieroll; /* mhitu.c: dieroll */
+    struct obj * g_mhitu_c_mon_currwep; /* mhitu.c: mon_currwep */
+    struct symsetentry g_drawing_c_symset_store[2]; /* drawing.c: symset_store */
+    nhsym g_drawing_c_primary_syms[SYM_MAX]; /* drawing.c: primary_syms */
+    nhsym g_drawing_c_rogue_syms[SYM_MAX]; /* drawing.c: rogue_syms */
+    nhsym g_drawing_c_ov_primary_syms[SYM_MAX]; /* drawing.c: ov_primary_syms */
+    nhsym g_drawing_c_ov_rogue_syms[SYM_MAX]; /* drawing.c: ov_rogue_syms */
+    nhsym g_drawing_c_warnsyms[6]; /* drawing.c: warnsyms */
+    int g_mkmap_c_n_loc_filled; /* mkmap.c: n_loc_filled */
+    unsigned g_steal_c_stealmid; /* steal.c: stealmid */
+    unsigned g_steal_c_stealoid; /* steal.c: stealoid */
+    struct obj * g_weapon_c_propellor; /* weapon.c: propellor */
+    schar g_pray_c_p_aligntyp; /* pray.c: p_aligntyp */
+    int g_pray_c_p_trouble; /* pray.c: p_trouble */
+    int g_pray_c_p_type; /* pray.c: p_type */
+    boolean g_zap_c_obj_zapped; /* zap.c: obj_zapped */
+    int g_zap_c_poly_zapped; /* zap.c: poly_zapped */
+    boolean g_uhitm_c_cleave_clockwise; /* uhitm.c: cleave_clockwise */
+    char g_uhitm_c_msgbuf[256]; /* uhitm.c: msgbuf */
+    struct obj * g_teleport_c_telescroll; /* teleport.c: telescroll */
+    int g_polyself_c_sex_change_ok; /* polyself.c: sex_change_ok */
+    void * g_read_c_gremlins_p; /* read.c: gremlins_p */
+    boolean g_read_c_known; /* read.c: known */
+    void * g_ball_c_bcp_p; /* ball.c: bcp_p */
+    void * g_ball_c_bcu_p; /* ball.c: bcu_p */
+    int g_ball_c_bcrestriction; /* ball.c: bcrestriction */
+    boolean g_dig_c_did_dig_msg; /* dig.c: did_dig_msg */
+    char g_dbridge_c_wholebuf[80]; /* dbridge.c: wholebuf */
+    void * g_dbridge_c_occupants_p; /* dbridge.c: occupants_p */
+    char g_do_wear_c_offdelaybuf[60]; /* do_wear.c: offdelaybuf */
+    boolean g_do_wear_c_initial_don; /* do_wear.c: initial_don */
+    int g_dog_c_petname_used; /* dog.c: petname_used */
+    short g_o_init_c_disco[NUM_OBJECTS]; /* o_init.c: disco */
+    char g_objnam_c_obufs[12][256]; /* objnam.c: obufs */
+    long g_topten_c_final_fpos; /* topten.c: final_fpos */
+    void * g_topten_c_tt_buf_p; /* topten.c: tt_buf_p */
+    int g_topten_c_toptenwin; /* topten.c: toptenwin */
+    void * g_topten_c_tt_head_p; /* topten.c: tt_head_p */
+    void * g_extralev_c_r_p; /* extralev.c: r_p */
+    char g_mapglyph_c_encbuf[20]; /* mapglyph.c: encbuf */
+    char g_mkobj_c_unknown[32]; /* mkobj.c: unknown */
+    char g_priest_c_piousness_buf[32]; /* priest.c: piousness_buf */
+    long g_dothrow_c_breakobj_lastmovetime; /* dothrow.c: breakobj_lastmovetime */
+    boolean g_dothrow_c_breakobj_peaceful_shk; /* dothrow.c: breakobj_peaceful_shk */
+    const char * g_options_c_opt_intro[10]; /* options.c: opt_intro */
+    char g_options_c_fmtstr_doset[24]; /* options.c: fmtstr_doset */
+    boolean g_options_c_made_fmtstr; /* options.c: made_fmtstr */
+    struct symsetentry * g_symset_list; /* global: symset_list */
+    aligntyp g_sp_lev_c_ralign[3]; /* sp_lev.c: ralign */
+    char g_cmd_c_travelcmd[2]; /* cmd.c: travelcmd */
+    char g_hacklib_c_s_suffix_buf[256]; /* hacklib.c: s_suffix_buf */
+    char g_hacklib_c_sitoa_buf[13]; /* hacklib.c: sitoa_buf */
+    coord g_mkroom_c_shrine_buf; /* mkroom.c: shrine_buf */
+    char g_options_c_mapped_menu_cmds[33]; /* options.c: mapped_menu_cmds */
+    boolean g_files_c_chosen_symset_start; /* files.c: chosen_symset_start */
+    boolean g_files_c_chosen_symset_end; /* files.c: chosen_symset_end */
+    boolean g_dlb_c_initialized; /* dlb.c: initialized */
     /* lazily-allocated per-env blobs whose types are private to one
      * .c file (e.g. options.c boolopt copy); freed by nh_ctx_free.
      * Slot assignments are documented at the allocation sites. */
@@ -535,5 +624,6 @@ void nh_ctx_fixup(struct nh_ctx *);
 #define restoring (nh_cur->g_restoring)
 #define notonhead (nh_cur->g_notonhead)
 #define nle_seeds (nh_cur->g_nle_seeds)
+#define symset_list (nh_cur->g_symset_list)
 
 #endif /* NH_CTX_GEN_H */

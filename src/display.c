@@ -2286,7 +2286,7 @@ set_wall_state()
 
 /* ------------------------------------------------------------------------ */
 /* This matrix is used here and in vision.c. */
-unsigned char seenv_matrix[3][3] = { { SV2, SV1, SV0 },
+const unsigned char seenv_matrix[3][3] = { { SV2, SV1, SV0 },
                                      { SV3, SVALL, SV7 },
                                      { SV4, SV5, SV6 } };
 

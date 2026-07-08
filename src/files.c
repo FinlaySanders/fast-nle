@@ -268,7 +268,7 @@ int bufsz;
 {
     char *sp, *op;
     int cnt = 0;
-    static char hexdigits[] = "0123456789ABCDEF";
+    static const char hexdigits[] = "0123456789ABCDEF";
 
     sp = s;
     op = callerbuf;
@@ -315,7 +315,7 @@ int bufsz;
 {
     char *sp, *op;
     int k, calc, cnt = 0;
-    static char hexdigits[] = "0123456789ABCDEF";
+    static const char hexdigits[] = "0123456789ABCDEF";
 
     sp = s;
     op = callerbuf;
@@ -3261,13 +3261,14 @@ boolean FDECL((*proc), (char *));
     return rv;
 }
 
-extern struct symsetentry *symset_list;  /* options.c */
-extern const char *known_handling[];     /* drawing.c */
-extern const char *known_restrictions[]; /* drawing.c */
+/* symset_list: per-env ctx global (accessor via nh_ctx_gen.h) */
+extern const char *const known_handling[];     /* drawing.c */
+extern const char *const known_restrictions[]; /* drawing.c */
 /* Per-env via nle_files_state (above). */
 #define symset_count      (nle_files()->_symset_count)
 #define symset_which_set  (nle_files()->_symset_which_set)
-static boolean chosen_symset_start = FALSE, chosen_symset_end = FALSE;
+#define chosen_symset_start (nh_cur->g_files_c_chosen_symset_start)
+#define chosen_symset_end (nh_cur->g_files_c_chosen_symset_end)
 
 STATIC_OVL
 FILE *
