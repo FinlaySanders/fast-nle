@@ -95,8 +95,11 @@ jobs:
       - name: Replay 7010 4x (2x ASLR on, 2x off)
         run: |
           g=tests/msan/aa_seed7010_7010.golden
+          mkdir -p /tmp/obsdump
           for i in 1 2; do
-            NLE_REPLAY_KEEP_GOING=1 build/replay_golden \
+            NLE_REPLAY_KEEP_GOING=1 \
+            NLE_REPLAY_DUMP_STEPS=11221,11222,54956,54957,55269,55270,55353,55354,56859,56860,57500,57501 \
+            NLE_REPLAY_DUMP_DIR=/tmp/obsdump build/replay_golden \
               build/libnethack.so build/dat $g \
               | grep -E "kg-mismatch|KEEP-GOING" > /tmp/aslr_on_$i.txt
           done
@@ -118,4 +121,6 @@ jobs:
         if: always()
         with:
           name: aslr-probe-logs
-          path: /tmp/aslr_*.txt
+          path: |
+            /tmp/aslr_*.txt
+            /tmp/obsdump/
