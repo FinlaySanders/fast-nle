@@ -26,6 +26,24 @@ extern "C" {
 #include "nletypes.h"
 }
 
+/* MSan boundary check: the C engine is instrumented but libstdc++ is not,
+   so once a string enters std::string its shadow is untrustworthy. Check
+   engine-produced strings here, at the C -> C++ crossing, where the shadow
+   is still real. No-op outside MemorySanitizer builds. */
+#if defined(__has_feature)
+#if __has_feature(memory_sanitizer)
+#include <sanitizer/msan_interface.h>
+#define MSAN_CHECK_CSTR(s)                                        \
+    do {                                                          \
+        if (s)                                                    \
+            __msan_check_mem_is_initialized((s), strlen(s) + 1);  \
+    } while (0)
+#endif
+#endif
+#ifndef MSAN_CHECK_CSTR
+#define MSAN_CHECK_CSTR(s) ((void) 0)
+#endif
+
 #define USE_DEBUG_API 0
 
 #if USE_DEBUG_API
@@ -334,6 +352,15 @@ NetHackRL::fill_obs(nle_obs *obs)
             assert(win->type == NHW_MESSAGE);
             std::strncpy((char *) &obs->message[0],
                          win->strings.back().c_str(), NLE_MESSAGE_SIZE);
+            /* The source std::string was written by uninstrumented
+               libstdc++, so the shadow strncpy propagated here is noise.
+               The real content was vetted by MSAN_CHECK_CSTR at putstr;
+               mark the copy clean so the obs funnel only reports truth. */
+#if defined(__has_feature)
+#if __has_feature(memory_sanitizer)
+            __msan_unpoison(obs->message, NLE_MESSAGE_SIZE);
+#endif
+#endif
         } else if (ttyDisplay->toplin) {
             // Copy toplines[], see topl.c.
             std::strncpy((char *) &obs->message[0], toplines,
@@ -571,6 +598,7 @@ NetHackRL::status_update_method(int fldidx, genericptr_t ptr, int,
     }
 
     char *text = (char *) ptr;
+    MSAN_CHECK_CSTR(text);
     std::string status(text);
     if (fldidx == BL_GOLD) {
         // Handle gold glyph.
@@ -584,6 +612,7 @@ void
 NetHackRL::putstr_method(winid wid, int attr, const char *str)
 {
     DEBUG_API("About to set strings on " << wid << std::endl);
+    MSAN_CHECK_CSTR(str);
     windows_[wid]->strings.push_back(str);
 }
 
@@ -682,6 +711,7 @@ NetHackRL::add_menu_method(
 )
 {
     DEBUG_API("rl_add_menu" << std::endl);
+    MSAN_CHECK_CSTR(str);
     tty_add_menu(wid, glyph, identifier, ch, gch, attr, str, preselected);
 
     /* We just add the menu item here. One problem with this method is that
@@ -920,6 +950,7 @@ void
 NetHackRL::rl_raw_print(const char *str)
 {
     DEBUG_API("rl_raw_print" << std::endl);
+    MSAN_CHECK_CSTR(str);
     /* Not calling tty_raw_print(str); here or below as that
        uses puts/fputs. */
     xputs(str);
@@ -931,6 +962,7 @@ void
 NetHackRL::rl_raw_print_bold(const char *str)
 {
     DEBUG_API("rl_raw_print_bold" << std::endl);
+    MSAN_CHECK_CSTR(str);
     /* Not calling tty_raw_print_bold(str);, so above. */
     xputs(str);
     putchar('\n');
@@ -1053,6 +1085,7 @@ void
 NetHackRL::rl_putmsghistory(const char *msg, BOOLEAN_P is_restoring)
 {
     DEBUG_API("rl_putmsghistory" << std::endl);
+    MSAN_CHECK_CSTR(msg);
     tty_putmsghistory(msg, is_restoring);
 }
 
