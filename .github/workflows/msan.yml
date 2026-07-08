@@ -100,13 +100,16 @@ jobs:
           # see IDENTICAL time inputs. Any remaining divergence from the
           # mac-recorded goldens is a genuine platform difference
           # (candidates: libc qsort tie order, etc.), not time.
-          echo "--- repinned 7010 (recorded with pinned clock on mac) ---"
-          NLE_REPLAY_KEEP_GOING=1 build/replay_golden \
+          echo "--- repinned 7010: dump frames around the 11222 flicker ---"
+          mkdir -p /tmp/frame_linux
+          NLE_REPLAY_KEEP_GOING=1 NLE_REPLAY_DUMP_STEPS=11221,11222,11223 \
+            NLE_REPLAY_DUMP_DIR=/tmp/frame_linux build/replay_golden \
             build/libnethack.so build/dat \
             tests/msan/aa_seed7010_repinned.golden \
             | grep -E "kg-mismatch|KEEP-GOING" || true
-          echo "--- aa_7015 (5330 fork check) ---"
-          NLE_REPLAY_KEEP_GOING=1 build/replay_golden \
+          echo "--- aa_7015: dump frames around the 5330 flicker ---"
+          NLE_REPLAY_KEEP_GOING=1 NLE_REPLAY_DUMP_STEPS=5329,5330,5331,5332 \
+            NLE_REPLAY_DUMP_DIR=/tmp/frame_linux build/replay_golden \
             build/libnethack.so build/dat \
             tests/goldens/aa_seed7015_7015.golden \
             | grep -E "kg-mismatch|KEEP-GOING" | head -8 || true
@@ -140,4 +143,6 @@ jobs:
         if: always()
         with:
           name: aslr-probe-logs
-          path: /tmp/time_sweep.txt
+          path: |
+            /tmp/time_sweep.txt
+            /tmp/frame_linux/
