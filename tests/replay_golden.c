@@ -25,6 +25,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/time.h>
+#include <time.h>
 #include <unistd.h>
 
 #include <dlfcn.h>
@@ -448,6 +450,31 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
     else if (rc == 0)
         printf("OK %s (%ld steps)\n", golden_path, steps);
     return keep_going ? 0 : rc;
+}
+
+/* NLE_FAKE_TIME=<epoch>: interpose time(2) for the whole process. With
+   -rdynamic on ELF, the dlopen'd engine binds to this definition, so
+   u_init's `time(&ubirthday)` gets the fake epoch. Used to prove the
+   golden divergence tracks wall-clock via shknam.c's
+   `nseed = ubirthday / 257`. */
+time_t
+time(time_t *tloc)
+{
+    static time_t fake = -2;
+    if (fake == -2) {
+        const char *spec = getenv("NLE_FAKE_TIME");
+        fake = spec ? (time_t) strtoll(spec, NULL, 10) : -1;
+    }
+    if (fake != -1) {
+        if (tloc)
+            *tloc = fake;
+        return fake;
+    }
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    if (tloc)
+        *tloc = tv.tv_sec;
+    return tv.tv_sec;
 }
 
 /* NLE_REPLAY_PREALLOC="count,size,leak": perturb the malloc arena before

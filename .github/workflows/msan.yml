@@ -94,60 +94,33 @@ jobs:
           clang -O2 -g -Iinclude \
             -Ibuild/_deps/deboost_context-src/include \
             tests/replay_golden.c -ldl -o build/replay_golden
-      - name: Old-harness vs new-harness, same engine, same host
+      - name: Time sweep - prove divergence tracks ubirthday/257
         run: |
-          # The fa405d82 run produced got=4693a84f... at step 54957; every
-          # later run (different harness binary) produced 5c5ebba7....
-          # Rebuild that exact old harness here and run both against the
-          # same engine build on the same host to separate binary-content
-          # dependence from host variance.
-          git show fa405d82:tests/replay_golden.c > /tmp/replay_old.c
-          clang -O2 -g -Iinclude \
+          # shknam.c derives shopkeeper names from
+          #   nseed = ubirthday / 257;  name_wanted += nseed%13 - nseed%5
+          # ubirthday = wall-clock time() at reset. The (nseed%13, nseed%5)
+          # pair has period 65 in nseed, so 65 consecutive 257s buckets
+          # cover every possible behavior. The harness interposes time()
+          # (NLE_FAKE_TIME + -rdynamic); if some bucket reproduces the
+          # golden's exact hash at every divergent step, the root cause is
+          # proven and record-time is recovered modulo the bucket period.
+          clang -O2 -g -rdynamic -Iinclude \
             -Ibuild/_deps/deboost_context-src/include \
-            /tmp/replay_old.c -ldl -o build/replay_old
+            tests/replay_golden.c -ldl -o build/replay_faketime
           g=tests/msan/aa_seed7010_7010.golden
-          NLE_REPLAY_KEEP_GOING=1 build/replay_old \
-            build/libnethack.so build/dat $g \
-            | grep -E "kg-mismatch step (11222|54957)" || true
-          NLE_REPLAY_KEEP_GOING=1 build/replay_golden \
-            build/libnethack.so build/dat $g \
-            | grep -E "kg-mismatch step (11222|54957)" || true
-
-      - name: Replay 7010 4x (2x ASLR on, 2x off)
-        run: |
-          g=tests/msan/aa_seed7010_7010.golden
-          # Run A: dump only at the divergent step. dump_obs runs after the
-          # obs is hashed, so no mid-game allocation precedes step 54957 —
-          # this should reproduce the no-dump run's obs (got 4693a84f...).
-          # Run B: also dump at 11221, whose fopen/fclose perturbs the
-          # malloc arena mid-game (got 5c5ebba7...). Diffing A vs B shows
-          # exactly which obs bytes depend on heap allocation history.
-          mkdir -p /tmp/obsdump_a /tmp/obsdump_b
-          NLE_REPLAY_KEEP_GOING=1 \
-            NLE_REPLAY_DUMP_STEPS=99999,54957,55270,56860 \
-            NLE_REPLAY_DUMP_DIR=/tmp/obsdump_a build/replay_golden \
-            build/libnethack.so build/dat $g \
-            | grep -E "kg-mismatch|KEEP-GOING" > /tmp/run_a.txt
-          NLE_REPLAY_KEEP_GOING=1 \
-            NLE_REPLAY_DUMP_STEPS=11221,54957,55270,56860 \
-            NLE_REPLAY_DUMP_DIR=/tmp/obsdump_b build/replay_golden \
-            build/libnethack.so build/dat $g \
-            | grep -E "kg-mismatch|KEEP-GOING" > /tmp/run_b.txt
-          echo "=== run A (no mid-game alloc before 54957) ==="
-          cat /tmp/run_a.txt
-          echo "=== run B (fopen at step 11221) ==="
-          cat /tmp/run_b.txt
-          echo "=== obs diff A vs B at 54957 ==="
-          diff /tmp/obsdump_a/obs_step54957.txt \
-               /tmp/obsdump_b/obs_step54957.txt || true
-          echo "=== obs diff A vs B at 55270 ==="
-          diff /tmp/obsdump_a/obs_step55270.txt \
-               /tmp/obsdump_b/obs_step55270.txt || true
+          base=1751500000
+          for k in $(seq 0 64); do
+            t=$((base + k * 257))
+            got=$(NLE_FAKE_TIME=$t NLE_REPLAY_KEEP_GOING=1 \
+              build/replay_faketime build/libnethack.so build/dat $g \
+              | grep -cE "kg-mismatch step (54957|55270|55354|56860|57501)" \
+              || true)
+            echo "bucket k=$k epoch=$t shop-step mismatches=$got"
+          done | tee /tmp/time_sweep.txt
+          echo "=== buckets with zero shop-step mismatches (record-time bucket) ==="
+          grep "mismatches=0" /tmp/time_sweep.txt || echo "none found"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: aslr-probe-logs
-          path: |
-            /tmp/run_*.txt
-            /tmp/obsdump_a/
-            /tmp/obsdump_b/
+          path: /tmp/time_sweep.txt
