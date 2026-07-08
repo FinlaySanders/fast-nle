@@ -34,11 +34,25 @@ Any behavioral divergence fails at the first differing step. Recording
 requires a venv with the stock package (`uv venv && uv pip install -e .`,
 run via `python -P` so the repo's source tree doesn't shadow the install).
 
+### Multi-env modes (tests/replay_multi.c)
+
+The engine now supports many envs in ONE loaded library (no dlopen-copy):
+
+```
+cc -O2 -Iinclude tests/replay_multi.c -ldl -lpthread -o build/replay_multi
+build/replay_multi --interleaved build/libnethack.so build/dat tests/goldens/*.golden
+build/replay_multi --shuffled    build/libnethack.so build/dat tests/goldens/*.golden
+```
+
+`--interleaved` steps golden pairs alternately (A,B,A,B,...) in one process
+— any cross-env leak diverges a hash. `--shuffled` additionally executes
+every `nle_*` call on a rotating pool thread — any state hiding in a
+thread-local other than the two sanctioned `__thread` ctx pointers
+(`nh_cur`, `current_nle_ctx`) diverges. Both run in CI.
+
 Current corpus: 8 episodes x 500 steps + 2 x up-to-3000 steps (one full
 death) from the scripted random-walk policy. TODO(phase-0b): AutoAscend
-driver for deep-game coverage (shops, combat, prayer, multi-level descent);
-add thread-shuffled and interleaved-pairs replay modes once the per-env
-refactor makes multi-env stepping possible.
+driver for deep-game coverage (shops, combat, prayer, multi-level descent).
 
 ## Benchmark rules (when benchmarks land)
 

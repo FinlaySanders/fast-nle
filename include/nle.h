@@ -17,7 +17,13 @@
  * Would like to annotate this with __thread, but that causes
  * the MacOS dynamic linker to not unload the library on dlclose().
  */
-nle_ctx_t *current_nle_ctx;
+extern NH_THREAD_LOCAL nle_ctx_t *current_nle_ctx; /* defined in nle.c;
+    NH_THREAD_LOCAL comes from nh_ctx_gen.h (via hack.h) */
+
+/* fast-nle: per-env settings (field on nle_ctx_t). Consumers that used the
+ * old process global just work; the ctx pointer is anchored at every API
+ * entry before any settings access. */
+#define settings (current_nle_ctx->settings)
 
 nle_ctx_t *nle_start(nle_obs *, FILE *, nle_settings *);
 nle_ctx_t *nle_step(nle_ctx_t *, nle_obs *);

@@ -89,9 +89,19 @@ def gen_struct_header(entries):
     out.append("     * Slot assignments are documented at the allocation sites. */")
     out.append("    void *nh_lazy[NH_LAZY_SLOTS];")
     out.append("};\n")
-    out.append("/* One game per process/dl-copy for now; becomes __thread when the")
-    out.append(" * multi-env single-library step lands (see docs/DESIGN.md §2). */")
-    out.append("extern struct nh_ctx *nh_cur;\n")
+    out.append("/* THE per-env context pointer: one thread-local slot, re-anchored at")
+    out.append(" * every public API entry, so any pool thread can step any env.")
+    out.append(" * Default TLS model (global-dynamic) works under Python's")
+    out.append(" * dlopen-copy-per-env; define NH_TLS_INITIAL_EXEC for the single-lib")
+    out.append(" * vecenv build (faster TLS access; needs the static TLS reserve). */")
+    out.append("#ifndef NH_THREAD_LOCAL")
+    out.append("#if defined(NH_TLS_INITIAL_EXEC) && defined(__linux__)")
+    out.append("#define NH_THREAD_LOCAL __thread __attribute__((tls_model(\"initial-exec\")))")
+    out.append("#else")
+    out.append("#define NH_THREAD_LOCAL __thread")
+    out.append("#endif")
+    out.append("#endif")
+    out.append("extern NH_THREAD_LOCAL struct nh_ctx *nh_cur;\n")
     out.append("struct nh_ctx *nh_ctx_new(void);")
     out.append("void nh_ctx_free(struct nh_ctx *);")
     out.append("/* handwritten (src/nh_ctx_fixup.c): fields whose initial value")
@@ -130,7 +140,7 @@ def gen_file_headers(entries):
 def gen_impl(entries):
     out = [HEADER]
     out.append('#include "hack.h"\n')
-    out.append("struct nh_ctx *nh_cur;\n")
+    out.append("NH_THREAD_LOCAL struct nh_ctx *nh_cur;\n")
     inits = [e for e in entries if e["init"]]
     for e in inits:
         # postfix const so it binds to the whole declarator (matches

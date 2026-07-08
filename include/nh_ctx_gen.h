@@ -483,9 +483,19 @@ struct nh_ctx {
     void *nh_lazy[NH_LAZY_SLOTS];
 };
 
-/* One game per process/dl-copy for now; becomes __thread when the
- * multi-env single-library step lands (see docs/DESIGN.md §2). */
-extern struct nh_ctx *nh_cur;
+/* THE per-env context pointer: one thread-local slot, re-anchored at
+ * every public API entry, so any pool thread can step any env.
+ * Default TLS model (global-dynamic) works under Python's
+ * dlopen-copy-per-env; define NH_TLS_INITIAL_EXEC for the single-lib
+ * vecenv build (faster TLS access; needs the static TLS reserve). */
+#ifndef NH_THREAD_LOCAL
+#if defined(NH_TLS_INITIAL_EXEC) && defined(__linux__)
+#define NH_THREAD_LOCAL __thread __attribute__((tls_model("initial-exec")))
+#else
+#define NH_THREAD_LOCAL __thread
+#endif
+#endif
+extern NH_THREAD_LOCAL struct nh_ctx *nh_cur;
 
 struct nh_ctx *nh_ctx_new(void);
 void nh_ctx_free(struct nh_ctx *);

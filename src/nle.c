@@ -186,7 +186,13 @@ init_nle(FILE *ttyrec, nle_obs *obs)
     return nle;
 }
 
-nle_settings settings;
+/* settings: per-env field on nle_ctx_t (accessor in nle.h) */
+
+/* The NLE-layer per-env pointer, thread-local like nh_cur so a thread
+ * pool can step any env from any thread. macOS caveat: __thread in a
+ * dylib blocks dlclose() unloading (per-env leak under the Python
+ * dlopen-copy model on dev boxes; the Linux target is unaffected). */
+NH_THREAD_LOCAL nle_ctx_t *current_nle_ctx;
 
 /* TODO: Consider copying the relevant parts of main() in unixmain.c. */
 void
@@ -432,11 +438,14 @@ nle_fopen_wizkit_file()
 nle_ctx_t *
 nle_start(nle_obs *obs, FILE *ttyrec, nle_settings *settings_p)
 {
-    settings = *settings_p;
-
     /* CO/LI setup moved into init_nle: they live in the migrated
      * tc_gbl_data and need the ctx allocated first. */
     nle_ctx_t *nle = init_nle(ttyrec, obs);
+
+    /* Anchor the ctx BEFORE the settings copy: `settings` is a per-env
+     * field reached through current_nle_ctx now. */
+    current_nle_ctx = nle;
+    settings = *settings_p;
 
     /* Initialise the level generation RNG */
     nle_init_lgen_rng();

@@ -27,7 +27,37 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "nledl.h"
+#include <dlfcn.h>
+
+#include "nletypes.h"
+
+/* The library is dlopen'd ONCE and shared by every episode (and, in the
+ * multi-env modes, by simultaneously-live envs). This exercises the
+ * single-library model the vecenv will use — per-env state must live in
+ * the per-env contexts, never in the library image. */
+typedef void *(*nle_start_fn)(nle_obs *, FILE *, nle_settings *);
+typedef void *(*nle_step_fn)(void *, nle_obs *);
+typedef void (*nle_end_fn)(void *);
+static nle_start_fn lib_start;
+static nle_step_fn lib_step;
+static nle_end_fn lib_end;
+
+static void
+load_lib(const char *dlpath)
+{
+    void *h = dlopen(dlpath, RTLD_LAZY);
+    if (!h) {
+        fprintf(stderr, "dlopen(%s): %s\n", dlpath, dlerror());
+        exit(2);
+    }
+    lib_start = (nle_start_fn) dlsym(h, "nle_start");
+    lib_step = (nle_step_fn) dlsym(h, "nle_step");
+    lib_end = (nle_end_fn) dlsym(h, "nle_end");
+    if (!lib_start || !lib_step || !lib_end) {
+        fprintf(stderr, "dlsym: %s\n", dlerror());
+        exit(2);
+    }
+}
 
 #define ROWNO 21
 #define COLNO 80
@@ -151,7 +181,7 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
     obs.message = message;
     obs.misc = misc;
 
-    nledl_ctx *nle = NULL;
+    void *nle = NULL;
     char vardir[PATH_MAX];
     long lineno = 0, steps = 0;
     int rc = 0;
@@ -198,7 +228,7 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
                 settings.time_seed_is_set = true;
             }
 
-            nle = nle_start(dlpath, &obs, NULL, &settings);
+            nle = lib_start(&obs, NULL, &settings);
             if (!nle) {
                 fprintf(stderr, "%s: nle_start failed\n", golden_path);
                 rc = 1;
@@ -228,7 +258,7 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
             }
             uint64_t want = strtoull(hash_hex, NULL, 16);
             obs.action = action;
-            nle_step(nle, &obs);
+            lib_step(nle, &obs);
             steps++;
             uint64_t h = obs_hash(&obs);
             if (h != want) {
@@ -253,7 +283,7 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
     }
 
     if (nle)
-        nle_end(nle);
+        lib_end(nle);
     fclose(f);
     if (rc == 0)
         printf("OK %s (%ld steps)\n", golden_path, steps);
@@ -270,6 +300,7 @@ main(int argc, char **argv)
         return 2;
     }
     int fails = 0;
+    load_lib(argv[1]);
     for (int i = 3; i < argc; i++)
         fails += replay_one(argv[1], argv[2], argv[i]);
     if (fails) {

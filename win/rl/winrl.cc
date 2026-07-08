@@ -13,6 +13,9 @@
 
 extern "C" {
 #include "hack.h"
+extern "C" {
+#include "nle.h" /* current_nle_ctx for per-env window-port state */
+}
 }
 
 extern "C" {
@@ -60,9 +63,9 @@ const int nul_glyph = cmap_to_glyph(S_stone);
 
 namespace nethack_rl
 {
-std::deque<std::string> win_proc_calls;
-bool in_yn_function = false;
-bool in_getlin = false;
+std::deque<std::string> win_proc_calls; /* debug-only call trace (whitelisted) */
+#define in_yn_function (current_nle_ctx->rl_in_yn_function)
+#define in_getlin (current_nle_ctx->rl_in_getlin)
 
 // Glyphs provide instructions for windows to render the game (see display.h).
 // At the start of the game, descriptions and properties of the object classes
@@ -187,7 +190,6 @@ class NetHackRL
         std::string object_class_name;
     };
 
-    static std::unique_ptr<NetHackRL> instance;
 
     // TODO: Don't heap allocate this stuff.
     std::vector<std::unique_ptr<rl_window> > windows_;
@@ -236,8 +238,10 @@ class NetHackRL
     void destroy_nhwindow_method(winid wid);
 };
 
-std::unique_ptr<NetHackRL> NetHackRL::instance =
-    std::unique_ptr<NetHackRL>(nullptr);
+/* Per-env window-port object, stored on nle_ctx_t (raw pointer: a C
+ * struct can't hold a unique_ptr). Created in rl_init_nhwindows, deleted
+ * in rl_exit_nhwindows / error paths below. */
+#define instance (*(NetHackRL **) &current_nle_ctx->rl_instance)
 
 NetHackRL::NetHackRL(int &argc, char **argv) : glyphs_(), blstats_{}
 {
@@ -708,7 +712,7 @@ NetHackRL::rl_init_nhwindows(int *argc, char **argv)
     DEBUG_API("rl_init_nhwindows" << std::endl);
     ScopedStack s(win_proc_calls, "init_nhwindows");
     tty_init_nhwindows(argc, argv);
-    instance = std::make_unique<NetHackRL>(*argc, argv);
+    instance = new NetHackRL(*argc, argv);
 }
 
 void
@@ -741,7 +745,8 @@ NetHackRL::rl_exit_nhwindows(const char *c)
 {
     DEBUG_API("rl_exit_nhwindows" << std::endl);
     ScopedStack s(win_proc_calls, "exit_nhwindows");
-    instance.reset(nullptr);
+    delete instance;
+    instance = nullptr;
     tty_exit_nhwindows(c);
 }
 
@@ -1072,7 +1077,8 @@ NetHackRL::rl_end_screen()
         // The only way instance can still be around is in an error situation.
         // Unfortunately, ZQM doesn't close properly when destructed via
         // global objects. So we do it here.
-        instance.reset(nullptr);
+        delete instance;
+    instance = nullptr;
 }
 
 void

@@ -1,5 +1,6 @@
 #include "nlernd.h"
 #include "hack.h"
+#include "nle.h" /* per-env settings */
 #include "isaac64.h"
 #include <string.h>
 #include <time.h>
@@ -16,8 +17,6 @@ extern int FDECL(set_random, (unsigned long, int FDECL((*fn), (int) )));
    as seed for the random number generator */
 extern unsigned long NDECL(sys_random_seed);
 
-/* NLE settings contains the initial RNG seeds */
-extern nle_settings settings;
 
 /*
  * Initializes the random number generator.

@@ -30,10 +30,22 @@ jobs:
       # Oracle (b): golden trajectories recorded from stock NLE must replay
       # bit-identically. Any engine change that alters game behavior fails
       # here. See docs/DESIGN.md.
-      - name: Build replay harness
+      - name: Build replay harnesses
         run: |
           cc -O2 -Iinclude -Ibuild/_deps/deboost_context-src/include \
-             tests/replay_golden.c sys/unix/nledl.c -ldl -o build/replay_golden
+             tests/replay_golden.c -ldl -o build/replay_golden
+          cc -O2 -Iinclude -Ibuild/_deps/deboost_context-src/include \
+             tests/replay_multi.c -ldl -lpthread -o build/replay_multi
 
-      - name: Replay golden trajectories
+      - name: Replay golden trajectories (sequential, one lib image)
         run: build/replay_golden build/libnethack.so build/dat tests/goldens/*.golden
+
+      # Two envs live simultaneously in ONE library image, stepped
+      # alternately — catches cross-env state leakage.
+      - name: Replay goldens (interleaved pairs)
+        run: build/replay_multi --interleaved build/libnethack.so build/dat tests/goldens/*.golden
+
+      # Every nle_* call executes on a rotating pool thread — catches state
+      # stashed in thread-locals other than the two sanctioned ctx pointers.
+      - name: Replay goldens (thread-shuffled)
+        run: build/replay_multi --shuffled build/libnethack.so build/dat tests/goldens/*.golden

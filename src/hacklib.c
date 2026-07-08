@@ -951,7 +951,6 @@ getlt()
  * and seeds have been set. Otherwise fall back to real system time.
  * The actual RNG work is done by nle_fill_fixed_tm() in nlernd.c.
  */
-extern nle_settings settings;
 STATIC_OVL struct tm *
 nle_getlt_maybe_fixed()
 {

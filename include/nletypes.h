@@ -94,29 +94,6 @@ typedef struct {
     bool use_lgen_seed; /* bool to tell NLE to use level generation RNG */
 } nle_seeds_init_t;
 
-typedef struct nle_globals {
-    fcontext_stack_t stack;
-    fcontext_t returncontext;
-    fcontext_t generatorcontext;
-
-    FILE *ttyrec;
-    TMT *vterminal;
-    char outbuf[BUFSIZ];
-    char *outbuf_write_ptr;
-    char *outbuf_write_end;
-
-#ifdef NLE_BZ2_TTYRECS
-    void *ttyrec_bz2;
-#endif
-
-    boolean done;
-    nle_obs *observation;
-
-    /* fast-nle: this env's migrated game state (struct nh_ctx, generated
-     * from tools/globals.def). Opaque here to keep game headers out. */
-    void *nh;
-} nle_ctx_t;
-
 typedef struct nle_settings {
     /*
      *  Path to NetHack's game files.
@@ -149,5 +126,43 @@ typedef struct nle_settings {
     bool time_seed_is_set;
 
 } nle_settings;
+
+typedef struct nle_globals {
+    fcontext_stack_t stack;
+    fcontext_t returncontext;
+    fcontext_t generatorcontext;
+
+    FILE *ttyrec;
+    TMT *vterminal;
+    char outbuf[BUFSIZ];
+    char *outbuf_write_ptr;
+    char *outbuf_write_end;
+
+    /* Unconditional: this struct's layout must be IDENTICAL in every TU,
+     * and NLE_BZ2_TTYRECS is only defined where bzlib.h is included. An
+     * #ifdef here once made nle.c and nlernd.c disagree about the offset
+     * of every following field (8-byte ghost). */
+    void *ttyrec_bz2;
+
+    boolean done;
+    nle_obs *observation;
+
+    /* fast-nle: this env's migrated game state (struct nh_ctx, generated
+     * from tools/globals.def). Opaque here to keep game headers out. */
+    void *nh;
+
+    /* fast-nle: per-env copy of the caller's nle_settings (was a process
+     * global; accessor macro `settings` in nle.h). */
+    nle_settings settings;
+
+    /* fast-nle: per-env window-port state (was static in winrl.cc).
+     * rl_instance holds the NetHackRL object (C++, hence void*); the two
+     * flags feed the misc/internal observation fields. */
+    void *rl_instance;
+    char rl_in_yn_function;
+    char rl_in_getlin;
+} nle_ctx_t;
+
+/* (nle_settings moved above nle_ctx_t — it is a member now) */
 
 #endif /* NLETYPES_H */

@@ -2,7 +2,7 @@
 
 #include "hack.h"
 
-struct nh_ctx *nh_cur;
+NH_THREAD_LOCAL struct nh_ctx *nh_cur;
 
 extern long const nh_tmpl_moves;
 extern long const nh_tmpl_monstermoves;
