@@ -1,0 +1,3 @@
+# Symbols allowed to remain writable in the final library.
+# Every entry needs a justification.
+# (empty until the migration defines the ctx TLS pointer)

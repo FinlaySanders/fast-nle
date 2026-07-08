@@ -1,0 +1,39 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y cmake bison flex libbz2-dev
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
+
+      - name: Build engine + data
+        run: cmake --build build --target nethack dat -j "$(nproc)"
+
+      # Oracle (a), transitional form: no NEW mutable globals vs baseline.
+      # The migration shrinks tools/global_baseline.txt monotonically; once
+      # it's empty, switch this to the strict whitelist gate.
+      - name: Check no new mutable globals (ratchet)
+        run: tools/check_no_globals.sh --ratchet build/libnethack.so
+
+      # Oracle (b): golden trajectories recorded from stock NLE must replay
+      # bit-identically. Any engine change that alters game behavior fails
+      # here. See docs/DESIGN.md.
+      - name: Build replay harness
+        run: |
+          cc -O2 -Iinclude -Ibuild/_deps/deboost_context-src/include \
+             tests/replay_golden.c sys/unix/nledl.c -ldl -o build/replay_golden
+
+      - name: Replay golden trajectories
+        run: build/replay_golden build/libnethack.so build/dat tests/goldens/*.golden

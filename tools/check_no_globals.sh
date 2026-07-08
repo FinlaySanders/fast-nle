@@ -5,21 +5,32 @@
 # and fails if any symbol is not in the whitelist. File-scope statics appear
 # here as local symbols, so a missed global cannot hide.
 #
-# Two modes:
-#   tools/check_no_globals.sh <libnethack.so|.dylib>              # CI gate
-#   tools/check_no_globals.sh --inventory <lib>                   # print every
+# Three modes:
+#   tools/check_no_globals.sh <libnethack.so|.dylib>          # strict CI gate
+#   tools/check_no_globals.sh --inventory <lib>               # print every
 #       writable symbol with size, sorted — this IS the migration worklist.
+#   tools/check_no_globals.sh --ratchet <lib>                 # transitional
+#       gate: fail only on symbols NOT in tools/global_baseline.txt (i.e. new
+#       globals). The migration shrinks the baseline monotonically toward the
+#       whitelist; regenerate it with --inventory | cut -f1 after each sweep.
 #
 # Whitelist: tools/global_whitelist.txt, one symbol per line, '#' comments.
 # Every entry must carry a justification comment. Expected steady state:
 # the single TLS ctx pointer + const-in-practice tables upstream forgot to
 # mark const (each to be fixed or justified).
+#
+# Symbol names are normalized (leading Mach-O underscore stripped) so the
+# baseline/whitelist are portable between macOS dev boxes and Linux CI.
 set -euo pipefail
 
 mode=check
-if [ "${1:-}" = "--inventory" ]; then mode=inventory; shift; fi
-lib="${1:?usage: check_no_globals.sh [--inventory] <library>}"
+case "${1:-}" in
+--inventory) mode=inventory; shift ;;
+--ratchet) mode=ratchet; shift ;;
+esac
+lib="${1:?usage: check_no_globals.sh [--inventory|--ratchet] <library>}"
 whitelist="$(dirname "$0")/global_whitelist.txt"
+baseline="$(dirname "$0")/global_baseline.txt"
 
 # ELF: nm type codes are reliable — D/d = .data, B/b = .bss, C/c = common
 # (upper = global, lower = local/static). TLS lands in .tdata/.tbss.
@@ -33,7 +44,8 @@ list_writable() {
         # Writable = __DATA/__DATA_DIRTY data|bss|common (NOT __const).
         nm -m "$lib" 2>/dev/null \
             | awk '$2 ~ /^\(__DATA[^,]*,__(data|bss|common)\)$/ \
-                   { print $NF "\t0\t" substr($2, 2, length($2)-2) }' \
+                   { sym = $NF; sub(/^_/, "", sym);
+                     print sym "\t0\t" substr($2, 2, length($2)-2) }' \
             | sort -u
         ;;
     *)
@@ -52,19 +64,43 @@ if [ "$mode" = inventory ]; then
     exit 0
 fi
 
+allowed=$(mktemp)
+trap 'rm -f "$allowed"' EXIT
+if [ -f "$whitelist" ]; then
+    grep -v '^#' "$whitelist" | sed 's/[[:space:]].*//' | grep -v '^$' >> "$allowed" || true
+fi
+if [ "$mode" = ratchet ]; then
+    if [ ! -f "$baseline" ]; then
+        echo "ratchet mode needs $baseline (generate: --inventory | cut -f1)" >&2
+        exit 2
+    fi
+    grep -v '^#' "$baseline" | sed 's/[[:space:]].*//' | grep -v '^$' >> "$allowed" || true
+fi
+
 fails=0
+count=0
 while IFS=$'\t' read -r sym size type; do
     [ -z "$sym" ] && continue
-    if [ -f "$whitelist" ] && grep -qxF "$sym" <(grep -v '^#' "$whitelist" | sed 's/[[:space:]].*//'); then
+    count=$((count + 1))
+    if grep -qxF "$sym" "$allowed"; then
         continue
     fi
-    echo "MUTABLE GLOBAL NOT WHITELISTED: $sym (size $size, type $type)" >&2
+    echo "MUTABLE GLOBAL NOT ALLOWED: $sym (size $size, type $type)" >&2
     fails=$((fails + 1))
 done < <(list_writable)
 
 if [ "$fails" -gt 0 ]; then
-    echo "FAIL: $fails non-whitelisted writable symbol(s) in $lib" >&2
-    echo "Each is per-process state that will be shared across all envs." >&2
+    if [ "$mode" = ratchet ]; then
+        echo "FAIL: $fails NEW writable symbol(s) vs baseline in $lib" >&2
+        echo "New per-process state would be shared across all envs." >&2
+    else
+        echo "FAIL: $fails non-whitelisted writable symbol(s) in $lib" >&2
+        echo "Each is per-process state that will be shared across all envs." >&2
+    fi
     exit 1
 fi
-echo "OK: no mutable globals outside whitelist in $lib"
+if [ "$mode" = ratchet ]; then
+    echo "OK (ratchet): no new mutable globals; $count remain vs baseline of $(grep -cv '^#' "$baseline") — shrink toward whitelist"
+else
+    echo "OK: no mutable globals outside whitelist in $lib"
+fi
