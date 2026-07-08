@@ -7,14 +7,9 @@ name: record-goldens
 # Manually triggered; download the artifacts and commit them to
 # tests/goldens/.
 on:
-  workflow_dispatch:
-    inputs:
-      seeds:
-        description: comma-separated seeds to record
-        default: "7010,7014,7015"
-      max_steps:
-        description: step cap per episode
-        default: "100000"
+  push:
+    branches: [msan-hunt]
+    paths: [.github/workflows/record-goldens.yml]
 
 jobs:
   record:
@@ -47,7 +42,7 @@ jobs:
           mkdir -p /tmp/goldens
           python -P tools/record_autoascend.py \
             --autoascend /tmp/autoascend --outdir /tmp/goldens \
-            --seeds "${{ inputs.seeds }}" --max-steps "${{ inputs.max_steps }}"
+            --seeds 7010,7014,7015 --max-steps 100000
           ls -la /tmp/goldens
 
       - uses: actions/upload-artifact@v4
