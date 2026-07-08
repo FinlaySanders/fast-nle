@@ -131,6 +131,22 @@ jobs:
           echo "--- gcc -O3 vs mac-recorded golden (want: INIT mismatch) ---"
           NLE_REPLAY_KEEP_GOING=1 build/replay_golden             build_o3/libnethack.so build/dat             tests/goldens/aa_seed7014_7014.golden 2>&1 | head -3
 
+      - name: UB flag bisect at gcc -O3
+        run: |
+          # gcc -O3 produces a different level-1 than -O2/clang (same
+          # source, same seeds): flag-dependent UB. Find the UB class:
+          # whichever defined-behavior flag restores the -O2 init (fe08...)
+          # names it.
+          for f in "-fwrapv" "-fno-strict-aliasing" "-fno-aggressive-loop-optimizations" "-fwrapv -fno-strict-aliasing"; do
+            d="build_f$(echo $f | tr -dc a-z)"
+            cmake -S . -B $d -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_C_FLAGS="$f" > /dev/null
+            cmake --build $d --target nethack -j "$(nproc)" > /dev/null 2>&1
+            r=$(build/replay_golden $d/libnethack.so build/dat \
+              tests/goldens/aa_seed7014_7014.golden 2>&1 | head -1)
+            echo "flags [$f]: $r"
+          done
+
       - name: Time sweep - prove divergence tracks ubirthday/257
         run: |
           # shknam.c derives shopkeeper names from
