@@ -49,3 +49,30 @@ jobs:
       # stashed in thread-locals other than the two sanctioned ctx pointers.
       - name: Replay goldens (thread-shuffled)
         run: build/replay_multi --shuffled build/libnethack.so build/dat tests/goldens/*.golden
+
+      # Oracle (d): the game must be identical at any optimization level.
+      # C leaves call-argument evaluation order unspecified; gcc -O3 once
+      # reordered RNG-drawing arguments (mklev.c gold placement etc.),
+      # generating different dungeons than -O2/clang. Those sites are now
+      # explicitly sequenced; this gate keeps new ones out.
+      - name: Replay goldens (gcc -O3 build must match)
+        run: |
+          cmake -S . -B build_o3 -DCMAKE_BUILD_TYPE=Release
+          cmake --build build_o3 --target nethack -j "$(nproc)"
+          build/replay_golden build_o3/libnethack.so build/dat \
+            tests/goldens/*.golden
+
+      # Oracle (c): seeded games must be independent of wall-clock time.
+      # Stock NetHack leaks time(0) into gameplay via ubirthday (shopkeeper
+      # names, used-item price parity, scroll labels); fast-nle derives
+      # ubirthday from time_seed instead (nle_birthday_maybe_fixed). Replay
+      # a shop-reaching golden under two wildly different interposed clocks:
+      # if a wall-clock leak is ever (re)introduced, one of them fails.
+      - name: Replay is wall-clock independent
+        run: |
+          cc -O2 -shared -fPIC tools/faketime_shim.c -o build/faketime_shim.so
+          for t in 123456789 2000000000; do
+            LD_PRELOAD=$PWD/build/faketime_shim.so NLE_FAKE_TIME=$t \
+              build/replay_golden build/libnethack.so build/dat \
+              tests/goldens/*.golden
+          done

@@ -740,11 +740,10 @@ u_init()
     u.ualignbase[A_CURRENT] = u.ualignbase[A_ORIGINAL] = u.ualign.type =
         aligns[flags.initalign].value;
 
-#if defined(BSD) && !defined(POSIX_TYPES)
-    (void) time((long *) &ubirthday);
-#else
-    (void) time(&ubirthday);
-#endif
+    /* fast-nle: was wall-clock time(&ubirthday), which leaks into gameplay
+       via shknam.c/shk.c/read.c/mkroom.c — see nle_birthday_maybe_fixed().
+       Seeded games derive it from time_seed for full reproducibility. */
+    ubirthday = nle_birthday_maybe_fixed();
 
     /*
      *  For now, everyone starts out with a night vision range of 1 and

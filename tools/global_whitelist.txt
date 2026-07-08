@@ -5,7 +5,6 @@ windowprocs_init_state	# atomic once-only guard for the process-global windowpro
 mon_trace_enabled.cached	# process-level getenv("NLE_TRACE_MON") cache; debug tracing only, no game state
 rest_mon_trace_enabled.cached	# same, restore-path trace cache
 # --- NLE-layer per-env-via-dlopen-copy; migrate with the single-lib multi-env milestone ---
-_ZN10nethack_rl14win_proc_callsE	# winrl.cc debug call-stack deque; same milestone
 # --- process-level, write-once or identical across envs ---
 windowprocs	# window-proc function-pointer table; set once per process (guarded by windowprocs_init_state)
 winchoices	# window-system registry; ini_routine pointers written once at process init
@@ -32,3 +31,8 @@ render_status.once_only	# wintty warn-once latch
 BZ2_crc32Table	# bzip2 CRC table (read-only after lib init)
 BZ2_rNums	# bzip2 randomization table (read-only)
 defattrs	# libtmt default attrs; written only by terminal escape parsing (tty obs cosmetic)
+completed.0	# gcc/clang static-init guard variables (ELF)
+DW.ref.__gxx_personality_v0	# ELF C++ EH personality reference (toolchain artifact)
+__TMC_END__	# ELF transactional-memory section marker (toolchain artifact)
+__dso_handle	# ELF per-DSO handle for atexit (toolchain artifact)
+linux_flag_console	# sys/share Linux console detection flag (real-terminal only; unused in NLE embedding)

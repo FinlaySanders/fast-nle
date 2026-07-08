@@ -33,7 +33,7 @@
 #define ROWNO 21
 #define COLNO 80
 #define MAPLEN (ROWNO * (COLNO - 1))
-#define MAX_STEPS 8192
+#define MAX_STEPS 131072
 
 typedef void *(*nle_start_fn)(nle_obs *, FILE *, nle_settings *);
 typedef void *(*nle_step_fn)(void *, nle_obs *);
@@ -53,8 +53,8 @@ struct golden {
     int fix_moon_phase;
     uint64_t init_hash;
     int n_steps;
-    int actions[MAX_STEPS];
-    uint64_t hashes[MAX_STEPS];
+    int *actions;      /* heap: MAX_STEPS entries (AutoAscend runs are long) */
+    uint64_t *hashes;
 };
 
 static int
@@ -69,6 +69,8 @@ parse_golden(const char *path, struct golden *g)
     }
     memset(g, 0, sizeof(*g));
     g->path = path;
+    g->actions = (int *) malloc(MAX_STEPS * sizeof(int));
+    g->hashes = (uint64_t *) malloc(MAX_STEPS * sizeof(uint64_t));
     while (fgets(line, sizeof(line), f)) {
         if (line[0] == '#' || line[0] == '\n')
             continue;
@@ -232,6 +234,9 @@ env_exec(struct env *e, enum env_op op)
         h = env_hash(e);
         want = e->g->hashes[e->step_idx];
         e->step_idx++;
+        /* No mismatch tolerance: the flickers once tolerated here were
+         * wall-clock leaking through ubirthday; goldens are now recorded
+         * with time(2) pinned, so replays must be exact. */
         if (h != want) {
             fprintf(stderr,
                     "%s: HASH MISMATCH at step %d: got %016llx want %016llx\n",
@@ -239,9 +244,9 @@ env_exec(struct env *e, enum env_op op)
                     (unsigned long long) want);
             e->failed = 1;
             e->done = 1;
-        } else if (e->obs.done || e->step_idx >= e->g->n_steps) {
-            e->done = 1;
         }
+        if (!e->failed && (e->obs.done || e->step_idx >= e->g->n_steps))
+            e->done = 1;
         break;
     case OP_END:
         if (e->nle)

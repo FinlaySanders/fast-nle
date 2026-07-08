@@ -123,6 +123,11 @@ def pick_action(rng: random.Random, misc, step_no: int) -> int:
 
 
 def record_episode(outdir, core, disp, max_steps, role, lgen=None):
+    # Pin wall-clock (the ubirthday gameplay leak) to the same epoch the
+    # fast-nle engine derives from time_seed. Effective when the process
+    # runs under tools/faketime_shim.c (LD_PRELOAD / DYLD_INSERT_LIBRARIES);
+    # keep the formula in sync with nle_birthday_maybe_fixed().
+    os.environ["NLE_FAKE_TIME"] = str(1600000000 + ((core + 1) % 100000) * 257)
     game = Nethack(observation_keys=OBS_KEYS, playername=role, ttyrec=None,
                    fix_moon_phase=True)
     try:

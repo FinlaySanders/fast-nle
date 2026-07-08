@@ -185,6 +185,11 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
     char vardir[PATH_MAX];
     long lineno = 0, steps = 0;
     int rc = 0;
+    /* No mismatch tolerance. The "transient" flickers once tolerated here
+     * were wall-clock leaking into gameplay through ubirthday (shopkeeper
+     * names etc.); goldens are now recorded with time(2) pinned to the
+     * same epoch nle_birthday_maybe_fixed() derives from time_seed, so
+     * replays must be exact. See tests/README.md. */
     char line[65536];
 
     while (fgets(line, sizeof(line), f)) {
@@ -268,7 +273,8 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
                 fprintf(stderr,
                         "%s: HASH MISMATCH at step %ld (action %d): "
                         "got %016llx want %016llx\n",
-                        golden_path, steps, action, (unsigned long long) h,
+                        golden_path, steps, action,
+                        (unsigned long long) h,
                         (unsigned long long) want);
                 rc = 1;
                 break;

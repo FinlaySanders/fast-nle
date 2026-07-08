@@ -34,7 +34,18 @@ global — the scariest bug class (silent cross-env state leak). Bootstrapping
 bonus: run it on the unmodified build and the failure list IS the migration
 inventory.
 
-**(b) Golden-trajectory replay.** Recorded once from unmodified stock NLE:
+**(b) Golden-trajectory replay.** Recorded from stock NLE at the import
+commit, normalized only by (i) `time(2)` pinned via
+`tools/faketime_shim.c` — stock leaks wall-clock into gameplay through
+`ubirthday` (shopkeeper names, price parity, scroll labels), pinned to the
+same epoch our engine derives from `time_seed`
+(`nle_birthday_maybe_fixed()`, formula mirrored in
+`tools/record_autoascend.py:pinned_epoch`) — and (ii)
+`tools/stock_record.patch`, a minimal source patch mirroring the engine's
+documented determinism fixes (currently: `sort_rooms` total order — libc
+qsort tie order is implementation-defined and macOS vs glibc disagreed).
+Every hunk in that patch must correspond to a documented engine deviation
+and vice versa. Golden format:
 `(seed, action, FNV-1a hash of glyphs+chars+blstats+message)` per step.
 Corpus: AutoAscend-driven games (thousands of turns deep — shops, combat,
 prayer, level changes; multiple roles/seeds) plus scripted edge cases
@@ -48,6 +59,32 @@ library. Three mandatory modes:
      `__thread` while its array moved per-env);
   3. interleaved-pairs — envs A,B stepped alternately must hash identically to
      A,B run solo (catches cross-env leakage even when both games "work").
+
+**(c) Wall-clock independence.** CI replays a shop-reaching golden under
+two different interposed clocks (`faketime_shim` + `NLE_FAKE_TIME`); both
+must pass. Guards against reintroducing any `time()`-derived gameplay
+dependency (see tests/README.md "Wall-clock leak").
+
+Full catalogue of stock's same-seed nondeterminism (wall-clock, platform
+ifdefs, argument evaluation order, libc qsort ties), how each was found,
+and the debugging playbook: **docs/DETERMINISM.md**.
+
+**(d) Optimization-level independence.** C leaves function-argument
+evaluation order unspecified, and NetHack passes multiple RNG-drawing
+expressions as sibling arguments (`mkgold(0L, somex(croom),
+somey(croom))`, …): gcc -O3 evaluated them in a different order than
+-O2/clang, producing different (still deterministic) dungeons per build.
+All such sites are explicitly sequenced into locals in the canonical
+(clang/-O2) order — grep `fast-nle: sequence rng draws`. CI replays the
+corpus with a gcc -O3 Release build to keep new sites out. This is what
+lets the -O3 + LTO perf work proceed without invalidating goldens.
+
+Platform note: the engine is normalized to Unix behavior everywhere — the
+MACOSX-only apple message in `eat.c` is disabled (it differed textually
+AND in RNG draws from the Unix branch, so seeds could fork across
+platforms). Deep goldens are recorded from stock NLE on Linux
+(`record-goldens.yml`, stock built with clang for canonical argument
+order) and replay bit-exactly on mac dev builds.
 
 Sanitizer builds (ASan/UBSan) run the replay in CI. The bump arena hides
 use-after-free from ASan, so keep an `NH_ARENA=off` build that routes

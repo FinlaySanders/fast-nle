@@ -1,0 +1,82 @@
+name: record-goldens
+# Record deep AutoAscend golden trajectories from STOCK NLE on Linux — the
+# target platform. Recording on Linux (with time(2) pinned by the recorder,
+# see tools/record_autoascend.py) makes goldens platform-canonical: the
+# fast-nle engine takes the UNIX code paths on every platform (see the
+# MACOSX note in src/eat.c), so mac dev builds replay these bit-exactly.
+# Manually triggered; download the artifacts and commit them to
+# tests/goldens/.
+on:
+  workflow_dispatch:
+    inputs:
+      seeds:
+        description: comma-separated seeds to record
+        default: "7010,7014,7015"
+      max_steps:
+        description: step cap per episode
+        default: "100000"
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install build deps
+        run: sudo apt-get update && sudo apt-get install -y cmake bison flex libbz2-dev
+
+      - name: Install stock NLE (import commit, normalization patch) + AutoAscend deps
+        run: |
+          pip install "numpy<2" scipy numba opencv-python-headless toolz \
+            pandas matplotlib nltk pillow seaborn gymnasium
+          # Stock is patched with tools/stock_record.patch (documented
+          # determinism normalizations mirrored in the fast-nle engine —
+          # currently the sort_rooms total order) so recordings agree with
+          # the engine bit-for-bit.
+          git clone --no-checkout "https://github.com/${GITHUB_REPOSITORY}.git" /tmp/stock
+          git -C /tmp/stock checkout 2319f298
+          patch -d /tmp/stock -p1 < tools/stock_record.patch
+          # clang: stock must evaluate rng-drawing call arguments in the
+          # canonical order (the one our sequenced engine encodes). gcc -O3
+          # reorders them; clang matches at every opt level we tested.
+          CC=clang CXX=clang++ pip install /tmp/stock
+
+      - name: Clone AutoAscend + BLStats align patch
+        run: |
+          git clone --depth 1 https://github.com/maciej-sypetkowski/autoascend /tmp/autoascend
+          sed -i "s/level_number prop_mask')/level_number prop_mask align')/" \
+            /tmp/autoascend/autoascend/agent.py
+
+      - name: Record (deep, AutoAscend)
+        run: |
+          mkdir -p /tmp/goldens
+          python -P tools/record_autoascend.py \
+            --autoascend /tmp/autoascend --outdir /tmp/goldens \
+            --seeds "${{ inputs.seeds }}" --max-steps "${{ inputs.max_steps }}"
+          ls -la /tmp/goldens
+
+      - name: Record (scripted seeds needing patched-stock provenance)
+        run: |
+          # cav 1004 / wiz 1025 / val 9000 hit sort_rooms lx-ties; their
+          # mac-recorded versions encode mac-libc tie order and are invalid
+          # under the total-order engine.
+          cc -O2 -shared -fPIC tools/faketime_shim.c -o /tmp/faketime_shim.so
+          export LD_PRELOAD=/tmp/faketime_shim.so
+          python -P tools/record_goldens.py --outdir /tmp/goldens \
+            --roles cav --seed-base 1004 --episodes-per-role 1 --lgen-every 0
+          python -P tools/record_goldens.py --outdir /tmp/goldens \
+            --roles wiz --seed-base 1025 --episodes-per-role 1 --lgen-every 0
+          python -P tools/record_goldens.py --outdir /tmp/goldens \
+            --roles val --seed-base 9000 --episodes-per-role 1 \
+            --steps 6000 --lgen-every 1
+          ls -la /tmp/goldens
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: goldens
+          path: /tmp/goldens/

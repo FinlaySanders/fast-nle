@@ -63,7 +63,11 @@ const int nul_glyph = cmap_to_glyph(S_stone);
 
 namespace nethack_rl
 {
-std::deque<std::string> win_proc_calls; /* debug-only call trace (whitelisted) */
+/* The former win_proc_calls debug deque is gone: it was the last
+ * process-global in the window port, its std::string churn perturbed the
+ * heap on every window call (a suspect for layout-dependent behavior),
+ * and it drowned MemorySanitizer in uninstrumented-libstdc++ shadow
+ * noise. DEBUG_API logging remains for tracing. */
 #define in_yn_function (current_nle_ctx->rl_in_yn_function)
 #define in_getlin (current_nle_ctx->rl_in_getlin)
 
@@ -87,23 +91,6 @@ shuffled_glyph(int glyph)
     return glyph;
 }
 
-class ScopedStack
-{
-  public:
-    ScopedStack(std::deque<std::string> &deque, std::string &&s)
-        : deque_(deque)
-    {
-        deque_.push_back(s);
-    }
-
-    ~ScopedStack()
-    {
-        deque_.pop_back();
-    }
-
-  private:
-    std::deque<std::string> &deque_;
-};
 
 class NetHackRL
 {
@@ -623,7 +610,6 @@ NetHackRL::create_nhwindow_method(int type)
     }
 
     DEBUG_API("rl_create_nhwindow(type=" << window_type << ")");
-    ScopedStack s(win_proc_calls, "create_nhwindow");
 
     winid wid = tty_create_nhwindow(type);
     DEBUG_API(": wid == " << wid << std::endl);
@@ -710,7 +696,6 @@ void
 NetHackRL::rl_init_nhwindows(int *argc, char **argv)
 {
     DEBUG_API("rl_init_nhwindows" << std::endl);
-    ScopedStack s(win_proc_calls, "init_nhwindows");
     tty_init_nhwindows(argc, argv);
     instance = new NetHackRL(*argc, argv);
 }
@@ -719,7 +704,6 @@ void
 NetHackRL::rl_player_selection()
 {
     DEBUG_API("rl_player_selection" << std::endl);
-    ScopedStack s(win_proc_calls, "player_selection");
     tty_player_selection();
     instance->player_selection_method();
 }
@@ -728,7 +712,6 @@ void
 NetHackRL::rl_askname()
 {
     DEBUG_API("rl_askname" << std::endl);
-    ScopedStack s(win_proc_calls, "askname");
     tty_askname();
 }
 
@@ -736,7 +719,6 @@ void
 NetHackRL::rl_get_nh_event()
 {
     DEBUG_API("rl_get_nh_event" << std::endl);
-    ScopedStack s(win_proc_calls, "get_nh_event");
     tty_get_nh_event();
 }
 
@@ -744,7 +726,6 @@ void
 NetHackRL::rl_exit_nhwindows(const char *c)
 {
     DEBUG_API("rl_exit_nhwindows" << std::endl);
-    ScopedStack s(win_proc_calls, "exit_nhwindows");
     delete instance;
     instance = nullptr;
     tty_exit_nhwindows(c);
@@ -754,7 +735,6 @@ void
 NetHackRL::rl_suspend_nhwindows(const char *c)
 {
     DEBUG_API("rl_suspend_nhwindows" << std::endl);
-    ScopedStack s(win_proc_calls, "suspend_nhwindows");
     tty_suspend_nhwindows(c);
 }
 
@@ -762,7 +742,6 @@ void
 NetHackRL::rl_resume_nhwindows()
 {
     DEBUG_API("rl_resume_nhwindows" << std::endl);
-    ScopedStack s(win_proc_calls, "resume_nhwindows");
     tty_resume_nhwindows();
 }
 
@@ -776,7 +755,6 @@ NetHackRL::rl_create_nhwindow(int type)
 void
 NetHackRL::rl_clear_nhwindow(winid wid)
 {
-    ScopedStack s(win_proc_calls, "clear_nhwindow");
     instance->clear_nhwindow_method(wid);
 }
 
@@ -792,14 +770,12 @@ NetHackRL::rl_clear_nhwindow(winid wid)
 void
 NetHackRL::rl_display_nhwindow(winid wid, BOOLEAN_P block)
 {
-    ScopedStack s(win_proc_calls, "display_nhwindow");
     instance->display_nhwindow_method(wid, block);
 }
 
 void
 NetHackRL::rl_destroy_nhwindow(winid wid)
 {
-    ScopedStack s(win_proc_calls, "destroy_nhwindow");
     instance->destroy_nhwindow_method(wid);
 }
 
@@ -808,7 +784,6 @@ NetHackRL::rl_curs(winid wid, int x, int y)
 {
     DEBUG_API("rl_curs(wid=" << wid << ", x=" << x << ", y=" << y << ")"
                              << std::endl);
-    ScopedStack s(win_proc_calls, "curs");
     DEBUG_API("rl_curs for window id " << wid << std::endl);
     tty_curs(wid, x, y);
 }
@@ -818,7 +793,6 @@ NetHackRL::rl_putstr(winid wid, int attr, const char *text)
 {
     DEBUG_API("rl_putstr(wid=" << wid << ", attr=" << attr
                                << ", text=" << text << ")" << std::endl);
-    ScopedStack s(win_proc_calls, "putstr");
     instance->putstr_method(wid, attr, text);
     tty_putstr(wid, attr, text);
 }
@@ -827,14 +801,12 @@ void
 NetHackRL::rl_display_file(const char *filename, BOOLEAN_P must_exist)
 {
     DEBUG_API("rl_display_file" << std::endl);
-    ScopedStack s(win_proc_calls, "display_file");
     tty_display_file(filename, must_exist);
 }
 
 void
 NetHackRL::rl_start_menu(winid wid)
 {
-    ScopedStack s(win_proc_calls, "start_menu");
     instance->start_menu_method(wid);
 }
 
@@ -843,7 +815,6 @@ NetHackRL::rl_add_menu(winid wid, int glyph, const ANY_P *identifier,
                        CHAR_P ch, CHAR_P gch, int attr, const char *str,
                        BOOLEAN_P presel)
 {
-    ScopedStack s(win_proc_calls, "add_menu");
     instance->add_menu_method(wid, glyph, identifier, ch, gch, attr, str,
                               presel);
 }
@@ -852,7 +823,6 @@ void
 NetHackRL::rl_end_menu(winid wid, const char *prompt)
 {
     DEBUG_API("rl_end_menu" << std::endl);
-    ScopedStack s(win_proc_calls, "end_menu");
     tty_end_menu(wid, prompt);
 }
 
@@ -860,7 +830,6 @@ int
 NetHackRL::rl_select_menu(winid wid, int how, MENU_ITEM_P **menu_list)
 {
     DEBUG_API("rl_select_menu");
-    ScopedStack s(win_proc_calls, "select_menu");
     int response = tty_select_menu(wid, how, menu_list);
     DEBUG_API(" : " << response << std::endl);
     return response;
@@ -870,7 +839,6 @@ void
 NetHackRL::rl_update_inventory()
 {
     DEBUG_API("rl_update_inventory" << std::endl);
-    ScopedStack s(win_proc_calls, "update_inventory");
     instance->update_inventory_method();
 }
 
@@ -878,7 +846,6 @@ void
 NetHackRL::rl_mark_synch()
 {
     DEBUG_API("rl_mark_synch" << std::endl);
-    ScopedStack s(win_proc_calls, "mark_synch");
     tty_mark_synch();
 }
 
@@ -886,7 +853,6 @@ void
 NetHackRL::rl_wait_synch()
 {
     DEBUG_API("rl_wait_synch" << std::endl);
-    ScopedStack s(win_proc_calls, "wait_synch");
     tty_wait_synch();
 }
 
@@ -954,7 +920,6 @@ void
 NetHackRL::rl_raw_print(const char *str)
 {
     DEBUG_API("rl_raw_print" << std::endl);
-    ScopedStack s(win_proc_calls, "raw_print");
     /* Not calling tty_raw_print(str); here or below as that
        uses puts/fputs. */
     xputs(str);
@@ -966,7 +931,6 @@ void
 NetHackRL::rl_raw_print_bold(const char *str)
 {
     DEBUG_API("rl_raw_print_bold" << std::endl);
-    ScopedStack s(win_proc_calls, "raw_bold_print");
     /* Not calling tty_raw_print_bold(str);, so above. */
     xputs(str);
     putchar('\n');
@@ -977,7 +941,6 @@ int
 NetHackRL::rl_nhgetch()
 {
     DEBUG_API("rl_nhgetch" << std::endl);
-    ScopedStack s(win_proc_calls, "nhgetch");
     int i = instance->getch_method();
     return i;
 }
@@ -989,7 +952,6 @@ NetHackRL::rl_nh_poskey(int *x, int *y, int *mod)
     nhUse(y);
     nhUse(mod);
 
-    ScopedStack s(win_proc_calls, "nh_poskey");
     int action = rl_nhgetch();
     DEBUG_API("rl_nh_poskey: " << action << std::endl);
     return action;
@@ -1000,7 +962,6 @@ void
 NetHackRL::rl_nhbell()
 {
     DEBUG_API("rl_nhbell" << std::endl);
-    ScopedStack s(win_proc_calls, "nhbell");
     return tty_nhbell();
 }
 
@@ -1008,7 +969,6 @@ int
 NetHackRL::rl_doprev_message()
 {
     DEBUG_API("rl_doprev_message" << std::endl);
-    ScopedStack s(win_proc_calls, "doprev_message");
     int result = tty_doprev_message();
     return result;
 }
@@ -1018,7 +978,6 @@ NetHackRL::rl_yn_function(const char *question_, const char *choices,
                           CHAR_P def)
 {
     DEBUG_API("rl_yn_function" << std::endl);
-    ScopedStack s(win_proc_calls, "yn_function");
     in_yn_function = true;
     char result = tty_yn_function(question_, choices, def);
     in_yn_function = false;
@@ -1029,7 +988,6 @@ void
 NetHackRL::rl_getlin(const char *prompt, char *line)
 {
     DEBUG_API("rl_getlin" << std::endl);
-    ScopedStack s(win_proc_calls, "getlin");
     in_getlin = true;
     tty_getlin(prompt, line);
     in_getlin = false;
@@ -1039,7 +997,6 @@ int
 NetHackRL::rl_get_ext_cmd()
 {
     DEBUG_API("rl_get_ext_cmd" << std::endl);
-    ScopedStack s(win_proc_calls, "get_ext_cmd");
     return tty_get_ext_cmd();
 }
 
@@ -1047,7 +1004,6 @@ void
 NetHackRL::rl_number_pad(int i)
 {
     DEBUG_API("rl_number_pad" << std::endl);
-    ScopedStack s(win_proc_calls, "number_pad");
     tty_number_pad(i);
 }
 
@@ -1062,7 +1018,6 @@ void
 NetHackRL::rl_start_screen()
 {
     DEBUG_API("rl_start_screen" << std::endl);
-    ScopedStack s(win_proc_calls, "start_screen");
     tty_start_screen();
 }
 
@@ -1070,7 +1025,6 @@ void
 NetHackRL::rl_end_screen()
 {
     DEBUG_API("rl_end_screen" << std::endl);
-    ScopedStack s(win_proc_calls, "end_screen");
     tty_end_screen();
 
     if (instance)
@@ -1106,7 +1060,6 @@ void
 NetHackRL::rl_status_init()
 {
     DEBUG_API("rl_status_init" << std::endl);
-    ScopedStack s(win_proc_calls, "status_init");
     tty_status_init();
 }
 
@@ -1116,7 +1069,6 @@ NetHackRL::rl_status_update(int fldidx, genericptr_t ptr, int chg,
 {
     DEBUG_API("rl_status_update" << std::endl);
 
-    ScopedStack s(win_proc_calls, "status_update");
     instance->status_update_method(fldidx, ptr, chg, percent, color,
                                    colormasks);
 #ifdef STATUS_HILITES

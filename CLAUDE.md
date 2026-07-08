@@ -11,11 +11,17 @@ refactor — see `docs/DESIGN.md` for what we keep and what we do differently.
 
 ## Non-negotiables
 
-1. **Game behavior must be bit-identical to stock NLE.** Every engine change is
-   gated by golden-trajectory replay: recorded `(seed, action, per-step obs hash)`
-   sequences from unmodified NLE (driven by AutoAscend for depth) must replay
-   identically. No commit that changes hashes, ever, without an explicit opt-in
-   flag defaulting to off.
+1. **Game behavior must be bit-identical to stock NLE (determinism-normalized).**
+   Every engine change is gated by golden-trajectory replay: recorded
+   `(seed, action, per-step obs hash)` sequences from stock NLE (driven by
+   AutoAscend for depth) must replay identically. Stock itself is not a pure
+   function of its seeds; recordings normalize exactly the documented leaks
+   (pinned clock + `tools/stock_record.patch` + clang, on Linux — see
+   docs/DETERMINISM.md) and the engine mirrors each normalization. Beyond
+   that: no commit that changes hashes, ever, without an explicit opt-in
+   flag defaulting to off, and no new normalization without its
+   recording-side counterpart, re-recorded goldens, and a DETERMINISM.md
+   entry.
 2. **No mutable globals.** All per-game state lives in one generated per-env
    context struct. CI dumps the built library's writable sections
    (`.data`/`.bss`/`.tbss`/COMMON) and fails on any non-whitelisted symbol.

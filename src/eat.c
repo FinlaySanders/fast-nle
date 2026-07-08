@@ -1861,10 +1861,14 @@ struct obj *otmp;
         } else if (otmp->otyp == APPLE && otmp->cursed && !Sleep_resistance) {
             ; /* skip core joke; feedback deferred til fpostfx() */
 
-#if defined(MAC) || defined(MACOSX)
-        /* KMH -- Why should Unix have all the fun?
-           We check MACOSX before UNIX to get the Apple-specific apple
-           message; the '#if UNIX' code will still kick in for pear. */
+#if defined(MAC)
+        /* fast-nle: MACOSX removed from this condition. The Apple-specific
+           apple message made obs text differ between mac dev builds and the
+           Linux target, and the branches are not RNG-equivalent (the UNIX
+           branch below draws rnd(100) when hallucinating), so the same
+           seeds could fork across platforms. All our builds take the UNIX
+           branch; goldens are recorded on Linux. Classic-MacOS MAC builds
+           keep the joke — we never build those. */
         } else if (otmp->otyp == APPLE) {
             pline("Delicious!  Must be a Macintosh!");
 #endif

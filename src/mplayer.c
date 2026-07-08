@@ -140,8 +140,9 @@ register boolean special;
         struct obj *otmp;
 
         mtmp->m_lev = (special ? rn1(16, 15) : rnd(16));
-        mtmp->mhp = mtmp->mhpmax = d((int) mtmp->m_lev, 10)
-                                   + (special ? (30 + rnd(30)) : 30);
+        /* fast-nle: sequence rng draws (arg eval order unspecified) */
+        mtmp->mhp = mtmp->mhpmax = d((int) mtmp->m_lev, 10);
+        mtmp->mhp = mtmp->mhpmax += (special ? (30 + rnd(30)) : 30);
         if (special) {
             get_mplname(mtmp, nam);
             mtmp = christen_monst(mtmp, nam);

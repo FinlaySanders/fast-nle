@@ -2901,9 +2901,15 @@ boolean wep_was_destroyed;
                         /* [it's the hero who should be getting paralyzed
                            and isn't; this message describes the monster's
                            reaction rather than the hero's escape] */
-                        pline("%s looks %s%s.", Monnam(mon),
-                              !rn2(2) ? "" : "rather ",
-                              !rn2(2) ? "numb" : "stupefied");
+                        {
+                            /* fast-nle: sequence rng draws (arg eval order unspecified) */
+                            const char *rathr = !rn2(2) ? "" : "rather ",
+                                       *numbd = !rn2(2) ? "numb"
+                                                        : "stupefied";
+
+                            pline("%s looks %s%s.", Monnam(mon), rathr,
+                                  numbd);
+                        }
                     } else if (Free_action) {
                         You("momentarily stiffen under %s gaze!",
                             s_suffix(mon_nam(mon)));

@@ -1,0 +1,35 @@
+# fast-nle: normalization patch applied to STOCK NLE (import commit
+# 2319f298) before building it for golden recording. Keep in sync with the
+# corresponding engine changes — each hunk mirrors a documented fast-nle
+# determinism fix so that stock-at-record-time and the fast-nle engine
+# agree bit-for-bit:
+#
+#   * mklev.c do_comp: total order for sort_rooms. Stock ties on lx and
+#     libc qsort tie order is implementation-defined (macOS vs glibc
+#     disagreed, generating different dungeons from the same seeds).
+#
+# Wall-clock pinning needs no source patch (tools/faketime_shim.c), and
+# argument-order sequencing needs none because recording builds use clang,
+# whose evaluation order matches the engine's explicit sequencing.
+diff --git a/src/mklev.c b/src/mklev.c
+index 743355f6..6302a9b2 100644
+--- a/src/mklev.c
++++ b/src/mklev.c
+@@ -64,7 +64,16 @@ const genericptr vy;
+     y = (const struct mkroom *) vy;
+     if (x->lx < y->lx)
+         return -1;
+-    return (x->lx > y->lx);
++    if (x->lx > y->lx)
++        return 1;
++    /* fast-nle stock_record.patch: total order (see fast-nle mklev.c) */
++    if (x->ly != y->ly)
++        return (x->ly > y->ly) ? 1 : -1;
++    if (x->hx != y->hx)
++        return (x->hx > y->hx) ? 1 : -1;
++    if (x->hy != y->hy)
++        return (x->hy > y->hy) ? 1 : -1;
++    return 0;
+ #endif /* LINT */
+ }
+ 

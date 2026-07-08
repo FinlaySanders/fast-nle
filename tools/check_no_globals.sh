@@ -51,10 +51,14 @@ list_writable() {
             | sort -u
         ;;
     *)
-        if command -v llvm-nm >/dev/null 2>&1; then NM=llvm-nm; else NM=nm; fi
-        # --no-demangle keeps C++ symbols greppable against the whitelist
-        $NM --print-size --no-demangle "$lib" 2>/dev/null \
-            | awk 'NF >= 4 && $3 ~ /^[DdBbCc]$/ { print $4 "\t" $2 "\t" $3 }' \
+        # ELF: nm can't distinguish .data.rel.ro (const-with-relocations,
+        # remapped READ-ONLY after dynamic linking) from real .data — both
+        # print as D/d. Use objdump's section column and keep only genuine
+        # writable sections.
+        objdump -t "$lib" 2>/dev/null \
+            | awk '$4 == ".data" || $4 == ".bss" || $4 == "*COM*" \
+                   { print $NF "\t" $(NF-1) "\t" $4 }' \
+            | grep -vE '^(\.data|\.bss|completed\.[0-9]+)\t' \
             | sort -u
         ;;
     esac

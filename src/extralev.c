@@ -258,7 +258,12 @@ makeroguerooms()
             }
             here.doortable = 0;
         }
-    miniwalk(rn2(3), rn2(3));
+    {
+        /* fast-nle: sequence rng draws (arg eval order unspecified) */
+        int wx = rn2(3), wy = rn2(3);
+
+        miniwalk(wx, wy);
+    }
     nroom = 0;
     for (y = 0; y < 3; y++)
         for (x = 0; x < 3; x++) {

@@ -67,10 +67,24 @@ int FDECL((*fn), (int));
                  (int) sizeof seed);
 }
 
+/* msan-hunt: trace each seeded draw when NLE_RNG_TRACE is set — used to
+   pinpoint call sites whose evaluation order differs across builds. */
+#include <stdlib.h>
+#include <stdio.h>
+static int
+nle_rng_trace(const char *fn, int x, int r)
+{
+    if (getenv("NLE_RNG_TRACE"))
+        fprintf(stderr, "RNGTRACE %s(%d)=%d\n", fn, x, r);
+    return r;
+}
+
 static int
 RND(int x)
 {
-    return (isaac64_next_uint64(nle_rng_state(CORE)) % x);
+    int r = (int) (isaac64_next_uint64(nle_rng_state(CORE)) % x);
+
+    return nle_rng_trace("RND", x, r);
 }
 
 /* 0 <= rn2(x) < x, but on a different sequence from the "main" rn2;

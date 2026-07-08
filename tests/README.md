@@ -57,6 +57,63 @@ search, stairs, pickup/drop, eat/quaff/read/wear/wield/throw, kick, cast,
 pray, engrave, open/close, pay — with deterministic prompt handling.
 TODO(phase-0b): AutoAscend driver for genuinely deep games.
 
+### Determinism
+
+Stock NLE is NOT a pure function of its seeds — four distinct leaks
+(wall-clock, a platform `#ifdef`, argument evaluation order, libc qsort
+tie order) are catalogued with fixes and a debugging playbook in
+**docs/DETERMINISM.md**. Summaries below.
+
+### Wall-clock leak (ubirthday) — solved; zero mismatch tolerance
+
+Stock NetHack sets `ubirthday = time(0)` at reset and it leaks into
+GAMEPLAY: shopkeeper names (`shknam.c` buckets it by 257 seconds — and
+when the derived index overflows the name list, an extra `rn2()` call
+shifts the whole RNG stream, i.e. a true trajectory fork), used-item
+price parity (`shk.c`), scroll labels (`read.c`), `mkroom.c`, bones pool
+(`files.c`). Same seeds at different wall-clock times give different
+games. This masqueraded for a long time as an "uninitialized read /
+heap-layout heisenbug": any rebuild took minutes → new 257s bucket →
+different shopkeeper name; ASan/MSan-clean because the data is
+initialized (full hunt: msan-hunt branch).
+
+fast-nle fixes it engine-side: `nle_birthday_maybe_fixed()` (hacklib.c)
+derives ubirthday from `time_seed` when seeded. Goldens are recorded from
+stock with `time(2)` pinned to the SAME epoch via `tools/faketime_shim.c`
+(the recorder does this automatically; formula in `pinned_epoch()`).
+Replays are therefore exact: the replayers have ZERO mismatch tolerance,
+and CI replays a shop-reaching golden under two different fake clocks to
+keep gameplay time-independence pinned. Seed 7010 — once dropped as
+"forked" — was re-recorded under the pinned clock and replays all 58,436
+steps bit-exactly. The AutoAscend recorder still verifies each golden in
+a fresh subprocess before accepting it.
+
+### Cross-platform: goldens are Linux-canonical
+
+Stock NetHack compiles an Apple-specific apple-eating message on macOS
+(`src/eat.c`, `#if defined(MACOSX)`: "Must be a Macintosh!" vs Unix's
+"Core dumped.") — and the branches are not RNG-equivalent (the Unix one
+draws `rnd(100)` when hallucinating), so identical seeds could fork
+between platforms. fast-nle removes MACOSX from that condition: every
+build takes the Unix branch, and deep goldens are recorded from stock on
+Linux (`.github/workflows/record-goldens.yml`, manual trigger) so they
+replay bit-exactly on both the Linux target and mac dev boxes.
+
+And libc must not change the game: `sort_rooms()` compares rooms only by
+`lx`, so ties made the dungeon depend on the platform's qsort (macOS vs
+glibc disagreed at aa_7015's dlvl 2). The engine's `do_comp` is now a
+total order; recording applies the identical change to stock via
+`tools/stock_record.patch`.
+
+Related: compiler flags must not change the game either. NetHack passes
+multiple RNG-drawing expressions as sibling call arguments whose
+evaluation order C leaves unspecified — gcc -O3 reordered them and
+generated different dungeons than -O2/clang. All such sites are now
+explicitly sequenced (grep `fast-nle: sequence rng draws`); CI replays
+the corpus with a gcc -O3 build to catch regressions, and golden
+recording builds stock with clang so its argument order matches the
+canonical sequenced order.
+
 ### Regenerating / arbitrating the corpus
 
 Goldens must capture STOCK behavior. To (re)record or arbitrate a
