@@ -117,6 +117,20 @@ jobs:
             tests/goldens/aa_seed7015_7015.golden \
             | grep -E "kg-mismatch|KEEP-GOING" | head -8 || true
 
+      - name: gcc -O3 Release build init check
+        run: |
+          # pip-installed stock (gcc Release/-O3) generates a DIFFERENT
+          # level-1 gold position than every -O2/clang build for the same
+          # seeds. If our engine at gcc -O3 reproduces that, the divergence
+          # is optimization-level-dependent UB in level gen, not a
+          # stock-vs-fork difference.
+          cmake -S . -B build_o3 -DCMAKE_BUILD_TYPE=Release
+          cmake --build build_o3 --target nethack -j "$(nproc)"
+          echo "--- gcc -O3 vs Linux-recorded goldens (want: INIT match) ---"
+          NLE_REPLAY_KEEP_GOING=1 build/replay_golden             build_o3/libnethack.so build/dat             tests/linuxgold/aa_seed7014_7014.golden 2>&1 | head -3
+          echo "--- gcc -O3 vs mac-recorded golden (want: INIT mismatch) ---"
+          NLE_REPLAY_KEEP_GOING=1 build/replay_golden             build_o3/libnethack.so build/dat             tests/goldens/aa_seed7014_7014.golden 2>&1 | head -3
+
       - name: Time sweep - prove divergence tracks ubirthday/257
         run: |
           # shknam.c derives shopkeeper names from
