@@ -1,0 +1,60 @@
+name: msan-hunt
+on:
+  push:
+    branches: [msan-hunt]
+  workflow_dispatch:
+
+jobs:
+  msan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install deps
+        run: sudo apt-get update && sudo apt-get install -y clang bison flex
+
+      - name: Configure (MemorySanitizer, origin tracking)
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_C_FLAGS="-O1 -g -fsanitize=memory -fsanitize-memory-track-origins=2 -fsanitize-recover=memory -fno-omit-frame-pointer" \
+            -DCMAKE_CXX_FLAGS="-O1 -g -fsanitize=memory -fsanitize-memory-track-origins=2 -fsanitize-recover=memory -fno-omit-frame-pointer" \
+            -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=memory" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=memory"
+
+      # build tools (makedefs/lev_comp) run during this step under MSan;
+      # recover mode keeps them alive through their own reports
+      - name: Build engine + data
+        env:
+          MSAN_OPTIONS: halt_on_error=0:exitcode=0
+        run: cmake --build build --target nethack dat -j "$(nproc)"
+
+      - name: Build replay harness
+        run: |
+          clang -O1 -g -fsanitize=memory -fsanitize-memory-track-origins=2 \
+            -fsanitize-recover=memory -fno-omit-frame-pointer \
+            -Iinclude -Ibuild/_deps/deboost_context-src/include \
+            tests/replay_golden.c -ldl -o build/replay_golden
+
+      - name: Replay deep golden under MSan
+        env:
+          MSAN_OPTIONS: halt_on_error=0:exitcode=0
+        run: |
+          build/replay_golden build/libnethack.so build/dat \
+            tests/goldens/aa_seed7015_7015.golden \
+            tests/goldens/mon_seed1010_2021.golden \
+            > /tmp/msan_replay.log 2>&1 || true
+          echo "=== replay result ==="
+          grep -E "^OK|MISMATCH|transient" /tmp/msan_replay.log | tail -5
+          echo "=== unique MSan reports: ==="
+          grep -c "WARNING: MemorySanitizer" /tmp/msan_replay.log || true
+          echo "=== first 12 reports with stacks ==="
+          awk '/WARNING: MemorySanitizer/{n++} n<=12 && n>0' /tmp/msan_replay.log | head -400
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: msan-replay-log
+          path: /tmp/msan_replay.log
