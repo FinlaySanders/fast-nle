@@ -100,6 +100,9 @@ jobs:
           # see IDENTICAL time inputs. Any remaining divergence from the
           # mac-recorded goldens is a genuine platform difference
           # (candidates: libc qsort tie order, etc.), not time.
+          echo "--- Linux-recorded goldens vs our Linux engine ---"
+          build/replay_golden build/libnethack.so build/dat \
+            tests/linuxgold/*.golden || true
           echo "--- repinned 7010: dump frames around the 11222 flicker ---"
           mkdir -p /tmp/frame_linux
           NLE_REPLAY_KEEP_GOING=1 NLE_REPLAY_DUMP_STEPS=11221,11222,11223 \
