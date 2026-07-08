@@ -173,6 +173,12 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
     int have_seeds = 0, have_options = 0, have_lgen = 0;
     uint64_t init_hash = 0;
     int have_init = 0;
+    /* NLE_REPLAY_KEEP_GOING: step through every recorded action even after
+       hash mismatches. The trajectory is no longer golden-verified, but the
+       game is still real — used to extend MemorySanitizer coverage past a
+       known cross-platform fork point. */
+    int keep_going = getenv("NLE_REPLAY_KEEP_GOING") != NULL;
+    long kg_mismatches = 0;
 
     /* Observation buffers: exactly the keys the recorder bound; all other
      * nle_obs pointers stay NULL (unbound), matching the Python side.
@@ -293,6 +299,13 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
             steps++;
             CHECK_OBS_INIT(&obs);
             uint64_t h = obs_hash(&obs);
+            if (keep_going) {
+                if (h != want)
+                    kg_mismatches++;
+                if (obs.done)
+                    break;
+                continue;
+            }
             if (pending_transient) {
                 if (h == want) {
                     transients++;
@@ -346,9 +359,12 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
     if (nle)
         lib_end(nle);
     fclose(f);
-    if (rc == 0)
+    if (keep_going)
+        printf("KEEP-GOING %s (%ld steps, %ld hash mismatches ignored)\n",
+               golden_path, steps, kg_mismatches);
+    else if (rc == 0)
         printf("OK %s (%ld steps)\n", golden_path, steps);
-    return rc;
+    return keep_going ? 0 : rc;
 }
 
 int

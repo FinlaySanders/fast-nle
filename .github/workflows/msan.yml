@@ -47,12 +47,19 @@ jobs:
         env:
           MSAN_OPTIONS: halt_on_error=0:exitcode=0
         run: |
-          build/replay_golden build/libnethack.so build/dat \
+          # keep-going: Linux forks off the mac-recorded deep goldens early
+          # (aa_7015 at step 5330), but MSan coverage doesn't need hash
+          # agreement — step through ALL recorded actions of both deep games.
+          NLE_REPLAY_KEEP_GOING=1 build/replay_golden build/libnethack.so \
+            build/dat \
             tests/goldens/aa_seed7015_7015.golden \
-            tests/goldens/mon_seed1010_2021.golden \
+            tests/msan/aa_seed7010_7010.golden \
             > /tmp/msan_replay.log 2>&1 || true
+          build/replay_golden build/libnethack.so build/dat \
+            tests/goldens/mon_seed1010_2021.golden \
+            >> /tmp/msan_replay.log 2>&1 || true
           echo "=== replay result ==="
-          grep -E "^OK|MISMATCH|transient" /tmp/msan_replay.log | tail -5
+          grep -E "^OK|^KEEP-GOING|MISMATCH|transient" /tmp/msan_replay.log | tail -5
           echo "=== unique MSan reports: ==="
           grep -c "WARNING: MemorySanitizer" /tmp/msan_replay.log || true
           echo "=== first 12 reports with stacks ==="
