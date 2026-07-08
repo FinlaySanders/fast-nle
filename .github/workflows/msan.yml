@@ -103,6 +103,12 @@ jobs:
           echo "--- Linux-recorded goldens vs our Linux engine ---"
           build/replay_golden build/libnethack.so build/dat \
             tests/linuxgold/*.golden || true
+          echo "--- RNG trace of levelgen step 30918 (7015) ---"
+          NLE_TRACE_AT_STEP=30918 NLE_REPLAY_KEEP_GOING=1 \
+            build/replay_golden build/libnethack.so build/dat \
+            tests/linuxgold/aa_seed7015_7015.golden \
+            2> /tmp/trace_linux.txt > /dev/null || true
+          grep -c RNGTRACE /tmp/trace_linux.txt || true
           echo "--- 7015 fork frames (step 30919, depth-2 levelgen) ---"
           mkdir -p /tmp/frame_linux
           NLE_REPLAY_KEEP_GOING=1 NLE_REPLAY_DUMP_STEPS=30918,30919,30920 \
@@ -216,4 +222,5 @@ jobs:
           name: aslr-probe-logs
           path: |
             /tmp/time_sweep.txt
+            /tmp/trace_linux.txt
             /tmp/frame_linux/

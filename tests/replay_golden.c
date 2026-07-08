@@ -387,6 +387,18 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
             obs.action = action;
             lib_step(nle, &obs);
             steps++;
+            /* NLE_TRACE_DEPTH: log every dungeon-depth change with its
+               step — locates the step at which a given level was first
+               generated (where level-gen rng draws happen). */
+            {
+                static long prev_depth = -1;
+                if (getenv("NLE_TRACE_DEPTH")
+                    && obs.blstats[12] != prev_depth) {
+                    fprintf(stderr, "DEPTH %ld -> %ld at step %ld\n",
+                            prev_depth, (long) obs.blstats[12], steps);
+                    prev_depth = obs.blstats[12];
+                }
+            }
             CHECK_OBS_INIT(&obs);
             uint64_t h = obs_hash(&obs);
             if (dump_step_wanted(steps))
