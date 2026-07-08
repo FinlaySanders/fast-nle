@@ -100,9 +100,9 @@ jobs:
           # see IDENTICAL time inputs. Any remaining divergence from the
           # mac-recorded goldens is a genuine platform difference
           # (candidates: libc qsort tie order, etc.), not time.
-          echo "--- Linux-recorded goldens vs our Linux engine ---"
+          echo "--- FULL CORPUS vs Linux clang -O2 engine ---"
           build/replay_golden build/libnethack.so build/dat \
-            tests/linuxgold/*.golden || true
+            tests/goldens/*.golden | tail -1
           echo "--- RNG trace of levelgen step 30918 (7015) ---"
           NLE_TRACE_AT_STEP=30918 NLE_REPLAY_KEEP_GOING=1 \
             build/replay_golden build/libnethack.so build/dat \
@@ -151,7 +151,10 @@ jobs:
           # deep golden keep-going with both builds and diff the streams.
           cmake -S . -B build_o3s -DCMAKE_BUILD_TYPE=Release > /dev/null
           cmake --build build_o3s --target nethack -j "$(nproc)" > /dev/null 2>&1
-          g=tests/msan/aa_seed7010_repinned.golden
+          echo "--- FULL CORPUS vs Linux gcc -O3 engine ---"
+          build/replay_golden build_o3s/libnethack.so build/dat \
+            tests/goldens/*.golden | tail -1
+          g=tests/goldens/aa_seed7010_7010.golden
           NLE_REPLAY_KEEP_GOING=1 build/replay_golden \
             build/libnethack.so build/dat $g > /tmp/o2.out 2>&1 || true
           NLE_REPLAY_KEEP_GOING=1 build/replay_golden \
