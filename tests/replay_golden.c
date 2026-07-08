@@ -31,6 +31,26 @@
 
 #include "nletypes.h"
 
+#ifndef __has_feature
+#define __has_feature(x) 0
+#endif
+#if __has_feature(memory_sanitizer)
+#include <sanitizer/msan_interface.h>
+/* Funnel: any uninitialized byte the engine copied into the observation
+ * gets reported here WITH its allocation origin. Plain copying is only
+ * "propagation" to MSan; this check is what fires. */
+#define CHECK_OBS_INIT(o) do { \
+    __msan_check_mem_is_initialized((o)->glyphs, MAPLEN * sizeof(short)); \
+    __msan_check_mem_is_initialized((o)->chars, MAPLEN); \
+    __msan_check_mem_is_initialized((o)->colors, MAPLEN); \
+    __msan_check_mem_is_initialized((o)->specials, MAPLEN); \
+    __msan_check_mem_is_initialized((o)->blstats, NLE_BLSTATS_SIZE * sizeof(long)); \
+    __msan_check_mem_is_initialized((o)->message, NLE_MESSAGE_SIZE); \
+} while (0)
+#else
+#define CHECK_OBS_INIT(o) ((void) 0)
+#endif
+
 /* The library is dlopen'd ONCE and shared by every episode (and, in the
  * multi-env modes, by simultaneously-live envs). This exercises the
  * single-library model the vecenv will use — per-env state must live in
@@ -271,6 +291,7 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
             obs.action = action;
             lib_step(nle, &obs);
             steps++;
+            CHECK_OBS_INIT(&obs);
             uint64_t h = obs_hash(&obs);
             if (pending_transient) {
                 if (h == want) {
