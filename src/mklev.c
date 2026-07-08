@@ -69,7 +69,23 @@ const genericptr vy;
     y = (const struct mkroom *) vy;
     if (x->lx < y->lx)
         return -1;
-    return (x->lx > y->lx);
+    if (x->lx > y->lx)
+        return 1;
+    /* fast-nle: total order. Stock compares lx only; when two rooms tie,
+       qsort's tie order is implementation-defined, and macOS libc vs
+       glibc disagreed — same seeds generated different dungeons per
+       platform (found via aa_7015 dlvl 2, rooms with lx 16,16 and
+       56,56). Tiebreak on the remaining geometry (room rectangles are
+       unique), making the sort deterministic under ANY qsort. Golden
+       recording applies the same change to stock
+       (tools/stock_record.patch). */
+    if (x->ly != y->ly)
+        return (x->ly > y->ly) ? 1 : -1;
+    if (x->hx != y->hx)
+        return (x->hx > y->hx) ? 1 : -1;
+    if (x->hy != y->hy)
+        return (x->hy > y->hy) ? 1 : -1;
+    return 0;
 #endif /* LINT */
 }
 
