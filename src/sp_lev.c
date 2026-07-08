@@ -13,6 +13,23 @@
 #include "dlb.h"
 #include "sp_lev.h"
 
+/* File-statics migrated to nle_ctx_t for per-env
+ * isolation. See nle.h block. The macros route every
+ * existing direct-name access through current_nle_ctx->s_<name>. */
+#define mines_prize_count           (nh_cur->g_sp_lev_c_mines_prize_count)
+#define soko_prize_count            (nh_cur->g_sp_lev_c_soko_prize_count)
+#define container_obj               (nh_cur->g_sp_lev_c_container_obj)
+#define container_idx               (nh_cur->g_sp_lev_c_container_idx)
+#define invent_carrying_monster     (nh_cur->g_sp_lev_c_invent_carrying_monster)
+#define floodfillchk_match_under_typ \
+    (nh_cur->g_sp_lev_c_floodfillchk_match_under_typ)
+
+/* MAX_CONTAINMENT is in sp_lev.h (==10). The nle.h ctx field is sized to
+ * a literal 10 to avoid pulling sp_lev.h into nle.h. Catch future drift. */
+_Static_assert(MAX_CONTAINMENT == 10,
+               "s_container_obj sized to 10 in nle.h "
+               "but MAX_CONTAINMENT changed; update nle.h");
+
 #ifdef _MSC_VER
  #pragma warning(push)
  #pragma warning(disable : 4244)
@@ -189,26 +206,54 @@ STATIC_DCL boolean FDECL(sp_level_coder, (sp_lev *));
 
 extern struct engr *head_engr;
 
-extern int min_rx, max_rx, min_ry, max_ry; /* from mkmap.c */
+/* min_rx, max_rx, min_ry, max_ry — migrated to nle_ctx_t (mkmap.c). */
+#define min_rx (nh_cur->g_sp_lev_c_min_rx)
+#define max_rx (nh_cur->g_sp_lev_c_max_rx)
+#define min_ry (nh_cur->g_sp_lev_c_min_ry)
+#define max_ry (nh_cur->g_sp_lev_c_max_ry)
 
 /* positions touched by level elements explicitly defined in the des-file */
-static char SpLev_Map[COLNO][ROWNO];
+/* SpLev_Map — per-env special-level positions migrated to nle_ctx_t. */
+#define SpLev_Map (nh_cur->g_sp_lev_c_splev_map)
 
 static aligntyp ralign[3] = { AM_CHAOTIC, AM_NEUTRAL, AM_LAWFUL };
-static NEARDATA xchar xstart, ystart;
-static NEARDATA char xsize, ysize;
+/* Per-env special-level bounding box (was static NEARDATA).
+ * Two envs concurrently generating a special level on the same OS thread
+ * would clobber the TLS box → out-of-bounds levl[][] write. */
+#define xstart  (nh_cur->g_sp_lev_c_xstart)
+#define ystart  (nh_cur->g_sp_lev_c_ystart)
+#define xsize   (nh_cur->g_sp_lev_c_xsize)
+#define ysize   (nh_cur->g_sp_lev_c_ysize)
 
-char *lev_message = 0;
-lev_region *lregions = 0;
-int num_lregions = 0;
+/* Per-env special-level message + lregions table. Were
+ * NON-static cross-TU process-global heap pointers; env B's level entry
+ * would free() env A's still-pending lev_message → UAF crash candidate
+ * for intermittent obs=0x4 corruption. The cross-TU externs in mkmaze.c
+ * and questpgr.c now route to the same per-env macro. */
+#define lev_message    (nh_cur->g_sp_lev_c_lev_message)
+#define lregions       ((lev_region *) nh_cur->g_sp_lev_c_lregions_p)
+#define num_lregions   (nh_cur->g_sp_lev_c_num_lregions)
+/* lregions reassignment needs a writable lvalue; the cast above is
+ * read-only. set_lregions(p) below routes lvalue writes through the
+ * underlying ctx pointer. */
+#define set_lregions(p) \
+    (nh_cur->g_sp_lev_c_lregions_p = (void *) (p))
 
-static boolean splev_init_present = FALSE;
-static boolean icedpools = FALSE;
-static int mines_prize_count = 0, soko_prize_count = 0; /* achievements */
-
-static struct obj *container_obj[MAX_CONTAINMENT];
-static int container_idx = 0;
-static struct monst *invent_carrying_monster = NULL;
+/* Per-env level-gen state. Were __thread; OMP coroutine-
+ * resume hazard causes worker thread to see zero/stale TLS values.
+ * NOTE: icedpools is NOT macro-replaced here because struct linfo (sp_lev.h:343)
+ * also has an icedpools field; a bare `#define icedpools` would corrupt the
+ * `linit->icedpools` struct access.  Use sp_icedpools as the per-env name. */
+#define splev_init_present (nh_cur->g_sp_lev_c_splev_init_present)
+#define sp_icedpools       (nh_cur->g_sp_lev_c_icedpools)
+#define container_idx      (nh_cur->g_sp_lev_c_container_idx)
+/* Per-env mid-build statics that race when N envs
+ * run in one process. Direct ctx fields; macros below. */
+#define mines_prize_count       (nh_cur->g_sp_lev_c_mines_prize_count)
+#define soko_prize_count        (nh_cur->g_sp_lev_c_soko_prize_count)
+#define container_obj           (nh_cur->g_sp_lev_c_container_obj)
+#define invent_carrying_monster (nh_cur->g_sp_lev_c_invent_carrying_monster)
+#define floodfillchk_match_under_typ (nh_cur->g_sp_lev_c_floodfillchk_match_under_typ)
 
 #define SPLEV_STACK_RESERVE 128
 
@@ -2791,7 +2836,7 @@ lev_init *linit;
             linit->lit = rn2(2);
         if (linit->filling > -1)
             lvlfill_solid(linit->filling, 0);
-        linit->icedpools = icedpools;
+        linit->icedpools = sp_icedpools;
         mkmap(linit);
         break;
     }
@@ -3298,7 +3343,7 @@ struct sp_coder *coder;
     if (lflags & GRAVEYARD)
         level.lflags.graveyard = 1;
     if (lflags & ICEDPOOLS)
-        icedpools = TRUE;
+        sp_icedpools = TRUE;
     if (lflags & SOLIDIFY)
         coder->solidify = TRUE;
     if (lflags & CORRMAZE)
@@ -3865,8 +3910,24 @@ int dir;
                 selection_setpoint(x, y, ov, 1);
 }
 
-STATIC_VAR int FDECL((*selection_flood_check_func), (int, int));
-STATIC_VAR schar floodfillchk_match_under_typ;
+/* Per-env sp_lev.c state. selection_flood_check_func bundled into
+ * one struct, lazily allocated via nle_sp_lev(). */
+struct nle_sp_lev_state {
+    int (*_selection_flood_check_func)(int, int);
+};
+static struct nle_sp_lev_state *
+nle_sp_lev(void)
+{
+    if (!nh_cur) return NULL;
+    struct nle_sp_lev_state *s = (struct nle_sp_lev_state *) nh_cur->nh_lazy[12];
+    if (!s) { /* slot 12: sp_lev.c function-local statics */
+        s = (struct nle_sp_lev_state *) calloc(1, sizeof(struct nle_sp_lev_state));
+        nh_cur->nh_lazy[12] = s;
+    }
+    return s;
+}
+#define selection_flood_check_func (nle_sp_lev()->_selection_flood_check_func)
+/* floodfillchk_match_under_typ moved to nle_ctx_t */
 
 void
 set_selection_floodfillchk(f)
@@ -4564,10 +4625,10 @@ struct sp_coder *coder;
                       sizeof(lev_region) * num_lregions);
         Free(lregions);
         num_lregions++;
-        lregions = newl;
+        set_lregions(newl);
     } else {
         num_lregions = 1;
-        lregions = (lev_region *) alloc(sizeof(lev_region));
+        set_lregions((lev_region *) alloc(sizeof(lev_region)));
     }
     (void) memcpy(&lregions[num_lregions - 1], tmplregion,
                   sizeof(lev_region));
@@ -4901,7 +4962,12 @@ spo_map(coder)
 struct sp_coder *coder;
 {
     static const char nhFunc[] = "spo_map";
-    mazepart tmpmazepart;
+    /* Xsize/ysize/xstart/ystart are now macros expanding to
+     * current_nle_ctx->s_sp_*. Capture struct mazepart's .xsize/.ysize
+     * fields into bare locals BEFORE any reference to the macro-named
+     * tokens, so the struct member accesses don't get rewritten. */
+    char mp_xsize, mp_ysize;
+    schar mp_zaligntyp, mp_halign, mp_valign;
     struct opvar *mpxs, *mpys, *mpmap, *mpa, *mpkeepr, *mpzalign;
     xchar halign, valign;
     xchar tmpxstart, tmpystart, tmpxsize, tmpysize;
@@ -4911,24 +4977,24 @@ struct sp_coder *coder;
         || !OV_pop_i(mpkeepr) || !OV_pop_i(mpzalign) || !OV_pop_c(mpa))
         return;
 
-    tmpmazepart.xsize = OV_i(mpxs);
-    tmpmazepart.ysize = OV_i(mpys);
-    tmpmazepart.zaligntyp = OV_i(mpzalign);
+    mp_xsize = (char) OV_i(mpxs);
+    mp_ysize = (char) OV_i(mpys);
+    mp_zaligntyp = (schar) OV_i(mpzalign);
 
     upc = get_unpacked_coord(OV_i(mpa), ANY_LOC);
-    tmpmazepart.halign = upc.x;
-    tmpmazepart.valign = upc.y;
+    mp_halign = (schar) upc.x;
+    mp_valign = (schar) upc.y;
 
     tmpxsize = xsize;
     tmpysize = ysize;
     tmpxstart = xstart;
     tmpystart = ystart;
 
-    halign = tmpmazepart.halign;
-    valign = tmpmazepart.valign;
-    xsize = tmpmazepart.xsize;
-    ysize = tmpmazepart.ysize;
-    switch (tmpmazepart.zaligntyp) {
+    halign = mp_halign;
+    valign = mp_valign;
+    xsize = mp_xsize;
+    ysize = mp_ysize;
+    switch (mp_zaligntyp) {
     default:
     case 0:
         break;
@@ -4970,13 +5036,13 @@ struct sp_coder *coder;
         if (!coder->croom) {
             xstart = 1;
             ystart = 0;
-            xsize = COLNO - 1 - tmpmazepart.xsize;
-            ysize = ROWNO - tmpmazepart.ysize;
+            xsize = COLNO - 1 - mp_xsize;
+            ysize = ROWNO - mp_ysize;
         }
         get_location_coord(&halign, &valign, ANY_LOC, coder->croom,
                            OV_i(mpa));
-        xsize = tmpmazepart.xsize;
-        ysize = tmpmazepart.ysize;
+        xsize = mp_xsize;
+        ysize = mp_ysize;
         xstart = halign;
         ystart = valign;
         break;
@@ -5033,7 +5099,7 @@ struct sp_coder *coder;
                 else if (levl[x][y].typ == LAVAPOOL)
                     levl[x][y].lit = 1;
                 else if (splev_init_present && levl[x][y].typ == ICE)
-                    levl[x][y].icedpool = icedpools ? ICED_POOL : ICED_MOAT;
+                    levl[x][y].icedpool = sp_icedpools ? ICED_POOL : ICED_MOAT;
             }
         if (coder->lvl_is_joined)
             remove_rooms(xstart, ystart, xstart + xsize, ystart + ysize);
@@ -5322,7 +5388,7 @@ sp_lev *lvl;
     coder->lvl_is_joined = 0;
 
     splev_init_present = FALSE;
-    icedpools = FALSE;
+    sp_icedpools = FALSE;
     /* achievement tracking; static init would suffice except we need to
        reset if #wizmakemap is used to recreate mines' end or sokoban end;
        once either level is created, these values can be forgotten */

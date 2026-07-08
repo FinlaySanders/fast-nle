@@ -148,6 +148,16 @@ init_nle(FILE *ttyrec, nle_obs *obs)
     assert(nle->nh);
     nh_cur = nle->nh;
 
+    /* Seed the per-env save/restore codec tables (they hold function
+     * pointers, so they can't be zero-init or memcpy templates; the
+     * helpers live in save.c / restore.c to reach the static codecs). */
+    {
+        extern void NDECL(nle_restoreprocs_init);
+        extern void NDECL(nle_saveprocs_init);
+        nle_restoreprocs_init();
+        nle_saveprocs_init();
+    }
+
     /* Set CO and LI to control ttyrec output size (used by tmt_open below).
      * They live in the migrated tc_gbl_data, so this cannot happen before
      * the ctx exists — it used to be done at the top of nle_start. */

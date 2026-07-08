@@ -7,6 +7,9 @@
 #include "lev.h"
 #include "dlb.h"
 
+/* Misc-2 per-env redirect (rumors.c) */
+#define true_rumor_size (nh_cur->g_rumors_c_true_rumor_size)
+
 /*      [note: this comment is fairly old, but still accurate for 3.1]
  * Rumors have been entirely rewritten to speed up the access.  This is
  * essential when working from floppies.  Using fseek() the way that's done
@@ -45,16 +48,40 @@ STATIC_DCL void FDECL(init_rumors, (dlb *));
 STATIC_DCL void FDECL(init_oracles, (dlb *));
 STATIC_DCL void FDECL(couldnt_open_file, (const char *));
 
-/* rumor size variables are signed so that value -1 can be used as a flag */
-static long true_rumor_size = 0L, false_rumor_size;
-/* rumor start offsets are unsigned because they're handled via %lx format */
-static unsigned long true_rumor_start, false_rumor_start;
-/* rumor end offsets are signed because they're compared with [dlb_]ftell() */
-static long true_rumor_end, false_rumor_end;
+/* Per-env rumors.c state. false_rumor_size / true_rumor_start /
+ * false_rumor_start / true_rumor_end / false_rumor_end bundled into
+ * one struct, lazily allocated via nle_rumors(). true_rumor_size was
+ * already migrated to nle_ctx_t.s_true_rumor_size. */
+struct nle_rumors_state {
+    long          _false_rumor_size;
+    unsigned long _true_rumor_start;
+    unsigned long _false_rumor_start;
+    long          _true_rumor_end;
+    long          _false_rumor_end;
+};
+static struct nle_rumors_state *
+nle_rumors(void)
+{
+    if (!nh_cur) return NULL;
+    struct nle_rumors_state *s = (struct nle_rumors_state *) nh_cur->nh_lazy[30];
+    if (!s) {
+        s = (struct nle_rumors_state *) calloc(1, sizeof(struct nle_rumors_state));
+        nh_cur->nh_lazy[30] = s;
+    }
+    return s;
+}
+#define false_rumor_size   (nle_rumors()->_false_rumor_size)
+#define true_rumor_start   (nle_rumors()->_true_rumor_start)
+#define false_rumor_start  (nle_rumors()->_false_rumor_start)
+#define true_rumor_end     (nle_rumors()->_true_rumor_end)
+#define false_rumor_end    (nle_rumors()->_false_rumor_end)
 /* oracles are handled differently from rumors... */
-static int oracle_flg = 0; /* -1=>don't use, 0=>need init, 1=>init done */
-static unsigned oracle_cnt = 0;
-static unsigned long *oracle_loc = 0;
+/* Oracle state per-env. oracle_flg/oracle_loc were __thread;
+ * oracle_cnt was a plain static (process-global) but is decremented as oracles
+ * are used — so it must be per-env too. */
+#define oracle_flg (nh_cur->g_rumors_c_oracle_flg)
+#define oracle_loc ((*(unsigned long **) &nh_cur->nh_lazy[29]))
+#define oracle_cnt (nh_cur->g_rumors_c_oracle_cnt)
 
 STATIC_OVL void
 init_rumors(fp)

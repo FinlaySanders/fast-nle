@@ -10,8 +10,11 @@
                               * config file parsing) with modest decoration;
                               * result will then be truncated to BUFSZ-1 */
 
-static unsigned pline_flags = 0;
-static char prevmsg[BUFSZ];
+/* TLS — per-thread message state. */
+/* Per-env (was __thread). pline modifier bitfield. */
+#define pline_flags (nh_cur->g_pline_c_pline_flags)
+/* prevmsg — per-env message-repeat suppression buffer. */
+#define prevmsg (nh_cur->g_pline_c_prevmsg)
 
 static void FDECL(putmesg, (const char *));
 static char *FDECL(You_buf, (int));
@@ -121,7 +124,10 @@ pline
 VA_DECL(const char *, line)
 #endif /* USE_STDARG | USE_VARARG */
 {       /* start of vpline() or of nested block in USE_OLDARG's pline() */
-    static int in_pline = 0;
+    /* Was process-shared function-local static — env A would
+     * leak in_pline=1 across yields into env B's pline, suppressing
+     * legitimate output. Per-env now. */
+    #define in_pline (nh_cur->g_pline_c_in_pline)
     char pbuf[BIGBUFSZ]; /* will get chopped down to BUFSZ-1 if longer */
     int ln;
     int msgtyp;
@@ -260,9 +266,35 @@ VA_DECL(const char *, line)
     return;
 }
 
-/* work buffer for You(), &c and verbalize() */
-static char *you_buf = 0;
-static int you_buf_siz = 0;
+/* Per-env work buffer for You(), &c and verbalize().
+ * Was `static char *you_buf` + `int you_buf_siz`. Across envs
+ * sharing a pthread, env A's heap pointer survived in TLS and env B's
+ * You_buf() could free env A's buffer. Now stored per-env. */
+struct nle_pline_state {
+    char *_you_buf;
+    int   _you_buf_siz;
+};
+static struct nle_pline_state *
+nle_pline(void)
+{
+    if (!nh_cur)
+        return NULL;
+    struct nle_pline_state *s = (struct nle_pline_state *) nh_cur->nh_lazy[35];
+    if (!s) {
+        /* Arena-allocate (not libc calloc): this struct holds `_you_buf`, an
+         * arena pointer. If the struct lived on the libc heap it would NOT be
+         * captured by nle_fr_snapshot, so after a restore (which rewinds the
+         * arena) `_you_buf` would dangle into a reused arena offset and the
+         * next You_hear/pline would write its message over whatever now lives
+         * there (e.g. a live monster's struct) -> corruption/SIGSEGV. */
+        s = (struct nle_pline_state *) calloc(
+            1, sizeof(struct nle_pline_state));
+        nh_cur->nh_lazy[35] = s;
+    }
+    return s;
+}
+#define you_buf     (nle_pline()->_you_buf)
+#define you_buf_siz (nle_pline()->_you_buf_siz)
 
 static char *
 You_buf(siz)

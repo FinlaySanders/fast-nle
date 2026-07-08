@@ -367,7 +367,7 @@ bc_order()
         || u.uswallow)
         return BCPOS_DIFFER;
 
-    for (obj = level.objects[uball->ox][uball->oy]; obj;
+    for (obj = level.objs[uball->ox][uball->oy]; obj;
          obj = obj->nexthere) {
         if (obj == uchain)
             return BCPOS_CHAIN;

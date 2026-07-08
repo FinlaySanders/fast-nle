@@ -1,15 +1,25 @@
-/* NetHack 3.6	do_name.c	$NHDT-Date: 1674864731 2023/01/28 00:12:11 $  $NHDT-Branch: NetHack-3.6 $:$NHDT-Revision: 1.154 $ */
+/* NetHack 3.6	do_name.c	$NHDT-Date: 1582364431 2020/02/22 09:40:31 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.174 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Pasi Kallinen, 2018. */
 /* NetHack may be freely redistributed.  See license for details. */
 
 #include "hack.h"
 
+/* Per-env return buffers for two functions that previously held
+ * function-local `static char buf[…]`. Renamed to unique tags so the
+ * file-level macros don't collide with the many other `buf` locals here. */
+#define dxdy_buf      (nh_cur->g_do_name_c_dxdy_buf)
+#define rndmonnam_buf (nh_cur->g_do_name_c_rndmonnam_buf)
+
+/* Per-env replacements for three do_name.c file-statics. */
+#define gloc_filter_map                      (nh_cur->g_do_name_c_gloc_filter_map_p)
+#define gloc_filter_floodfill_match_glyph    (nh_cur->g_do_name_c_gloc_filter_match_glyph)
+#define via_naming                           (nh_cur->g_do_name_c_via_naming)
+
 STATIC_DCL char *NDECL(nextmbuf);
 STATIC_DCL void FDECL(getpos_help, (BOOLEAN_P, const char *));
 STATIC_DCL int FDECL(CFDECLSPEC cmp_coord_distu, (const void *, const void *));
 STATIC_DCL boolean FDECL(gather_locs_interesting, (int, int, int));
-STATIC_DCL char *FDECL(name_from_player, (char *, const char *, const char *));
 STATIC_DCL void FDECL(gather_locs, (coord **, int *, int));
 STATIC_DCL int FDECL(gloc_filter_floodfill_matcharea, (int, int));
 STATIC_DCL void FDECL(auto_describe, (int, int));
@@ -28,19 +38,35 @@ extern const char what_is_an_unknown_object[]; /* from pager.c */
 STATIC_OVL char *
 nextmbuf()
 {
-    static char NEARDATA bufs[NUMMBUF][BUFSZ];
-    static int bufidx = 0;
+    /* bufs/bufidx migrated to nle_ctx_t (per-env). */
+    char (*bufs)[BUFSZ] = (char (*)[BUFSZ]) nh_cur->g_do_name_c_mbufs;
 
-    bufidx = (bufidx + 1) % NUMMBUF;
-    return bufs[bufidx];
+    nh_cur->g_do_name_c_mbuf_idx = (nh_cur->g_do_name_c_mbuf_idx + 1) % NUMMBUF;
+    return bufs[nh_cur->g_do_name_c_mbuf_idx];
 }
 
 /* function for getpos() to highlight desired map locations.
  * parameter value 0 = initialize, 1 = highlight, 2 = done
  */
-static void FDECL((*getpos_hilitefunc), (int)) = (void FDECL((*), (int))) 0;
-static boolean FDECL((*getpos_getvalid), (int, int)) =
-                                           (boolean FDECL((*), (int, int))) 0;
+/* Per-env do_name.c state. getpos_hilitefunc / getpos_getvalid / screen_fmt. */
+struct nle_do_name_state {
+    void (*_getpos_hilitefunc)(int);
+    boolean (*_getpos_getvalid)(int, int);
+    char _screen_fmt[16];
+};
+static struct nle_do_name_state *
+nle_do_name(void)
+{
+    if (!nh_cur) return NULL;
+    struct nle_do_name_state *s = (struct nle_do_name_state *) nh_cur->nh_lazy[26];
+    if (!s) {
+        s = (struct nle_do_name_state *) calloc(1, sizeof(struct nle_do_name_state));
+        nh_cur->nh_lazy[26] = s;
+    }
+    return s;
+}
+#define getpos_hilitefunc  (nle_do_name()->_getpos_hilitefunc)
+#define getpos_getvalid    (nle_do_name()->_getpos_getvalid)
 
 void
 getpos_sethilite(gp_hilitef, gp_getvalidf)
@@ -245,13 +271,14 @@ const void *b;
      && glyph_to_cmap(levl[(x)][(y)].glyph) == S_stone  \
      && !levl[(x)][(y)].seenv)
 
-static struct opvar *gloc_filter_map = (struct opvar *) 0;
+/* gloc_filter_map moved into nle_ctx_t — macro above.
+ * Default is NULL via calloc; matches original (struct opvar *) 0. */
 
 #define GLOC_SAME_AREA(x,y)                                     \
     (isok((x), (y))                                             \
      && (selection_getpoint((x),(y), gloc_filter_map)))
 
-static int gloc_filter_floodfill_match_glyph;
+/* gloc_filter_floodfill_match_glyph moved into nle_ctx_t. */
 
 int
 gloc_filter_classify_glyph(glyph)
@@ -460,36 +487,36 @@ dxdy_to_dist_descr(dx, dy, fulldir)
 int dx, dy;
 boolean fulldir;
 {
-    static char buf[30];
+    /* Dxdy_buf (was `buf`) migrated to nle_ctx_t */
     int dst;
 
     if (!dx && !dy) {
-        Sprintf(buf, "here");
+        Sprintf(dxdy_buf, "here");
     } else if ((dst = xytod(dx, dy)) != -1) {
         /* explicit direction; 'one step' is implicit */
-        Sprintf(buf, "%s", directionname(dst));
+        Sprintf(dxdy_buf, "%s", directionname(dst));
     } else {
         static const char *dirnames[4][2] = {
             { "n", "north" },
             { "s", "south" },
             { "w", "west" },
             { "e", "east" } };
-        buf[0] = '\0';
-        /* 9999: protect buf[] against overflow caused by invalid values */
+        dxdy_buf[0] = '\0';
+        /* 9999: protect dxdy_buf[] against overflow caused by invalid values */
         if (dy) {
             if (abs(dy) > 9999)
                 dy = sgn(dy) * 9999;
-            Sprintf(eos(buf), "%d%s%s", abs(dy), dirnames[(dy > 0)][fulldir],
+            Sprintf(eos(dxdy_buf), "%d%s%s", abs(dy), dirnames[(dy > 0)][fulldir],
                     dx ? "," : "");
         }
         if (dx) {
             if (abs(dx) > 9999)
                 dx = sgn(dx) * 9999;
-            Sprintf(eos(buf), "%d%s", abs(dx),
+            Sprintf(eos(dxdy_buf), "%d%s", abs(dx),
                     dirnames[2 + (dx > 0)][fulldir]);
         }
     }
-    return buf;
+    return dxdy_buf;
 }
 
 /* coordinate formatting for 'whatis_coord' option */
@@ -498,7 +525,7 @@ coord_desc(x, y, outbuf, cmode)
 int x, y;
 char *outbuf, cmode;
 {
-    static char screen_fmt[16]; /* [12] suffices: "[%02d,%02d]" */
+    char *screen_fmt = nle_do_name()->_screen_fmt; /* per-env */
     int dx, dy;
 
     outbuf[0] = '\0';
@@ -1062,34 +1089,6 @@ struct obj *obj;
     return "";
 }
 
-/* get a name for a monster or an object from player;
-   truncate if longer than PL_PSIZ, then return it */
-static char *
-name_from_player(outbuf, prompt, defres)
-char *outbuf;       /* output buffer, assumed to be at least BUFSZ long;
-                     * anything longer than PL_PSIZ will be truncated */
-const char *prompt;
-const char *defres; /* only used if EDIT_GETLIN is enabled; only useful
-                     * if windowport xxx's xxx_getlin() supports that */
-{
-    outbuf[0] = '\0';
-#ifdef EDIT_GETLIN
-    if (defres && *defres)
-        Strcpy(outbuf, defres); /* default response from getlin() */
-#else
-    nhUse(defres);
-#endif
-    getlin(prompt, outbuf);
-    if (!*outbuf || *outbuf == '\033')
-        return NULL;
-
-    /* strip leading and trailing spaces, condense internal sequences */
-    (void) mungspaces(outbuf);
-    if (strlen(outbuf) >= PL_PSIZ)
-        outbuf[PL_PSIZ - 1] = '\0';
-    return outbuf;
-}
-
 /* historical note: this returns a monster pointer because it used to
    allocate a new bigger block of memory to hold the monster and its name */
 struct monst *
@@ -1187,9 +1186,17 @@ do_mname()
     /* special case similar to the one in lookat() */
     Sprintf(qbuf, "What do you want to call %s?",
             distant_monnam(mtmp, ARTICLE_THE, monnambuf));
-    /* use getlin() to get a name string from the player */
-    if (!name_from_player(buf, qbuf, has_mname(mtmp) ? MNAME(mtmp) : NULL))
+    buf[0] = '\0';
+#ifdef EDIT_GETLIN
+    /* if there's an existing name, make it be the default answer */
+    if (has_mname(mtmp))
+        Strcpy(buf, MNAME(mtmp));
+#endif
+    getlin(qbuf, buf);
+    if (!*buf || *buf == '\033')
         return;
+    /* strip leading and trailing spaces; unnames monster if all spaces */
+    (void) mungspaces(buf);
 
     /* Unique monsters have their own specific names or titles.
      * Shopkeepers, temple priests and other minions use alternate
@@ -1216,7 +1223,8 @@ do_mname()
         (void) christen_monst(mtmp, buf);
 }
 
-STATIC_VAR int via_naming = 0;
+/* via_naming moved into nle_ctx_t — macro above.
+ * Default 0 via calloc. */
 
 /*
  * This routine used to change the address of 'obj' so be unsafe if not
@@ -1241,9 +1249,17 @@ register struct obj *obj;
     Sprintf(qbuf, "What do you want to name %s ",
             is_plural(obj) ? "these" : "this");
     (void) safe_qbuf(qbuf, qbuf, "?", obj, xname, simpleonames, "item");
-    /* use getlin() to get a name string from the player */
-    if (!name_from_player(buf, qbuf, safe_oname(obj)))
+    buf[0] = '\0';
+#ifdef EDIT_GETLIN
+    /* if there's an existing name, make it be the default answer */
+    if (has_oname(obj))
+        Strcpy(buf, ONAME(obj));
+#endif
+    getlin(qbuf, buf);
+    if (!*buf || *buf == '\033')
         return;
+    /* strip leading and trailing spaces; unnames item if all spaces */
+    (void) mungspaces(buf);
 
     /*
      * We don't violate illiteracy conduct here, although it is
@@ -1339,7 +1355,7 @@ const char *name;
     return obj;
 }
 
-static NEARDATA const char callable[] = {
+static const char callable[] = {
     SCROLL_CLASS, POTION_CLASS, WAND_CLASS,  RING_CLASS, AMULET_CLASS,
     GEM_CLASS,    SPBOOK_CLASS, ARMOR_CLASS, TOOL_CLASS, 0
 };
@@ -1497,8 +1513,14 @@ struct obj *obj;
                          docall_xname, simpleonames, "thing");
     /* pointer to old name */
     str1 = &(objects[obj->otyp].oc_uname);
-    /* use getlin() to get a name string from the player */
-    if (!name_from_player(buf, qbuf, *str1))
+    buf[0] = '\0';
+#ifdef EDIT_GETLIN
+    /* if there's an existing name, make it be the default answer */
+    if (*str1)
+        Strcpy(buf, *str1);
+#endif
+    getlin(qbuf, buf);
+    if (!*buf || *buf == '\033')
         return;
 
     /* clear old name */
@@ -2049,7 +2071,7 @@ char *
 rndmonnam(code)
 char *code;
 {
-    static char buf[BUFSZ];
+    /* Rndmonnam_buf (was `buf`) migrated to nle_ctx_t */
     char *mname;
     int name;
 #define BOGUSMONSIZE 100 /* arbitrary */
@@ -2063,9 +2085,9 @@ char *code;
              && (type_is_pname(&mons[name]) || (mons[name].geno & G_NOGEN)));
 
     if (name >= SPECIAL_PM) {
-        mname = bogusmon(buf, code);
+        mname = bogusmon(rndmonnam_buf, code);
     } else {
-        mname = strcpy(buf, mons[name].mname);
+        mname = strcpy(rndmonnam_buf, mons[name].mname);
     }
     return mname;
 #undef BOGUSMONSIZE
@@ -2100,7 +2122,7 @@ roguename()
                   : "Glenn Wichman";
 }
 
-static NEARDATA const char *const hcolors[] = {
+static const char *const hcolors[] = {
     "ultraviolet", "infrared", "bluish-orange", "reddish-green", "dark white",
     "light black", "sky blue-pink", "salty", "sweet", "sour", "bitter",
     "striped", "spiral", "swirly", "plaid", "checkered", "argyle", "paisley",
@@ -2130,7 +2152,7 @@ rndcolor()
                                            : c_obj_colors[k];
 }
 
-static NEARDATA const char *const hliquids[] = {
+static const char *const hliquids[] = {
     "yoghurt", "oobleck", "clotted blood", "diluted water", "purified water",
     "instant coffee", "tea", "herbal infusion", "liquid rainbow",
     "creamy foam", "mulled wine", "bouillon", "nectar", "grog", "flubber",

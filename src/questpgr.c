@@ -9,14 +9,36 @@
 
 #include "qtext.h"
 
+/* Per-env quest pager state. Was four file-statics
+ * (cvt_buf, nambuf, qt_list, msg_file) racing across envs; now all four
+ * route through current_nle_ctx. qt_list is a heap-allocated struct
+ * qtlists pointed to by s_qt_list_p; nle.c allocates it in init_nle via
+ * nle_qtlist_alloc() so nle.h doesn't need qtext.h. */
+#define cvt_buf  (nh_cur->g_questpgr_c_cvt_buf)
+#define nambuf   (nh_cur->g_questpgr_c_nambuf)
+static struct qtlists *
+nle_qt_list(void)
+{
+    if (!nh_cur->nh_lazy[34]) /* slot 34: questpgr.c qt_list */
+        nh_cur->nh_lazy[34] = calloc(1, sizeof(struct qtlists));
+    return (struct qtlists *) nh_cur->nh_lazy[34];
+}
+#define qt_list  (*nle_qt_list())
+#define msg_file ((*(struct dlb_handle **) &nh_cur->g_questpgr_c_msg_file_p))
+
+
 #define QTEXT_FILE "quest.dat"
 
 #ifdef TTY_GRAPHICS
 #include "wintty.h"
 #endif
 
-/* from sp_lev.c, for deliver_splev_message() */
-extern char *lev_message;
+/* Lev_message migrated to per-env nle_ctx_t. Was a NON-static
+ * cross-TU heap pointer freed here in deliver_splev_message; env B's level
+ * entry could free() env A's still-pending lev_message → dangling UAF.
+ * Routing the macro to the same per-env slot as sp_lev.c eliminates the
+ * cross-env free. */
+#define lev_message (nh_cur->g_sp_lev_c_lev_message)
 
 static void NDECL(dump_qtlist);
 static void FDECL(Fread, (genericptr_t, int, int, dlb *));
@@ -34,11 +56,7 @@ STATIC_DCL void FDECL(deliver_by_pline, (struct qtmsg *));
 STATIC_DCL void FDECL(deliver_by_window, (struct qtmsg *, int));
 STATIC_DCL boolean FDECL(skip_pager, (BOOLEAN_P));
 
-static char cvt_buf[64];
-static struct qtlists qt_list;
-static dlb *msg_file;
-/* used by ldrname() and neminame(), then copied into cvt_buf */
-static char nambuf[sizeof cvt_buf];
+/* cvt_buf, qt_list, msg_file, nambuf migrated to nle_ctx_t — see macros above. */
 
 /* dump the character msg list to check appearance;
    build with DEBUG enabled and use DEBUGFILES=questpgr.c

@@ -8,7 +8,12 @@
 
 #include "hack.h"
 
-boolean m_using = FALSE;
+/* Combat tick per-env (muse.c statics). */
+#define zap_oseen (nh_cur->g_muse_c_zap_oseen)
+
+/* M_using per-env (was NON-static cross-TU boolean,
+ * extern in zap.c). nle_ctx_t-zeroed field defaults to FALSE. */
+#define m_using (nh_cur->g_muse_c_m_using)
 
 /* Let monsters use magic items.  Arbitrary assumptions: Monsters only use
  * scrolls when they can see, monsters know when wands have 0 charges,
@@ -38,7 +43,13 @@ STATIC_DCL boolean FDECL(muse_unslime, (struct monst *, struct obj *,
 STATIC_DCL int FDECL(cures_sliming, (struct monst *, struct obj *));
 STATIC_DCL boolean FDECL(green_mon, (struct monst *));
 
-static struct musable {
+/* Musable / trapx / trapy migrated to nle_ctx_t to remove
+ * the last per-monster-turn process-global writes in muse.c. The
+ * `struct musable` type stays file-local; its storage lives in
+ * `nh_cur->nh_lazy[25]` (allocated in init_nle below — registered
+ * via the helper `nle_muse_alloc` in nle.c). Macros below rewrite every
+ * bare `m`, `trapx`, `trapy` reference in this file to the per-env slot. */
+struct musable {
     struct obj *offensive;
     struct obj *defensive;
     struct obj *misc;
@@ -46,14 +57,25 @@ static struct musable {
     /* =0, no capability; otherwise, different numbers.
      * If it's an object, the object is also set (it's 0 otherwise).
      */
-} m;
-static int trapx, trapy;
-static boolean zap_oseen; /* for wands which use mbhitm and are zapped at
-                           * players.  We usually want an oseen local to
-                           * the function, but this is impossible since the
-                           * function mbhitm has to be compatible with the
-                           * normal zap routines, and those routines don't
-                           * remember who zapped the wand. */
+};
+
+static struct musable *
+nle_musable(void)
+{
+    if (!nh_cur->nh_lazy[25]) /* slot 25: muse.c struct musable */
+        nh_cur->nh_lazy[25] = calloc(1, sizeof(struct musable));
+    return (struct musable *) nh_cur->nh_lazy[25];
+}
+#define m     (*nle_musable())
+#define trapx (nh_cur->g_muse_c_trapx)
+#define trapy (nh_cur->g_muse_c_trapy)
+/* (zap_oseen migrated to nh_cur->g_muse_c_zap_oseen
+ * via macro at top of file; original `static boolean zap_oseen;` removed.
+ * Comment retained for context:)
+ * for wands which use mbhitm and are zapped at players.  We usually want
+ * an oseen local to the function, but this is impossible since the
+ * function mbhitm has to be compatible with the normal zap routines,
+ * and those routines don't remember who zapped the wand. */
 
 /* Any preliminary checks which may result in the monster being unable to use
  * the item.  Returns 0 if nothing happened, 2 if the monster can't do
@@ -1360,7 +1382,7 @@ struct obj *obj;                     /* 2nd arg to fhitm/fhito */
             int hitanything = 0;
             register struct obj *next_obj;
 
-            for (otmp = level.objects[bhitpos.x][bhitpos.y]; otmp;
+            for (otmp = level.objs[bhitpos.x][bhitpos.y]; otmp;
                  otmp = next_obj) {
                 /* Fix for polymorph bug, Tim Wright */
                 next_obj = otmp->nexthere;
@@ -2603,5 +2625,6 @@ struct monst *mon;
     }
     return FALSE;
 }
+
 
 /*muse.c*/

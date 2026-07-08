@@ -2,3 +2,6 @@
 # Every entry needs a justification.
 # (empty until the migration defines the ctx TLS pointer)
 nh_cur	# the per-env context pointer itself: the ONE writable symbol the design allows (becomes the single __thread pointer at the multi-env step)
+windowprocs_init_state	# atomic once-only guard for the process-global windowprocs table (write-once function-pointer table, identical for every env; see windows.c choose_windows)
+mon_trace_enabled.cached	# process-level getenv("NLE_TRACE_MON") cache; debug tracing only, no game state
+rest_mon_trace_enabled.cached	# same, restore-path trace cache

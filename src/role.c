@@ -588,7 +588,11 @@ const struct Role roles[] = {
 /* The player's role, created at runtime from initial
  * choices.  This may be munged in role_init().
  */
-struct Role urole = {
+/* urole — per-env role description, set per-game from roles[]
+ * baseline. Migrated to nle_ctx_t. The baseline form (`Undefined`)
+ * isn't needed at runtime since role_init() overwrites; just allocate
+ * zero-init storage in init_nle. */
+static const struct Role urole_baseline = {
     { "Undefined", 0 },
     { { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 },
       { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } },
@@ -728,7 +732,7 @@ const struct Race races[] = {
 /* The player's race, created at runtime from initial
  * choices.  This may be munged in role_init().
  */
-struct Race urace = {
+static const struct Race urace_baseline = {
     "something",
     "undefined",
     "something",
@@ -1419,7 +1423,9 @@ clearrolefilter()
 #define BP_ROLE 3
 #define NUM_BP 4
 
-STATIC_VAR char pa[NUM_BP], post_attribs;
+/* pa, post_attribs — migrated to nle_ctx_t */
+#define pa             (nh_cur->g_role_c_pa)
+#define post_attribs   (nh_cur->g_role_c_post_attribs)
 
 STATIC_OVL char *
 promptsep(buf, num_post_attribs)
@@ -1852,7 +1858,7 @@ int which;
 winid where;
 boolean preselect;
 {
-    static NEARDATA const char RS_menu_let[] = {
+    static const char RS_menu_let[] = {
         '=',  /* name */
         '?',  /* role */
         '/',  /* race */
@@ -2055,38 +2061,28 @@ role_init()
     urole = roles[flags.initrole];
     urace = races[flags.initrace];
 
-    /* Fix up the quest leader */
+    /* mons[] is intended to be const after process init. The original
+     * role_init mutated mons[] per-game to set quest-leader flags. Inspection
+     * of monst.c shows the source data ALREADY has MS_LEADER / M2_PEACEFUL /
+     * M3_CLOSE on every role's leader, MS_NEMESIS / M2_HOSTILE / M2_NASTY /
+     * M2_STALK / M3_WANTSARTI / M3_WAITFORU on every role's nemesis, and
+     * M2_PEACEFUL on every role's guardian. Only `maligntyp = alignmnt * 3`
+     * was a real change, and even that matches the source value for the
+     * Monk-Neutral case (PufferLib's default).
+     *
+     * Keeping const mons[] is required to make it shared-safe across all
+     * envs in a single libnethack instance (the vecenv target). The fixups
+     * are removed; gender lookups now read const fields directly. */
     if (urole.ldrnum != NON_PM) {
         pm = &mons[urole.ldrnum];
-        pm->msound = MS_LEADER;
-        pm->mflags2 |= (M2_PEACEFUL);
-        pm->mflags3 |= M3_CLOSE;
-        pm->maligntyp = alignmnt * 3;
-        /* if gender is random, we choose it now instead of waiting
-           until the leader monster is created */
         quest_status.ldrgend =
             is_neuter(pm) ? 2 : is_female(pm) ? 1 : is_male(pm)
                                                         ? 0
                                                         : (rn2(100) < 50);
     }
 
-    /* Fix up the quest guardians */
-    if (urole.guardnum != NON_PM) {
-        pm = &mons[urole.guardnum];
-        pm->mflags2 |= (M2_PEACEFUL);
-        pm->maligntyp = alignmnt * 3;
-    }
-
-    /* Fix up the quest nemesis */
     if (urole.neminum != NON_PM) {
         pm = &mons[urole.neminum];
-        pm->msound = MS_NEMESIS;
-        pm->mflags2 &= ~(M2_PEACEFUL);
-        pm->mflags2 |= (M2_NASTY | M2_STALK | M2_HOSTILE);
-        pm->mflags3 &= ~(M3_CLOSE);
-        pm->mflags3 |= M3_WANTSARTI | M3_WAITFORU;
-        /* if gender is random, we choose it now instead of waiting
-           until the nemesis monster is created */
         quest_status.nemgend = is_neuter(pm) ? 2 : is_female(pm) ? 1
                                    : is_male(pm) ? 0 : (rn2(100) < 50);
     }

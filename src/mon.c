@@ -9,10 +9,19 @@
 #endif
 
 #include "hack.h"
+
+/* Function-local statics migrated to nle_ctx_t */
+#define msgmv         (nh_cur->g_mon_c_elemental_clog_msgmv)
 #include "mfndpos.h"
 #include <ctype.h>
 
-STATIC_VAR boolean vamp_rise_msg, disintegested;
+/* Misc-2 per-env redirects (mon.c) */
+#define animal_list       ((*(short **) &nh_cur->nh_lazy[36]))
+#define animal_list_count (nh_cur->g_mon_c_animal_list_count)
+
+/* Monster-death flags per-env (were STATIC_VAR boolean). */
+#define vamp_rise_msg (nh_cur->g_mon_c_vamp_rise_msg)
+#define disintegested (nh_cur->g_mon_c_disintegested)
 
 STATIC_DCL void FDECL(sanity_check_single_mon, (struct monst *, BOOLEAN_P,
                                                 const char *));
@@ -669,6 +678,7 @@ struct monst *mon;
     if (rn2(NORMAL_SPEED) < mmove_adj)
         mmove += NORMAL_SPEED;
 
+    
     return mmove;
 }
 
@@ -881,7 +891,7 @@ register struct monst *mtmp;
         return 0;
 
     /* Eats topmost metal object if it is there */
-    for (otmp = level.objects[mtmp->mx][mtmp->my]; otmp;
+    for (otmp = level.objs[mtmp->mx][mtmp->my]; otmp;
          otmp = otmp->nexthere) {
         /* Don't eat indigestible/choking/inappropriate objects */
         if ((mtmp->data == &mons[PM_RUST_MONSTER] && !is_rustprone(otmp))
@@ -977,7 +987,7 @@ struct monst *mtmp;
     /* eat organic objects, including cloth and wood, if present;
        engulf others, except huge rocks and metal attached to player
        [despite comment at top, doesn't assume that eater is a g.cube] */
-    for (otmp = level.objects[mtmp->mx][mtmp->my]; otmp; otmp = otmp2) {
+    for (otmp = level.objs[mtmp->mx][mtmp->my]; otmp; otmp = otmp2) {
         otmp2 = otmp->nexthere;
 
         /* touch sensitive items */
@@ -1129,7 +1139,7 @@ register const char *str;
     if (mtmp->isshk && inhishop(mtmp))
         return FALSE;
 
-    for (otmp = level.objects[mtmp->mx][mtmp->my]; otmp; otmp = otmp2) {
+    for (otmp = level.objs[mtmp->mx][mtmp->my]; otmp; otmp = otmp2) {
         otmp2 = otmp->nexthere;
         /* Nymphs take everything.  Most monsters don't pick up corpses. */
         if (!str ? searches_for_item(mtmp, otmp)
@@ -1797,7 +1807,28 @@ struct monst *m;
         /* [no action needed for x->mcorpsenm] */
 
         free((genericptr_t) x);
+        /* Root fix (replaces the whack-a-mole has_eshk()
+         * guards at every ESHK callsite): under NLE_USE_ARENA_FREE the
+         * free()s above are no-ops — the mextra slot and its sub-structs
+         * remain mapped in the never-reclaimed arena. Nulling m->mextra
+         * here used to be correct under libc malloc (clears a dangling
+         * pointer) but with arena allocation it breaks the invariant
+         * `isshk => has_eshk(m)` (mon.c:82 panics on this) WITHOUT
+         * actually freeing anything. The downstream cost is a parade
+         * of crashes (segfault at 0x18/0x35) in shop_keeper, dopay,
+         * shkname, shkname_is_pname, done_in_by, doset, polymon — all
+         * paths that branch on mtmp->isshk and immediately deref ESHK
+         * without checking has_eshk first.
+         *
+         * Under the arena allocator, leaving m->mextra pointing at the
+         * still-live (leaked) slot preserves the invariant and stops
+         * those crashes at the root. The cost is bounded: we already
+         * leak this memory across the entire game's arena lifetime;
+         * not nulling the field doesn't change the leak amount, just
+         * keeps the pointer valid until process exit. */
+#ifndef NLE_USE_ARENA_FREE
         m->mextra = (struct mextra *) 0;
+#endif
     }
 }
 
@@ -2650,7 +2681,7 @@ elemental_clog(mon)
 struct monst *mon;
 {
     int m_lev = 0;
-    static long msgmv = 0L;
+    /* Msgmv migrated to nle_ctx_t */
     struct monst *mtmp, *m1, *m2, *m3, *m4, *m5, *zm;
 
     if (In_endgame(&u.uz)) {
@@ -3211,7 +3242,7 @@ struct monst *mtmp;
     } else if (mtmp->data->mlet == S_EEL) {
         undetected = (is_pool(x, y) && !Is_waterlevel(&u.uz));
     } else if (hides_under(mtmp->data) && OBJ_AT(x, y)) {
-        struct obj *otmp = level.objects[x][y];
+        struct obj *otmp = level.objs[x][y];
 
         /* most monsters won't hide under cockatrice corpse */
         if (otmp->nexthere || otmp->otyp != CORPSE
@@ -3252,32 +3283,28 @@ struct monst *mon;
     }
 }
 
-static short *animal_list = 0; /* list of PM values for animal monsters */
-static int animal_list_count;
+/* animal_list / animal_list_count migrated to nle_ctx_t.s_animal_list[_count].
+ * The buffer is allocated lazily by mon_animal_list.
+ * Macros at the top of this file rewrite both names to current_nle_ctx fields. */
 
 void
 mon_animal_list(construct)
 boolean construct;
 {
     if (construct) {
+        if (animal_list) return;       /* already built process-wide */
         short animal_temp[SPECIAL_PM];
         int i, n;
-
-        /* if (animal_list) impossible("animal_list already exists"); */
-
         for (n = 0, i = LOW_PM; i < SPECIAL_PM; i++)
             if (is_animal(&mons[i]))
                 animal_temp[n++] = i;
-        /* if (n == 0) animal_temp[n++] = NON_PM; */
-
         animal_list = (short *) alloc(n * sizeof *animal_list);
         (void) memcpy((genericptr_t) animal_list, (genericptr_t) animal_temp,
                       n * sizeof *animal_list);
         animal_list_count = n;
-    } else { /* release */
-        if (animal_list)
-            free((genericptr_t) animal_list), animal_list = 0;
-        animal_list_count = 0;
+    } else {
+        /* Per-env release intentionally a no-op: the list is shared and
+         * derived from const mons[], so it's safe to leak. */
     }
 }
 

@@ -29,12 +29,14 @@ file(MAKE_DIRECTORY ${NLE_INC_GEN} ${NLE_SRC_GEN})
 add_executable(makedefs ${MAKEDEFS_SRC})
 target_include_directories(makedefs PRIVATE ${NLE_INC} ${NLE_INC_GEN}
                                             ${NLE_UTIL_GEN})
+target_compile_definitions(makedefs PRIVATE NLE_OBJECTS_GLOBAL)
 add_executable(dgn_comp ${DGN_COMP_SRC})
 target_include_directories(dgn_comp PRIVATE ${NLE_INC} ${NLE_INC_GEN}
                                             ${NLE_UTIL_GEN})
 add_executable(lev_comp ${LEV_COMP_SRC})
 target_include_directories(lev_comp PRIVATE ${NLE_INC} ${NLE_INC_GEN}
                                             ${NLE_UTIL_GEN})
+target_compile_definitions(lev_comp PRIVATE NLE_OBJECTS_GLOBAL)
 add_executable(dlb ${DLB_SRC})
 target_include_directories(dlb PRIVATE ${NLE_INC} ${NLE_INC_GEN}
                                        ${NLE_UTIL_GEN})
@@ -92,6 +94,7 @@ add_custom_target(util DEPENDS ${MAKEDEFS_HEADERS} recover)
 
 add_executable(tilemap ${NLE_WIN}/share/tilemap.c)
 target_include_directories(tilemap PUBLIC ${NLE_INC} ${NLE_INC_GEN})
+target_compile_definitions(tilemap PRIVATE NLE_OBJECTS_GLOBAL)
 add_dependencies(tilemap util)
 
 file(GLOB NETHACK_TILE_SRC ${NLE_WIN}/rl/tile2rgb.c ${NLE_WIN}/rl/nletiletxt.c
@@ -99,6 +102,7 @@ file(GLOB NETHACK_TILE_SRC ${NLE_WIN}/rl/tile2rgb.c ${NLE_WIN}/rl/nletiletxt.c
 add_library(tile OBJECT ${NETHACK_TILE_SRC} ${NLE_SRC_GEN}/tile.c)
 target_include_directories(tile PUBLIC ${NLE_INC} ${NLE_INC_GEN}
                                        ${NLE_WIN}/share)
+target_compile_definitions(tile PRIVATE NLE_OBJECTS_GLOBAL)
 add_dependencies(tile generate_pm_h generate_tile_c)
 
 # NOTE: util is dependent on these two

@@ -6,7 +6,9 @@
 #include "hack.h"
 #include "lev.h"
 
-extern char bones[]; /* from files.c */
+/* The legacy `extern char bones[]` (files.c) is per-env now. No macro:
+ * flag.h has a `boolean bones` member and it would clobber flags.bones.
+ * The two buffer references below use the ctx field directly. */
 #ifdef MFLOPPY
 extern long bytes_counted;
 #endif
@@ -20,7 +22,7 @@ STATIC_OVL boolean
 no_bones_level(lev)
 d_level *lev;
 {
-    extern d_level save_dlevel; /* in do.c */
+#define save_dlevel (nh_cur->g_do_c_save_dlevel_store) /* per-env; was do.c global */
     s_level *sptr;
 
     if (ledger_no(&save_dlevel))
@@ -551,7 +553,7 @@ struct obj *corpse;
         bwrite(fd, (genericptr_t) bonesid, (unsigned) c); /* DD.nnn */
         savefruitchn(fd, COUNT_SAVE);
         bflush(fd);
-        if (bytes_counted > freediskspace(bones)) { /* not enough room */
+        if (bytes_counted > freediskspace(nh_cur->g_files_c_bones)) { /* not enough room */
             if (wizard)
                 pline("Insufficient space to create bones file.");
             (void) nhclose(fd);
@@ -596,7 +598,7 @@ getbones()
     if (fd < 0)
         return 0;
 
-    if (validate(fd, bones) != 0) {
+    if (validate(fd, nh_cur->g_files_c_bones) != 0) {
         if (!wizard)
             pline("Discarding unusable bones; no need to panic...");
         ok = FALSE;

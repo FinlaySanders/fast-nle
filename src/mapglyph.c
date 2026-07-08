@@ -54,8 +54,8 @@ static const int explcolors[] = {
     (currentgraphics == ROGUESET && SYMHANDLING(H_IBM))
 #endif
 
-#define is_objpile(x,y) (!Hallucination && level.objects[(x)][(y)] \
-                         && level.objects[(x)][(y)]->nexthere)
+#define is_objpile(x,y) (!Hallucination && level.objs[(x)][(y)] \
+                         && level.objs[(x)][(y)]->nexthere)
 
 /*ARGSUSED*/
 int

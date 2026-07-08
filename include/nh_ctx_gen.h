@@ -3,7 +3,7 @@
 #ifndef NH_CTX_GEN_H
 #define NH_CTX_GEN_H
 
-#define NH_LAZY_SLOTS 8
+#define NH_LAZY_SLOTS 48
 struct nh_ctx {
     /* hot: touched every step; keep packed at the front so the
      * per-step working set spans the fewest cache lines. */
@@ -16,6 +16,22 @@ struct nh_ctx {
     struct sinfo g_program_state; /* global: program_state */
     int (*g_occupation)(void); /* global: occupation */
     int (*g_afternmv)(void); /* global: afternmv */
+    char g_vision_c_could_see[2][ROWNO][COLNO]; /* vision.c: could_see */
+    char g_vision_c_viz_clear[ROWNO][COLNO]; /* vision.c: viz_clear */
+    char g_vision_c_left_ptrs[ROWNO][COLNO]; /* vision.c: left_ptrs */
+    char g_vision_c_right_ptrs[ROWNO][COLNO]; /* vision.c: right_ptrs */
+    char * g_vision_c_viz_clear_rows[ROWNO]; /* vision.c: viz_clear_rows */
+    char * g_vision_c_cs_rows0[ROWNO]; /* vision.c: cs_rows0 */
+    char * g_vision_c_cs_rows1[ROWNO]; /* vision.c: cs_rows1 */
+    char g_vision_c_cs_rmin0[ROWNO]; /* vision.c: cs_rmin0 */
+    char g_vision_c_cs_rmax0[ROWNO]; /* vision.c: cs_rmax0 */
+    char g_vision_c_cs_rmin1[ROWNO]; /* vision.c: cs_rmin1 */
+    char g_vision_c_cs_rmax1[ROWNO]; /* vision.c: cs_rmax1 */
+    char * g_vision_c_viz_rmin; /* vision.c: viz_rmin */
+    char * g_vision_c_viz_rmax; /* vision.c: viz_rmax */
+    char g_display_c_gbuf_start[ROWNO]; /* display.c: gbuf_start */
+    char g_display_c_gbuf_stop[ROWNO]; /* display.c: gbuf_stop */
+    int g_xwaitingforspace; /* global: xwaitingforspace */
     /* --- cold --- */
     int g_track_c_utcnt; /* track.c: utcnt */
     int g_track_c_utpnt; /* track.c: utpnt */
@@ -139,6 +155,239 @@ struct nh_ctx {
     unsigned g_nhUse_dummy; /* global: nhUse_dummy */
     short g_options_c_n_menu_mapped; /* options.c: n_menu_mapped */
     char g_attrib_c_from_what_buf[256]; /* attrib.c: from_what_buf */
+    struct cmd g_Cmd; /* global: Cmd */
+    int g_cmd_c_alt_esc; /* cmd.c: alt_esc */
+    int (*g_cmd_c_timed_occ_fn)(void); /* cmd.c: timed_occ_fn */
+    char g_cmd_c_pushq[20]; /* cmd.c: pushq */
+    char g_cmd_c_saveq[20]; /* cmd.c: saveq */
+    int g_cmd_c_phead; /* cmd.c: phead */
+    int g_cmd_c_ptail; /* cmd.c: ptail */
+    int g_cmd_c_shead; /* cmd.c: shead */
+    int g_cmd_c_stail; /* cmd.c: stail */
+    short g_cmd_c_en_win; /* cmd.c: en_win */
+    boolean g_cmd_c_en_via_menu; /* cmd.c: en_via_menu */
+    const char * g_cmd_c_readchar_queue; /* cmd.c: readchar_queue */
+    int g_vision_c_vis_start_row; /* vision.c: vis_start_row */
+    int g_vision_c_vis_start_col; /* vision.c: vis_start_col */
+    int g_vision_c_vis_step; /* vision.c: vis_step */
+    char ** g_vision_c_vis_cs_rows; /* vision.c: vis_cs_rows */
+    char * g_vision_c_vis_cs_left; /* vision.c: vis_cs_left */
+    char * g_vision_c_vis_cs_right; /* vision.c: vis_cs_right */
+    void (*g_vision_c_vis_func)(); /* vision.c: vis_func */
+    void * g_vision_c_vis_varg; /* vision.c: vis_varg */
+    int g_vision_c_vision_recur_depth; /* vision.c: vision_recur_depth */
+    unsigned char g_vision_c_vision_colbump[COLNO + 1]; /* vision.c: vision_colbump */
+    char g_botl_c_strength_buf[32]; /* botl.c: strength_buf */
+    boolean g_botl_c_blinit; /* botl.c: blinit */
+    boolean g_botl_c_update_all; /* botl.c: update_all */
+    boolean g_botl_c_valset[23]; /* botl.c: valset */
+    long g_botl_c_bl_hilite_moves; /* botl.c: bl_hilite_moves */
+    unsigned long g_botl_c_cond_hilites[21]; /* botl.c: cond_hilites */
+    int g_botl_c_now_or_before_idx; /* botl.c: now_or_before_idx */
+    int g_botl_c_status_hilite_str_id; /* botl.c: status_hilite_str_id */
+    char g_botl_c_blstats_initalready; /* botl.c: blstats_initalready */
+    void * g_botl_c_status_hilite_str_p; /* botl.c: status_hilite_str_p */
+    int g_sp_lev_c_min_rx; /* sp_lev.c: min_rx */
+    int g_sp_lev_c_max_rx; /* sp_lev.c: max_rx */
+    int g_sp_lev_c_min_ry; /* sp_lev.c: min_ry */
+    int g_sp_lev_c_max_ry; /* sp_lev.c: max_ry */
+    char g_sp_lev_c_splev_map[COLNO][ROWNO]; /* sp_lev.c: splev_map */
+    schar g_sp_lev_c_xstart; /* sp_lev.c: xstart */
+    schar g_sp_lev_c_ystart; /* sp_lev.c: ystart */
+    char g_sp_lev_c_xsize; /* sp_lev.c: xsize */
+    char g_sp_lev_c_ysize; /* sp_lev.c: ysize */
+    char * g_sp_lev_c_lev_message; /* sp_lev.c: lev_message */
+    void * g_sp_lev_c_lregions_p; /* sp_lev.c: lregions_p */
+    int g_sp_lev_c_num_lregions; /* sp_lev.c: num_lregions */
+    boolean g_sp_lev_c_splev_init_present; /* sp_lev.c: splev_init_present */
+    boolean g_sp_lev_c_icedpools; /* sp_lev.c: icedpools */
+    int g_sp_lev_c_container_idx; /* sp_lev.c: container_idx */
+    struct obj * g_sp_lev_c_container_obj[10]; /* sp_lev.c: container_obj */
+    struct monst * g_sp_lev_c_invent_carrying_monster; /* sp_lev.c: invent_carrying_monster */
+    int g_sp_lev_c_mines_prize_count; /* sp_lev.c: mines_prize_count */
+    int g_sp_lev_c_soko_prize_count; /* sp_lev.c: soko_prize_count */
+    schar g_sp_lev_c_floodfillchk_match_under_typ; /* sp_lev.c: floodfillchk_match_under_typ */
+    void * g_mkmaze_c_bbubbles; /* mkmaze.c: bbubbles */
+    void * g_mkmaze_c_ebubbles; /* mkmaze.c: ebubbles */
+    boolean g_mkmaze_c_movebubbles_up; /* mkmaze.c: movebubbles_up */
+    int g_mkmaze_c_water_xmin; /* mkmaze.c: water_xmin */
+    int g_mkmaze_c_water_ymin; /* mkmaze.c: water_ymin */
+    int g_mkmaze_c_water_xmax; /* mkmaze.c: water_xmax */
+    int g_mkmaze_c_water_ymax; /* mkmaze.c: water_ymax */
+    struct trap * g_mkmaze_c_wportal; /* mkmaze.c: wportal */
+    int g_display_c_bad_count[36]; /* display.c: bad_count */
+    void * g_display_c_tglyph_p; /* display.c: tglyph_p */
+    boolean g_display_c_in_cls; /* display.c: in_cls */
+    int g_display_c_flushing; /* display.c: flushing */
+    int g_display_c_delay_flushing; /* display.c: delay_flushing */
+    schar g_display_c_swallowed_lastx; /* display.c: swallowed_lastx */
+    schar g_display_c_swallowed_lasty; /* display.c: swallowed_lasty */
+    schar g_display_c_under_water_lastx; /* display.c: under_water_lastx */
+    schar g_display_c_under_water_lasty; /* display.c: under_water_lasty */
+    boolean g_display_c_under_water_dela; /* display.c: under_water_dela */
+    boolean g_display_c_under_ground_dela; /* display.c: under_ground_dela */
+    int g_display_c_nul_gbuf_new; /* display.c: nul_gbuf_new */
+    int g_display_c_nul_gbuf_glyph; /* display.c: nul_gbuf_glyph */
+    int g_invent_c_lastinvnr; /* invent.c: lastinvnr */
+    unsigned g_invent_c_sortlootmode; /* invent.c: sortlootmode */
+    int g_invent_c_cached_pickinv_win; /* invent.c: cached_pickinv_win */
+    int g_invent_c_this_type; /* invent.c: this_type */
+    unsigned g_invent_c_invbufsiz; /* invent.c: invbufsiz */
+    schar g_invent_c_only_x; /* invent.c: only_x */
+    schar g_invent_c_only_y; /* invent.c: only_y */
+    char g_invent_c_safeq_xprn_let; /* invent.c: safeq_xprn_let */
+    boolean g_invent_c_safeq_xprn_dot; /* invent.c: safeq_xprn_dot */
+    char g_invent_c_armcat[8]; /* invent.c: armcat */
+    char g_invent_c_li[256]; /* invent.c: li */
+    char g_invent_c_altbuf[256]; /* invent.c: altbuf */
+    void * g_windows_c_last_winchoice; /* windows.c: last_winchoice */
+    boolean g_windows_c_status_activefields[23]; /* windows.c: status_activefields */
+    const char * g_windows_c_status_fieldfmt[23]; /* windows.c: status_fieldfmt */
+    const char * g_windows_c_status_fieldnm[23]; /* windows.c: status_fieldnm */
+    char * g_windows_c_status_vals[23]; /* windows.c: status_vals */
+    int g_wintty_c_base_window; /* wintty.c: base_window */
+    char g_wintty_c_compress_cbuf[256]; /* wintty.c: compress_cbuf */
+    int g_wintty_c_hpbar_color; /* wintty.c: hpbar_color */
+    int g_wintty_c_hpbar_percent; /* wintty.c: hpbar_percent */
+    unsigned long * g_wintty_c_tty_colormasks; /* wintty.c: tty_colormasks */
+    long g_wintty_c_tty_condition_bits; /* wintty.c: tty_condition_bits */
+    int g_wintty_c_tty_nhgetch_nesting; /* wintty.c: tty_nhgetch_nesting */
+    boolean g_topl_c_initd; /* topl.c: initd */
+    int g_topl_c_nxtidx; /* topl.c: nxtidx */
+    boolean g_getline_c_suppress_history; /* getline.c: suppress_history */
+    struct WinDesc * g_wintty_c_wins[20]; /* wintty.c: wins */
+    struct DisplayDesc * g_wintty_c_ttydisplay; /* wintty.c: ttydisplay */
+    char g_wintty_c_morc; /* wintty.c: morc */
+    char g_files_c_savef[45]; /* files.c: savef */
+    char g_files_c_bones[16]; /* files.c: bones */
+    char * g_files_c_config_section_chosen; /* files.c: config_section_chosen */
+    char * g_files_c_config_section_current; /* files.c: config_section_current */
+    char g_files_c_fqn_fname[2048]; /* files.c: fqn_fname */
+    int g_files_c_lockptr; /* files.c: lockptr */
+    char g_files_c_wizkit[128]; /* files.c: wizkit */
+    int g_dungeon_c_n_dgns; /* dungeon.c: n_dgns */
+    long g_shk_c_pickmovetime; /* shk.c: pickmovetime */
+    char g_shk_c_empty_shops[5]; /* shk.c: empty_shops */
+    boolean g_muse_c_m_using; /* muse.c: m_using */
+    int g_muse_c_trapx; /* muse.c: trapx */
+    int g_muse_c_trapy; /* muse.c: trapy */
+    boolean g_muse_c_zap_oseen; /* muse.c: zap_oseen */
+    boolean g_pickup_c_abort_looting; /* pickup.c: abort_looting */
+    boolean g_pickup_c_autopick_costly; /* pickup.c: autopick_costly */
+    boolean g_pickup_c_bucx_filter; /* pickup.c: bucx_filter */
+    boolean g_pickup_c_class_filter; /* pickup.c: class_filter */
+    struct obj * g_pickup_c_current_container; /* pickup.c: current_container */
+    int g_pickup_c_encumber_msg_oldcap; /* pickup.c: encumber_msg_oldcap */
+    boolean g_pickup_c_shop_filter; /* pickup.c: shop_filter */
+    long g_pickup_c_val_for_n_or_more; /* pickup.c: val_for_n_or_more */
+    char g_pickup_c_valid_menu_classes[24]; /* pickup.c: valid_menu_classes */
+    int g_pickup_c_vmc_count; /* pickup.c: vmc_count */
+    int g_hack_c_domove_skates; /* hack.c: domove_skates */
+    char g_hack_c_in_rooms_buf[5]; /* hack.c: in_rooms_buf */
+    int g_hack_c_inspoteffects; /* hack.c: inspoteffects */
+    long g_hack_c_moverock_lastmovetime; /* hack.c: moverock_lastmovetime */
+    schar g_hack_c_spotloc_x; /* hack.c: spotloc_x */
+    schar g_hack_c_spotloc_y; /* hack.c: spotloc_y */
+    int g_hack_c_spotterrain; /* hack.c: spotterrain */
+    struct trap * g_hack_c_spottrap; /* hack.c: spottrap */
+    unsigned g_hack_c_spottraptyp; /* hack.c: spottraptyp */
+    void * g_hack_c_tmp_anything_p; /* hack.c: tmp_anything_p */
+    int g_hack_c_wc; /* hack.c: wc */
+    char g_do_name_c_dxdy_buf[30]; /* do_name.c: dxdy_buf */
+    char g_do_name_c_rndmonnam_buf[256]; /* do_name.c: rndmonnam_buf */
+    int g_do_name_c_gloc_filter_match_glyph; /* do_name.c: gloc_filter_match_glyph */
+    void * g_do_name_c_gloc_filter_map_p; /* do_name.c: gloc_filter_map_p */
+    int g_do_name_c_mbuf_idx; /* do_name.c: mbuf_idx */
+    char g_do_name_c_mbufs[5 * 256]; /* do_name.c: mbufs */
+    int g_do_name_c_via_naming; /* do_name.c: via_naming */
+    char g_trap_c_tnbuf[12]; /* trap.c: tnbuf */
+    int g_trap_c_force_mintrap; /* trap.c: force_mintrap */
+    boolean g_trap_c_recursive_mine; /* trap.c: recursive_mine */
+    int g_drawing_c_currentgraphics; /* drawing.c: currentgraphics */
+    char g_files_c_lock[46]; /* files.c: lock */
+    boolean g_restoring; /* global: restoring */
+    boolean g_notonhead; /* global: notonhead */
+    unsigned long g_nle_seeds[3]; /* global: nle_seeds */
+    int g_rumors_c_oracle_flg; /* rumors.c: oracle_flg */
+    unsigned g_rumors_c_oracle_cnt; /* rumors.c: oracle_cnt */
+    long g_rumors_c_true_rumor_size; /* rumors.c: true_rumor_size */
+    schar g_artifact_c_artidisco[33]; /* artifact.c: artidisco */
+    boolean g_artifact_c_artiexist[35]; /* artifact.c: artiexist */
+    int g_artifact_c_nesting; /* artifact.c: nesting */
+    char g_artifact_c_resbuf[20]; /* artifact.c: resbuf */
+    int g_artifact_c_mkot_trap_warn_count; /* artifact.c: mkot_trap_warn_count */
+    int g_artifact_c_spec_dbon_applies; /* artifact.c: spec_dbon_applies */
+    boolean g_artifact_c_touch_blasted; /* artifact.c: touch_blasted */
+    int g_apply_c_jumping_is_magic; /* apply.c: jumping_is_magic */
+    int g_apply_c_polearm_range_max; /* apply.c: polearm_range_max */
+    int g_apply_c_polearm_range_min; /* apply.c: polearm_range_min */
+    void * g_save_c_bw_file; /* save.c: bw_file */
+    int g_save_c_bwritefd; /* save.c: bwritefd */
+    boolean g_save_c_compressing; /* save.c: compressing */
+    int g_save_c_count_only; /* save.c: count_only */
+    unsigned char g_save_c_outbuf[256]; /* save.c: outbuf */
+    unsigned short g_save_c_outbufp; /* save.c: outbufp */
+    short g_save_c_outrunlength; /* save.c: outrunlength */
+    const char * g_save_c_procs_name; /* save.c: procs_name */
+    void (*g_save_c_procs_bclose)(int); /* save.c: procs_bclose */
+    void (*g_save_c_procs_bflush)(int); /* save.c: procs_bflush */
+    void (*g_save_c_procs_bufoff)(int); /* save.c: procs_bufoff */
+    void (*g_save_c_procs_bufon)(int); /* save.c: procs_bufon */
+    void (*g_save_c_procs_bwrite)(int, void *, unsigned int); /* save.c: procs_bwrite */
+    unsigned g_save_c_usteed_id; /* save.c: usteed_id */
+    unsigned g_save_c_ustuck_id; /* save.c: ustuck_id */
+    char g_role_c_pa[4]; /* role.c: pa */
+    int g_role_c_post_attribs; /* role.c: post_attribs */
+    void * g_lock_c_xlock_door_p; /* lock.c: xlock_door_p */
+    void * g_restore_c_id_map_p; /* restore.c: id_map_p */
+    int g_restore_c_n_ids_mapped; /* restore.c: n_ids_mapped */
+    struct fruit * g_restore_c_oldfruit; /* restore.c: oldfruit */
+    long g_restore_c_omoves; /* restore.c: omoves */
+    int g_restore_c_procs_mread_flags; /* restore.c: procs_mread_flags */
+    const char * g_restore_c_procs_name; /* restore.c: procs_name */
+    void (*g_restore_c_procs_bclose)(int); /* restore.c: procs_bclose */
+    void (*g_restore_c_procs_minit)(void); /* restore.c: procs_minit */
+    void (*g_restore_c_procs_mread)(int, void *, unsigned int); /* restore.c: procs_mread */
+    unsigned char g_restore_c_zc_inbuf[256]; /* restore.c: zc_inbuf */
+    short g_restore_c_zc_inrunlength; /* restore.c: zc_inrunlength */
+    int g_restore_c_zc_mreadfd; /* restore.c: zc_mreadfd */
+    char g_hacklib_c_ing_suffix_buf[256]; /* hacklib.c: ing_suffix_buf */
+    char g_hacklib_c_datestr[15]; /* hacklib.c: datestr */
+    int g_hacklib_c_visctrl_nbuf; /* hacklib.c: visctrl_nbuf */
+    char g_hacklib_c_visctrl_bufs[5][5]; /* hacklib.c: visctrl_bufs */
+    struct Role g_role_c_urole_store; /* role.c: urole_store */
+    struct Race g_role_c_urace_store; /* role.c: urace_store */
+    boolean g_eat_c_force_save_hs; /* eat.c: force_save_hs */
+    char g_eat_c_msgbuf[256]; /* eat.c: msgbuf */
+    long g_eat_c_ate_brains; /* eat.c: ate_brains */
+    unsigned g_eat_c_newuhs_save_hs; /* eat.c: newuhs_save_hs */
+    boolean g_eat_c_newuhs_saved_hs; /* eat.c: newuhs_saved_hs */
+    int g_potion_c_nothing; /* potion.c: nothing */
+    int g_potion_c_unkn; /* potion.c: unkn */
+    char g_do_c_at_ladder; /* do.c: at_ladder */
+    char * g_do_c_dfr_post_msg; /* do.c: dfr_post_msg */
+    char * g_do_c_dfr_pre_msg; /* do.c: dfr_pre_msg */
+    char g_do_c_dowipe_buf[39]; /* do.c: dowipe_buf */
+    d_level g_do_c_save_dlevel_store; /* do.c: save_dlevel_store */
+    char g_questpgr_c_cvt_buf[64]; /* questpgr.c: cvt_buf */
+    char g_questpgr_c_nambuf[64]; /* questpgr.c: nambuf */
+    void * g_questpgr_c_msg_file_p; /* questpgr.c: msg_file_p */
+    unsigned g_pline_c_pline_flags; /* pline.c: pline_flags */
+    int g_pline_c_in_pline; /* pline.c: in_pline */
+    char g_pline_c_prevmsg[256]; /* pline.c: prevmsg */
+    int g_mon_c_animal_list_count; /* mon.c: animal_list_count */
+    boolean g_mon_c_disintegested; /* mon.c: disintegested */
+    long g_mon_c_elemental_clog_msgmv; /* mon.c: elemental_clog_msgmv */
+    boolean g_mon_c_vamp_rise_msg; /* mon.c: vamp_rise_msg */
+    int g_mhitm_c_dieroll; /* mhitm.c: dieroll */
+    boolean g_mhitm_c_far_noise; /* mhitm.c: far_noise */
+    struct obj * g_mhitm_c_otmp; /* mhitm.c: otmp */
+    long g_mhitm_c_noisetime; /* mhitm.c: noisetime */
+    boolean g_mhitm_c_vis; /* mhitm.c: vis */
+    int g_spell_c_sortmode; /* spell.c: sortmode */
+    void * g_makemon_c_align_shift_lev_p; /* makemon.c: align_shift_lev_p */
+    long g_makemon_c_align_shift_oldmoves; /* makemon.c: align_shift_oldmoves */
+    int g_end_c_vanq_sortmode; /* end.c: vanq_sortmode */
     /* lazily-allocated per-env blobs whose types are private to one
      * .c file (e.g. options.c boolopt copy); freed by nh_ctx_free.
      * Slot assignments are documented at the allocation sites. */
@@ -281,5 +530,10 @@ void nh_ctx_fixup(struct nh_ctx *);
 #define sfsaveinfo (nh_cur->g_sfsaveinfo)
 #define plinemsg_types (nh_cur->g_plinemsg_types)
 #define nhUse_dummy (nh_cur->g_nhUse_dummy)
+#define Cmd (nh_cur->g_Cmd)
+#define xwaitingforspace (nh_cur->g_xwaitingforspace)
+#define restoring (nh_cur->g_restoring)
+#define notonhead (nh_cur->g_notonhead)
+#define nle_seeds (nh_cur->g_nle_seeds)
 
 #endif /* NH_CTX_GEN_H */

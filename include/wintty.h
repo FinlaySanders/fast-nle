@@ -91,16 +91,15 @@ struct tty_status_fields {
 #endif
 #define NHW_BASE 6
 
-extern struct window_procs tty_procs;
+extern const struct window_procs tty_procs;
 
-/* port specific variable declarations */
-extern winid BASE_WINDOW;
-
-extern struct WinDesc *wins[MAXWIN];
-
-extern struct DisplayDesc *ttyDisplay; /* the tty display descriptor */
-
-extern char morc;         /* last character typed to xwaitforspace */
+/* port specific variable declarations — used to be globals in
+ * wintty.c/getline.c; now per-env ctx fields, macros for every consumer
+ * (wintty.h is included after hack.h everywhere in the tty layer). */
+#define BASE_WINDOW (nh_cur->g_wintty_c_base_window)
+#define wins        (nh_cur->g_wintty_c_wins)
+#define ttyDisplay  (nh_cur->g_wintty_c_ttydisplay)
+#define morc        (nh_cur->g_wintty_c_morc)
 extern char defmorestr[]; /* default --more-- prompt */
 
 /* port specific external function references */

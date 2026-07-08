@@ -7,6 +7,51 @@
 #include "lev.h"
 #include "func_tab.h"
 
+/* Per-env replacements for two cmd.c file-statics.
+ * clicklook_cc is heap-allocated via nle_get_clicklook_cc() (forward-decl'd
+ * as `struct nhcoord` in nle.h); first-use idempotent init per env. */
+static coord *
+nle_get_clicklook_cc(void)
+{
+    if (!nh_cur->nh_lazy[4]) /* slot 4: cmd.c clicklook_cc */
+        nh_cur->nh_lazy[4] = calloc(1, sizeof(coord));
+    return (coord *) nh_cur->nh_lazy[4];
+}
+#define alt_esc       (nh_cur->g_cmd_c_alt_esc)
+#define clicklook_cc  (*nle_get_clicklook_cc())
+
+/* Per-env cmd.c function-local statics. */
+struct nle_cmd_state {
+    int   _last_multi;
+    struct ext_func_tab *_back_dir_cmd[8];
+    boolean _backed_dir_cmd;
+    char  _cmd[4];
+    char  _in_line[80 /* COLNO */];
+    char  _key2cmdbuf[48];
+    unsigned _randomkey_i;
+};
+static struct nle_cmd_state *
+nle_cmd(void)
+{
+    if (!nh_cur) return NULL;
+    struct nle_cmd_state *s = (struct nle_cmd_state *) nh_cur->nh_lazy[3];
+    if (!s) { /* slot 3: cmd.c function-local statics */
+        s = (struct nle_cmd_state *) calloc(1, sizeof(struct nle_cmd_state));
+        nh_cur->nh_lazy[3] = s;
+    }
+    return s;
+}
+#define last_multi    (nle_cmd()->_last_multi)
+#define back_dir_cmd  (nle_cmd()->_back_dir_cmd)
+#define backed_dir_cmd (nle_cmd()->_backed_dir_cmd)
+/* Note: the `cmd` static in click_to_cmd() is renamed to `click_cmd` to avoid
+ * colliding with the `cmd` parameter in rhack(). Bare uses in click_to_cmd()
+ * are manually rewritten to `click_cmd`. */
+#define click_cmd     (nle_cmd()->_cmd)
+#define in_line       (nle_cmd()->_in_line)
+#define key2cmdbuf    (nle_cmd()->_key2cmdbuf)
+#define randomkey_i   (nle_cmd()->_randomkey_i)
+
 /* Macros for meta and ctrl modifiers:
  *   M and C return the meta/ctrl code for the given character;
  *     e.g., (C('c') is ctrl-c
@@ -26,11 +71,9 @@
 #define unctrl(c) ((c) <= C('z') ? (0x60 | (c)) : (c))
 #define unmeta(c) (0x7f & (c))
 
-#ifdef ALTMETA
-STATIC_VAR boolean alt_esc = FALSE;
-#endif
+/* alt_esc moved into nle_ctx_t — macro above. */
 
-struct cmd Cmd = { 0 }; /* flag.h */
+/* Cmd — migrated to nle_ctx_t (per-env). */
 
 extern const char *hu_stat[];  /* hunger status from eat.c */
 extern const char *enc_stat[]; /* encumbrance status from botl.c */
@@ -129,7 +172,7 @@ extern int NDECL(dozap);              /**/
 extern int NDECL(doorganize);         /**/
 #endif /* DUMB */
 
-static int NDECL((*timed_occ_fn));
+#define timed_occ_fn (nh_cur->g_cmd_c_timed_occ_fn)
 
 STATIC_PTR int NDECL(dosuspend_core);
 STATIC_PTR int NDECL(dosh_core);
@@ -204,8 +247,8 @@ STATIC_DCL char *NDECL(parse);
 STATIC_DCL void FDECL(show_direction_keys, (winid, CHAR_P, BOOLEAN_P));
 STATIC_DCL boolean FDECL(help_dir, (CHAR_P, int, const char *));
 
-static const char *readchar_queue = "";
-static coord clicklook_cc;
+#define readchar_queue (nh_cur->g_cmd_c_readchar_queue) /* per-env; fixup inits to "" */
+/* clicklook_cc moved into nle_ctx_t — macro above. */
 /* for rejecting attempts to use wizard mode commands */
 static const char unavailcmd[] = "Unavailable command '%s'.";
 /* for rejecting #if !SHELL, !SUSPEND */
@@ -276,9 +319,15 @@ STATIC_DCL char NDECL(popch);
  * direction), and the input prompt is not shown.  Also, while in_doagain is
  * TRUE, no keystrokes can be saved into the saveq.
  */
+/* Per-env key-input queues. Were plain statics (process-global);
+ * concurrent OMP envs on the same thread could interleave input replay. */
 #define BSIZE 20
-static char pushq[BSIZE], saveq[BSIZE];
-static NEARDATA int phead, ptail, shead, stail;
+#define pushq  (nh_cur->g_cmd_c_pushq)
+#define saveq  (nh_cur->g_cmd_c_saveq)
+#define phead  (nh_cur->g_cmd_c_phead)
+#define ptail  (nh_cur->g_cmd_c_ptail)
+#define shead  (nh_cur->g_cmd_c_shead)
+#define stail  (nh_cur->g_cmd_c_stail)
 
 STATIC_OVL char
 popch()
@@ -1612,8 +1661,12 @@ doterrain(VOID_ARGS)
 }
 
 /* -enlightenment and conduct- */
-static winid en_win = WIN_ERR;
-static boolean en_via_menu = FALSE;
+/* Per-env. en_win was a plain static (process-global winid);
+ * concurrent envs could alias the same window on game-over/conduct display.
+ * en_via_menu was __thread; OMP cross-thread TLS hazard. */
+#define en_win       ((winid) nh_cur->g_cmd_c_en_win)
+#define set_en_win(v) (nh_cur->g_cmd_c_en_win = (short)(v))
+#define en_via_menu  (nh_cur->g_cmd_c_en_via_menu)
 static const char You_[] = "You ", are[] = "are ", were[] = "were ",
                   have[] = "have ", had[] = "had ", can[] = "can ",
                   could[] = "could ";
@@ -1773,7 +1826,7 @@ int final; /* ENL_GAMEINPROGRESS:0, ENL_GAMEOVERALIVE, ENL_GAMEOVERDEAD */
 {
     char buf[BUFSZ], tmpbuf[BUFSZ];
 
-    en_win = create_nhwindow(NHW_MENU);
+    set_en_win(create_nhwindow(NHW_MENU));
     en_via_menu = !final;
     if (en_via_menu)
         start_menu(en_win);
@@ -1822,7 +1875,7 @@ int final; /* ENL_GAMEINPROGRESS:0, ENL_GAMEOVERALIVE, ENL_GAMEOVERDEAD */
         en_via_menu = FALSE;
     }
     destroy_nhwindow(en_win);
-    en_win = WIN_ERR;
+    set_en_win(WIN_ERR);
 }
 
 /*ARGSUSED*/
@@ -2612,7 +2665,7 @@ attributes_enlightenment(unused_mode, final)
 int unused_mode UNUSED;
 int final;
 {
-    static NEARDATA const char if_surroundings_permitted[] =
+    static const char if_surroundings_permitted[] =
         " if surroundings permitted";
     int ltmp, armpro;
     char buf[BUFSZ];
@@ -3202,7 +3255,7 @@ int msgflag;          /* for variant message phrasing */
             if (is_pool(u.ux, u.uy))
                 Sprintf(bp, " in the %s", waterbody_name(u.ux, u.uy));
         } else if (hides_under(youmonst.data)) {
-            struct obj *o = level.objects[u.ux][u.uy];
+            struct obj *o = level.objs[u.ux][u.uy];
 
             if (o)
                 Sprintf(bp, " underneath %s", ansimpleoname(o));
@@ -3251,7 +3304,7 @@ int final;
     int ngenocided;
 
     /* Create the conduct window */
-    en_win = create_nhwindow(NHW_MENU);
+    set_en_win(create_nhwindow(NHW_MENU));
     putstr(en_win, 0, "Voluntary challenges:");
 
     if (u.uroleplay.blind)
@@ -3348,7 +3401,7 @@ int final;
     /* Pop up the window and wait for a key */
     display_nhwindow(en_win, TRUE);
     destroy_nhwindow(en_win);
-    en_win = WIN_ERR;
+    set_en_win(WIN_ERR);
 }
 
 int nle_dosave() {
@@ -3372,7 +3425,7 @@ int nle_noop() {
 }
 
 /* ordered by command name */
-struct ext_func_tab extcmdlist[] = {
+const struct ext_func_tab extcmdlist[] = {
     { '#', "#", "perform an extended command",
             doextcmd, IFBURIED | GENERALCMD },
     { M('?'), "?", "list all extended commands",
@@ -3584,13 +3637,13 @@ static const struct movcmd movtab[] = {
     {   0,   0,   0,   0,  (char *) 0, (char *) 0 }
 };
 
-int extcmdlist_length = SIZE(extcmdlist) - 1;
+const int extcmdlist_length = SIZE(extcmdlist) - 1; /* never written */
 
 const char *
 key2extcmddesc(key)
 uchar key;
 {
-    static char key2cmdbuf[48];
+    /* key2cmdbuf — migrated to nle_cmd_state (per-env). */
     const struct movcmd *mov;
     int k, c;
     uchar M_5 = (uchar) M('5'), M_0 = (uchar) M('0');
@@ -4507,11 +4560,10 @@ boolean initial;
     static const int ylist[] = {
         'y', 'Y', C('y'), M('y'), M('Y'), M(C('y'))
     };
-    static struct ext_func_tab *back_dir_cmd[8];
+    /* back_dir_cmd, backed_dir_cmd — migrated to nle_cmd_state (per-env). */
     const struct ext_func_tab *cmdtmp;
     boolean flagtemp;
     int c, i, updated = 0;
-    static boolean backed_dir_cmd = FALSE;
 
     if (initial) {
         updated = 1;
@@ -4635,7 +4687,7 @@ int NDECL((*cmd_func));
 char
 randomkey()
 {
-    static unsigned i = 0;
+    /* i — migrated to nle_cmd_state as randomkey_i (per-env). */
     char c;
 
     switch (rn2(16)) {
@@ -4661,7 +4713,7 @@ randomkey()
         c = (char) rn1('Z' - 'A' + 1, 'A');
         break;
     case 8:
-        c = extcmdlist[i++ % SIZE(extcmdlist)].key;
+        c = extcmdlist[randomkey_i++ % SIZE(extcmdlist)].key;
         break;
     case 9:
         c = '#';
@@ -5319,7 +5371,7 @@ const char *
 directionname(dir)
 int dir;
 {
-    static NEARDATA const char *const dirnames[] = {
+    static const char *const dirnames[] = {
         "west",      "northwest", "north",     "northeast", "east",
         "southeast", "south",     "southwest", "down",      "up",
     };
@@ -5540,7 +5592,7 @@ boolean doit;
 #endif
 
     if (OBJ_AT(u.ux, u.uy)) {
-        struct obj *otmp = level.objects[u.ux][u.uy];
+        struct obj *otmp = level.objs[u.ux][u.uy];
 
         Sprintf(buf, "Pick up %s", otmp->nexthere ? "items" : doname(otmp));
         add_herecmd_menuitem(win, dopickup, buf);
@@ -5582,7 +5634,7 @@ boolean doit;
 }
 
 
-static NEARDATA int last_multi;
+/* last_multi — migrated to nle_cmd_state (per-env). */
 
 /*
  * convert a MAP window position into a movecmd
@@ -5592,14 +5644,14 @@ click_to_cmd(x, y, mod)
 int x, y, mod;
 {
     int dir;
-    static char cmd[4];
-    cmd[1] = 0;
+    /* cmd — migrated to nle_cmd_state as click_cmd (per-env). */
+    click_cmd[1] = 0;
 
     if (iflags.clicklook && mod == CLICK_2) {
         clicklook_cc.x = x;
         clicklook_cc.y = y;
-        cmd[0] = Cmd.spkeys[NHKF_CLICKLOOK];
-        return cmd;
+        click_cmd[0] = Cmd.spkeys[NHKF_CLICKLOOK];
+        return click_cmd;
     }
 
     x -= u.ux;
@@ -5611,43 +5663,43 @@ int x, y, mod;
         } else {
             u.tx = u.ux + x;
             u.ty = u.uy + y;
-            cmd[0] = Cmd.spkeys[NHKF_TRAVEL];
-            return cmd;
+            click_cmd[0] = Cmd.spkeys[NHKF_TRAVEL];
+            return click_cmd;
         }
 
         if (x == 0 && y == 0) {
             if (iflags.herecmd_menu) {
-                cmd[0] = here_cmd_menu(FALSE);
-                return cmd;
+                click_cmd[0] = here_cmd_menu(FALSE);
+                return click_cmd;
             }
 
             /* here */
             if (IS_FOUNTAIN(levl[u.ux][u.uy].typ)
                 || IS_SINK(levl[u.ux][u.uy].typ)) {
-                cmd[0] = cmd_from_func(mod == CLICK_1 ? dodrink : dodip);
-                return cmd;
+                click_cmd[0] = cmd_from_func(mod == CLICK_1 ? dodrink : dodip);
+                return click_cmd;
             } else if (IS_THRONE(levl[u.ux][u.uy].typ)) {
-                cmd[0] = cmd_from_func(dosit);
-                return cmd;
+                click_cmd[0] = cmd_from_func(dosit);
+                return click_cmd;
             } else if ((u.ux == xupstair && u.uy == yupstair)
                        || (u.ux == sstairs.sx && u.uy == sstairs.sy
                            && sstairs.up)
                        || (u.ux == xupladder && u.uy == yupladder)) {
-                cmd[0] = cmd_from_func(doup);
-                return cmd;
+                click_cmd[0] = cmd_from_func(doup);
+                return click_cmd;
             } else if ((u.ux == xdnstair && u.uy == ydnstair)
                        || (u.ux == sstairs.sx && u.uy == sstairs.sy
                            && !sstairs.up)
                        || (u.ux == xdnladder && u.uy == ydnladder)) {
-                cmd[0] = cmd_from_func(dodown);
-                return cmd;
+                click_cmd[0] = cmd_from_func(dodown);
+                return click_cmd;
             } else if (OBJ_AT(u.ux, u.uy)) {
-                cmd[0] = cmd_from_func(Is_container(level.objects[u.ux][u.uy])
+                click_cmd[0] = cmd_from_func(Is_container(level.objs[u.ux][u.uy])
                                        ? doloot : dopickup);
-                return cmd;
+                return click_cmd;
             } else {
-                cmd[0] = cmd_from_func(donull); /* just rest */
-                return cmd;
+                click_cmd[0] = cmd_from_func(donull); /* just rest */
+                return click_cmd;
             }
         }
 
@@ -5657,31 +5709,31 @@ int x, y, mod;
 
         if (!m_at(u.ux + x, u.uy + y)
             && !test_move(u.ux, u.uy, x, y, TEST_MOVE)) {
-            cmd[1] = Cmd.dirchars[dir];
-            cmd[2] = '\0';
+            click_cmd[1] = Cmd.dirchars[dir];
+            click_cmd[2] = '\0';
             if (iflags.herecmd_menu) {
-                cmd[0] = there_cmd_menu(FALSE, u.ux + x, u.uy + y);
-                if (cmd[0] == '\0')
-                    cmd[1] = '\0';
-                return cmd;
+                click_cmd[0] = there_cmd_menu(FALSE, u.ux + x, u.uy + y);
+                if (click_cmd[0] == '\0')
+                    click_cmd[1] = '\0';
+                return click_cmd;
             }
 
             if (IS_DOOR(levl[u.ux + x][u.uy + y].typ)) {
                 /* slight assistance to the player: choose kick/open for them
                  */
                 if (levl[u.ux + x][u.uy + y].doormask & D_LOCKED) {
-                    cmd[0] = cmd_from_func(dokick);
-                    return cmd;
+                    click_cmd[0] = cmd_from_func(dokick);
+                    return click_cmd;
                 }
                 if (levl[u.ux + x][u.uy + y].doormask & D_CLOSED) {
-                    cmd[0] = cmd_from_func(doopen);
-                    return cmd;
+                    click_cmd[0] = cmd_from_func(doopen);
+                    return click_cmd;
                 }
             }
             if (levl[u.ux + x][u.uy + y].typ <= SCORR) {
-                cmd[0] = cmd_from_func(dosearch);
-                cmd[1] = 0;
-                return cmd;
+                click_cmd[0] = cmd_from_func(dosearch);
+                click_cmd[1] = 0;
+                return click_cmd;
             }
         }
     } else {
@@ -5699,23 +5751,23 @@ int x, y, mod;
 
         if (x == 0 && y == 0) {
             /* map click on player to "rest" command */
-            cmd[0] = cmd_from_func(donull);
-            return cmd;
+            click_cmd[0] = cmd_from_func(donull);
+            return click_cmd;
         }
         dir = xytod(x, y);
     }
 
     /* move, attack, etc. */
-    cmd[1] = 0;
+    click_cmd[1] = 0;
     if (mod == CLICK_1) {
-        cmd[0] = Cmd.dirchars[dir];
+        click_cmd[0] = Cmd.dirchars[dir];
     } else {
-        cmd[0] = (Cmd.num_pad
+        click_cmd[0] = (Cmd.num_pad
                      ? M(Cmd.dirchars[dir])
                      : (Cmd.dirchars[dir] - 'a' + 'A')); /* run command */
     }
 
-    return cmd;
+    return click_cmd;
 }
 
 char
@@ -5783,11 +5835,7 @@ boolean historical; /* whether to include in message history: True => yes */
 STATIC_OVL char *
 parse()
 {
-#ifdef LINT /* static char in_line[COLNO]; */
-    char in_line[COLNO];
-#else
-    static char in_line[COLNO];
-#endif
+    /* in_line — migrated to nle_cmd_state (per-env). */
     register int foo;
 
     iflags.in_parse = TRUE;

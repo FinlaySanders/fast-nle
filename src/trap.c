@@ -5,6 +5,15 @@
 
 #include "hack.h"
 
+/* Per-env return buffer */
+#define tnbuf (nh_cur->g_trap_c_tnbuf)
+
+/* File-static migrated to nle_ctx_t. */
+#define force_mintrap (nh_cur->g_trap_c_force_mintrap)
+/* Function-local static `recursive_mine` in dotrap()
+ * migrated to per-env nle_ctx_t field. */
+#define recursive_mine  (nh_cur->g_trap_c_recursive_mine)
+
 extern const char *const destroy_strings[][3]; /* from zap.c */
 
 STATIC_DCL boolean FDECL(keep_saddle_with_steedcorpse, (unsigned, struct obj *,
@@ -40,7 +49,7 @@ STATIC_DCL boolean FDECL(thitm, (int, struct monst *, struct obj *, int,
 STATIC_DCL void NDECL(maybe_finish_sokoban);
 
 /* mintrap() should take a flags argument, but for time being we use this */
-STATIC_VAR int force_mintrap = 0;
+/* force_mintrap migrated to nh_cur->g_trap_c_force_mintrap. */
 
 STATIC_VAR const char *const a_your[2] = { "a", "your" };
 STATIC_VAR const char *const A_Your[2] = { "A", "Your" };
@@ -143,7 +152,7 @@ const char *ostr;
 int type;
 int ef_flags;
 {
-    static NEARDATA const char
+    static const char
         *const action[] = { "smoulder", "rust", "rot", "corrode" },
         *const msg[] = { "burnt", "rusted", "rotten", "corroded" },
         *const bythe[] = { "heat", "oxidation", "decay", "corrosion" };
@@ -1502,7 +1511,9 @@ unsigned trflags;
              * the ground, and you being affected again by the same
              * mine because it hasn't been deleted yet
              */
-            static boolean recursive_mine = FALSE;
+            /* `static boolean recursive_mine = FALSE;`
+             * migrated to nh_cur->g_trap_c_recursive_mine (calloc
+             * zeroes the field = FALSE). See top-of-file #define. */
 
             if (recursive_mine)
                 break;
@@ -1567,7 +1578,7 @@ trapnote(trap, noprefix)
 struct trap *trap;
 boolean noprefix;
 {
-    static char tnbuf[12];
+    /* Tnbuf migrated to nle_ctx_t */
     const char *tn,
         *tnnames[12] = { "C note",  "D flat", "D note",  "E flat",
                          "E note",  "F note", "F sharp", "G note",
@@ -1706,10 +1717,16 @@ struct trap *trap;
  * prevent them from vanishing if you are killed. They
  * will reappear at the launchplace in bones files.
  */
-static struct {
-    struct obj *obj;
-    xchar x, y;
-} launchplace;
+/* launchplace — per-env, lazy slot 28 (type private to trap.c). */
+struct launchplace_s { struct obj *obj; xchar x, y; };
+static struct launchplace_s *
+nle_launchplace(void)
+{
+    if (!nh_cur->nh_lazy[28])
+        nh_cur->nh_lazy[28] = calloc(1, sizeof(struct launchplace_s));
+    return (struct launchplace_s *) nh_cur->nh_lazy[28];
+}
+#define launchplace (*nle_launchplace())
 
 STATIC_OVL void
 launch_drop_spot(obj, x, y)
@@ -1857,14 +1874,6 @@ int style;
 
         bhitpos.x += dx;
         bhitpos.y += dy;
-
-        /* check if the obj is not out of bounds */
-        if (!isok(bhitpos.x, bhitpos.y)) {
-            bhitpos.x -= dx;
-            bhitpos.y -= dy;
-            x2 = bhitpos.x, y2 = bhitpos.y; /* object stops here */
-            break; 
-        }
 
         if ((mtmp = m_at(bhitpos.x, bhitpos.y)) != 0) {
             if (otyp == BOULDER && throws_rocks(mtmp->data)) {
@@ -3514,11 +3523,23 @@ struct obj *obj;
 
 /* context for water_damage(), managed by water_damage_chain();
    when more than one stack of potions of acid explode while processing
-   a chain of objects, use alternate phrasing after the first message */
-static struct h2o_ctx {
-    int dkn_boom, unk_boom; /* track dknown, !dknown separately */
+   a chain of objects, use alternate phrasing after the first message.
+   Migrated to per-env to stop multi-buffer race in
+   water_damage_chain at trap.c:3695 (segfault at offset 0x34 was
+   reading torn ctx_valid across pthreads). Struct defined here, storage
+   in nle_ctx_t->s_acid_ctx (declared as opaque void* in nle.h to keep
+   the type local). */
+struct h2o_ctx {
+    int dkn_boom, unk_boom;
     boolean ctx_valid;
-} acid_ctx = { 0, 0, FALSE };
+};
+#define acid_ctx (*(struct h2o_ctx *)nle_get_acid_ctx())
+static void *nle_get_acid_ctx(void) {
+    if (!nh_cur->nh_lazy[27]) {
+        nh_cur->nh_lazy[27] = calloc(1, sizeof(struct h2o_ctx));
+    }
+    return nh_cur->nh_lazy[27];
+}
 
 /* Get an object wet and damage it appropriately.
  *   "ostr", if present, is used instead of the object name in some
@@ -4208,7 +4229,7 @@ struct trap *ttmp;
 }
 
 /* getobj will filter down to cans of grease and known potions of oil */
-static NEARDATA const char oil[] = { ALL_CLASSES, TOOL_CLASS, POTION_CLASS,
+static const char oil[] = { ALL_CLASSES, TOOL_CLASS, POTION_CLASS,
                                      0 };
 
 /* it may not make much sense to use grease on floor boards, but so what? */
@@ -4414,7 +4435,7 @@ boolean force;
     here = (x == u.ux && y == u.uy); /* !u.dx && !u.dy */
 
     if (here) /* are there are one or more containers here? */
-        for (otmp = level.objects[x][y]; otmp; otmp = otmp->nexthere)
+        for (otmp = level.objs[x][y]; otmp; otmp = otmp->nexthere)
             if (Is_box(otmp)) {
                 if (++boxcnt > 1)
                     break;
@@ -4507,7 +4528,7 @@ boolean force;
         } /* end if */
 
         if (boxcnt) {
-            for (otmp = level.objects[x][y]; otmp; otmp = otmp->nexthere)
+            for (otmp = level.objs[x][y]; otmp; otmp = otmp->nexthere)
                 if (Is_box(otmp)) {
                     (void) safe_qbuf(qbuf, "There is ",
                                      " here.  Check it for traps?", otmp,
@@ -4885,7 +4906,7 @@ boolean disarm;
                                  && uball->ox == u.ux && uball->oy == u.uy)))
                 unpunish();
 
-            for (otmp = level.objects[u.ux][u.uy]; otmp; otmp = otmp2) {
+            for (otmp = level.objs[u.ux][u.uy]; otmp; otmp = otmp2) {
                 otmp2 = otmp->nexthere;
                 if (costly)
                     loss += stolen_value(otmp, otmp->ox, otmp->oy,

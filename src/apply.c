@@ -5,7 +5,12 @@
 
 #include "hack.h"
 
-extern boolean notonhead; /* for long worms */
+/* Notonhead per-env via nle_ctx_t (was extern boolean). */
+
+/* Jumping_is_magic was a file-scope static set in jump() before
+ * walk_path() invokes the get_valid_jump_position callback; under N envs in
+ * one process this raced. Migrate to per-env. */
+#define jumping_is_magic  (nh_cur->g_apply_c_jumping_is_magic)
 
 STATIC_DCL int FDECL(use_camera, (struct obj *));
 STATIC_DCL int FDECL(use_towel, (struct obj *));
@@ -572,10 +577,8 @@ boolean feedback;
             Your("leash falls slack.");
     }
     for (otmp = invent; otmp; otmp = otmp->nobj)
-        if (otmp->otyp == LEASH && otmp->leashmon == (int) mtmp->m_id) {
+        if (otmp->otyp == LEASH && otmp->leashmon == (int) mtmp->m_id)
             otmp->leashmon = 0;
-            update_inventory();
-        }
     mtmp->mleashed = 0;
 }
 
@@ -1460,7 +1463,7 @@ struct obj **optr;
     *optr = obj;
 }
 
-static NEARDATA const char cuddly[] = { TOOL_CLASS, GEM_CLASS, 0 };
+static const char cuddly[] = { TOOL_CLASS, GEM_CLASS, 0 };
 
 int
 dorub()
@@ -1626,7 +1629,7 @@ boolean showmsg;
     return TRUE;
 }
 
-static int jumping_is_magic;
+/* Jumping_is_magic migrated to nle_ctx_t (macro above). */
 
 STATIC_OVL boolean
 get_valid_jump_position(x,y)
@@ -2128,7 +2131,7 @@ long timeout;
     mtmp = make_familiar(figurine, cc.x, cc.y, TRUE);
     if (mtmp) {
         char and_vanish[BUFSZ];
-        struct obj *mshelter = level.objects[mtmp->mx][mtmp->my];
+        struct obj *mshelter = level.objs[mtmp->mx][mtmp->my];
 
         /* [m_monnam() yields accurate mon type, overriding hallucination] */
         Sprintf(monnambuf, "%s", an(m_monnam(mtmp)));
@@ -2286,7 +2289,7 @@ struct obj **optr;
     *optr = 0;
 }
 
-static NEARDATA const char lubricables[] = { ALL_CLASSES, ALLOW_NONE, 0 };
+static const char lubricables[] = { ALL_CLASSES, ALLOW_NONE, 0 };
 
 STATIC_OVL void
 use_grease(obj)
@@ -2478,12 +2481,27 @@ struct obj *tstone;
     return;
 }
 
-static struct trapinfo {
+/* Per-env apply.c state. trapinfo fields bundled into one struct.
+ * The struct layout matches the original `struct trapinfo` exactly so that
+ * `trapinfo.tobj` etc. continue to work via the macro below. */
+struct nle_apply_state {
     struct obj *tobj;
     xchar tx, ty;
     int time_needed;
     boolean force_bungle;
-} trapinfo;
+};
+static struct nle_apply_state *
+nle_apply(void)
+{
+    if (!nh_cur) return NULL;
+    struct nle_apply_state *s = (struct nle_apply_state *) nh_cur->nh_lazy[11];
+    if (!s) {
+        s = (struct nle_apply_state *) calloc(1, sizeof(struct nle_apply_state));
+        nh_cur->nh_lazy[11] = s;
+    }
+    return s;
+}
+#define trapinfo (*nle_apply())
 
 void
 reset_trapset()
@@ -2705,7 +2723,7 @@ struct obj *obj;
         }
         if (Levitation || u.usteed) {
             /* Have a shot at snaring something on the floor */
-            otmp = level.objects[u.ux][u.uy];
+            otmp = level.objs[u.ux][u.uy];
             if (otmp && otmp->otyp == CORPSE && otmp->corpsenm == PM_HORSE) {
                 pline("Why beat a dead horse?");
                 return 1;
@@ -2951,8 +2969,9 @@ int min_range, max_range;
     return TRUE;
 }
 
-static int polearm_range_min = -1;
-static int polearm_range_max = -1;
+/* Per-env (was __thread). Polearm targeting bounds. */
+#define polearm_range_min (nh_cur->g_apply_c_polearm_range_min)
+#define polearm_range_max (nh_cur->g_apply_c_polearm_range_max)
 
 STATIC_OVL boolean
 get_valid_polearm_position(x, y)
@@ -3232,7 +3251,7 @@ struct obj *obj;
         /* FIXME -- untrap needs to deal with non-adjacent traps */
         break;
     case 1: /* Object */
-        if ((otmp = level.objects[cc.x][cc.y]) != 0) {
+        if ((otmp = level.objs[cc.x][cc.y]) != 0) {
             You("snag an object from the %s!", surface(cc.x, cc.y));
             (void) pickup_object(otmp, 1L, FALSE);
             /* If pickup fails, leave it alone */
@@ -3463,7 +3482,7 @@ struct obj *obj;
                 (void) bhitm(mon, obj);
                 /* if (context.botl) bot(); */
             }
-            if (affects_objects && level.objects[x][y]) {
+            if (affects_objects && level.objs[x][y]) {
                 (void) bhitpile(obj, bhito, x, y, 0);
                 if (context.botl)
                     bot(); /* potion effects */
@@ -3481,7 +3500,7 @@ struct obj *obj;
              * of obj->bypass in the zap code to accomplish that last case
              * since it's also used by retouch_equipment() for polyself.)
              */
-            if (affects_objects && level.objects[x][y]) {
+            if (affects_objects && level.objs[x][y]) {
                 (void) bhitpile(obj, bhito, x, y, 0);
                 if (context.botl)
                     bot(); /* potion effects */

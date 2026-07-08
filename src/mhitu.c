@@ -490,7 +490,7 @@ register struct monst *mtmp;
                  * parallelism to work, we can't rephrase it, so we
                  * zap the "laid by you" momentarily instead.
                  */
-                struct obj *obj = level.objects[u.ux][u.uy];
+                struct obj *obj = level.objs[u.ux][u.uy];
 
                 if (obj || u.umonnum == PM_TRAPPER
                     || (youmonst.data->mlet == S_EEL
@@ -513,7 +513,7 @@ register struct monst *mtmp;
                         pline(
                           "Wait, %s!  There's a %s named %s hiding under %s!",
                               m_monnam(mtmp), youmonst.data->mname, plname,
-                              doname(level.objects[u.ux][u.uy]));
+                              doname(level.objs[u.ux][u.uy]));
                     if (obj)
                         obj->spe = save_spe;
                 } else
@@ -941,7 +941,7 @@ register struct attack *mattk;
             struct obj *obj;
             const char *what;
 
-            if ((obj = level.objects[mtmp->mx][mtmp->my]) != 0) {
+            if ((obj = level.objs[mtmp->mx][mtmp->my]) != 0) {
                 if (Blind && !obj->dknown)
                     what = something;
                 else if (is_pool(mtmp->mx, mtmp->my) && !Underwater)

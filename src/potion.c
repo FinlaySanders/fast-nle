@@ -5,10 +5,16 @@
 
 #include "hack.h"
 
-boolean notonhead = FALSE;
+/* Notonhead migrated to nle_ctx_t->s_notonhead (per-env).
+ * Was: `boolean notonhead = FALSE;` here, with `extern boolean notonhead;`
+ * declarations in 9 other files. Macro added in every file that references
+ * notonhead so each access expands to notonhead. */
 
-static NEARDATA int nothing, unkn;
-static NEARDATA const char beverages[] = { POTION_CLASS, 0 };
+/* Nothing/unkn (per-action accumulators inside potion handlers)
+ * migrated to per-env via nle_ctx_t. Were static NEARDATA int. */
+#define nothing           (nh_cur->g_potion_c_nothing)
+#define unkn              (nh_cur->g_potion_c_unkn)
+static const char beverages[] = { POTION_CLASS, 0 };
 
 STATIC_DCL long FDECL(itimeout, (long));
 STATIC_DCL long FDECL(itimeout_incr, (long, int));

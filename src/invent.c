@@ -1,9 +1,27 @@
-/* NetHack 3.6	invent.c	$NHDT-Date: 1674864733 2023/01/28 00:12:13 $  $NHDT-Branch: NetHack-3.6 $:$NHDT-Revision: 1.268 $ */
+/* NetHack 3.6	invent.c	$NHDT-Date: 1575245062 2019/12/02 00:04:22 $  $NHDT-Branch: NetHack-3.6 $:$NHDT-Revision: 1.267 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Derek S. Ray, 2015. */
 /* NetHack may be freely redistributed.  See license for details. */
 
 #include "hack.h"
+
+/* Per-env return buffers */
+#define armcat (nh_cur->g_invent_c_armcat)
+#define li     (nh_cur->g_invent_c_li)
+#define altbuf (nh_cur->g_invent_c_altbuf)
+
+/* Invent.c per-env state. The old `static T name;`
+ * file-statics raced across N>=128 PufferLib envs sharing this library.
+ * Each macro below rewrites every textual use of `name` in this TU to
+ * the corresponding s_<name> slot in the active env's nle_ctx_t.
+ * Note: `only` was `static coord only;` — replaced not by a macro but
+ * by direct rewrites of the 4 access sites to use s_only_x / s_only_y
+ * (xchar fields), to keep coord.h out of nle.h. */
+#define sortlootmode       (nh_cur->g_invent_c_sortlootmode)
+#define cached_pickinv_win (nh_cur->g_invent_c_cached_pickinv_win)
+#define this_type          (nh_cur->g_invent_c_this_type)
+#define invbuf             ((*(char **) &nh_cur->nh_lazy[16]))
+#define invbufsiz          (nh_cur->g_invent_c_invbufsiz)
 
 #ifndef C /* same as cmd.c */
 #define C(c) (0x1f & (c))
@@ -39,7 +57,9 @@ STATIC_DCL void FDECL(menu_identify, (int));
 STATIC_DCL boolean FDECL(tool_in_use, (struct obj *));
 STATIC_DCL char FDECL(obj_to_let, (struct obj *));
 
-static int lastinvnr = 51; /* 0 ... 51 (never saved&restored) */
+/* Per-env (was __thread). Inventory menu position. Init to 51
+ * in init_nle to preserve original semantics; calloc'd 0 is harmless too. */
+#define lastinvnr (nh_cur->g_invent_c_lastinvnr)
 
 /* wizards can wish for venom, which will become an invisible inventory
  * item without this.  putting it in inv_order would mean venom would
@@ -67,7 +87,7 @@ struct obj *obj;
         SCROLL_CLASS, SPBOOK_CLASS, GEM_CLASS, FOOD_CLASS, TOOL_CLASS,
         WEAPON_CLASS, ARMOR_CLASS, ROCK_CLASS, BALL_CLASS, CHAIN_CLASS, 0,
     };
-    static char armcat[8];
+    /* Armcat migrated to nle_ctx_t */
     const char *classorder;
     char *p;
     int k, otyp = obj->otyp, oclass = obj->oclass;
@@ -297,7 +317,7 @@ struct obj *obj;
 }
 
 /* set by sortloot() for use by sortloot_cmp(); reset by sortloot when done */
-static unsigned sortlootmode = 0;
+/* sortlootmode migrated to nle_ctx_t->s_sortlootmode */
 
 /* qsort comparison routine for sortloot() */
 STATIC_OVL int CFDECLSPEC
@@ -1162,7 +1182,7 @@ int x, y;
 {
     struct obj *otmp, *otmp2;
 
-    for (otmp = level.objects[x][y]; otmp; otmp = otmp2) {
+    for (otmp = level.objs[x][y]; otmp; otmp = otmp2) {
         if (otmp == uball)
             unpunish();
         /* after unpunish(), or might get deallocated chain */
@@ -1206,7 +1226,7 @@ int x, y;
 {
     register struct obj *otmp;
 
-    for (otmp = level.objects[x][y]; otmp; otmp = otmp->nexthere)
+    for (otmp = level.objs[x][y]; otmp; otmp = otmp->nexthere)
         if (otmp->otyp == otyp)
             break;
 
@@ -1330,7 +1350,7 @@ int x, y;
 {
     register struct obj *otmp;
 
-    for (otmp = level.objects[x][y]; otmp; otmp = otmp->nexthere)
+    for (otmp = level.objs[x][y]; otmp; otmp = otmp->nexthere)
         if (obj == otmp)
             return TRUE;
     return FALSE;
@@ -1340,7 +1360,7 @@ struct obj *
 g_at(x, y)
 register int x, y;
 {
-    register struct obj *obj = level.objects[x][y];
+    register struct obj *obj = level.objs[x][y];
 
     while (obj) {
         if (obj->oclass == COIN_CLASS)
@@ -1894,18 +1914,20 @@ struct obj *otmp;
             : FALSE;
 }
 
-/* extra xprname() input that askchain() can't pass through safe_qbuf() */
-STATIC_VAR struct xprnctx {
-    char let;
-    boolean dot;
-} safeq_xprn_ctx;
+/* Safeq_xprn_ctx (set per-action by askchain, read by
+ * safe_qbuf -> short_oname callbacks) migrated to per-env via nle_ctx_t.
+ * Was: STATIC_VAR struct xprnctx { char let; boolean dot; } safeq_xprn_ctx;
+ * Now: two scalar fields s_safeq_xprn_let / s_safeq_xprn_dot on nle_ctx_t;
+ * the 6 access sites use those directly. */
+#define safeq_xprn_let (nh_cur->g_invent_c_safeq_xprn_let)
+#define safeq_xprn_dot (nh_cur->g_invent_c_safeq_xprn_dot)
 
 /* safe_qbuf() -> short_oname() callback */
 STATIC_PTR char *
 safeq_xprname(obj)
 struct obj *obj;
 {
-    return xprname(obj, (char *) 0, safeq_xprn_ctx.let, safeq_xprn_ctx.dot,
+    return xprname(obj, (char *) 0, safeq_xprn_let, safeq_xprn_dot,
                    0L, 0L);
 }
 
@@ -1914,11 +1936,11 @@ STATIC_PTR char *
 safeq_shortxprname(obj)
 struct obj *obj;
 {
-    return xprname(obj, ansimpleoname(obj), safeq_xprn_ctx.let,
-                   safeq_xprn_ctx.dot, 0L, 0L);
+    return xprname(obj, ansimpleoname(obj), safeq_xprn_let,
+                   safeq_xprn_dot, 0L, 0L);
 }
 
-static NEARDATA const char removeables[] = { ARMOR_CLASS, WEAPON_CLASS,
+static const char removeables[] = { ARMOR_CLASS, WEAPON_CLASS,
                                              RING_CLASS,  AMULET_CLASS,
                                              TOOL_CLASS,  0 };
 
@@ -2177,8 +2199,8 @@ int FDECL((*fn), (OBJ_P)), FDECL((*ckfn), (OBJ_P));
         if (bycat && !ckvalidcat(otmp))
             continue;
         if (!allflag) {
-            safeq_xprn_ctx.let = ilet;
-            safeq_xprn_ctx.dot = !nodot;
+            safeq_xprn_let = ilet;
+            safeq_xprn_dot = !nodot;
             *qpfx = '\0';
             if (first) {
                 /* traditional_loot() skips prompting when only one
@@ -2457,17 +2479,12 @@ boolean dot;     /* append period; (dot && cost => Iu) */
 long cost;       /* cost (for inventory of unpaid or expended items) */
 long quan;       /* if non-0, print this quantity, not obj->quan */
 {
-#ifdef LINT /* handle static char li[BUFSZ]; */
-    char li[BUFSZ];
-#else
-    static char li[BUFSZ];
-#endif
-    char suffix[80]; /* plenty of room for count and hallucinatory currency */
-    int sfxlen, txtlen; /* signed int for %*s formatting */
-    const char *fmt;
+    /* Li migrated to nle_ctx_t (was `static char li[BUFSZ]`,
+     * formerly with an #ifdef LINT alias to a stack array — both branches
+     * obsolete now that storage lives in the per-env ctx). */
     boolean use_invlet = (flags.invlet_constant
                           && let != CONTAINED_SYM && let != HANDS_SYM);
-    long savequan = 0L;
+    long savequan = 0;
 
     if (quan && obj) {
         savequan = obj->quan;
@@ -2479,33 +2496,18 @@ long quan;       /* if non-0, print this quantity, not obj->quan */
      *  *  Then obj == null and we are printing a total amount.
      *  >  Then the object is contained and doesn't have an inventory letter.
      */
-    fmt = "%c - %.*s%s";
-    if (!txt)
-        txt = doname(obj);
-    txtlen = (int) strlen(txt);
-
-    if (cost != 0L || let == '*') {
+    if (cost != 0 || let == '*') {
         /* if dot is true, we're doing Iu, otherwise Ix */
-        if (dot && use_invlet)
-            let = obj->invlet;
-        Sprintf(suffix, "%c%6ld %.50s", iflags.menu_tab_sep ? '\t' : ' ',
-                cost, currency(cost));
-        if (!iflags.menu_tab_sep) {
-            fmt = "%c - %-45.*s%s";
-            if (txtlen < 45)
-                txtlen = 45;
-        }
+        Sprintf(li,
+                iflags.menu_tab_sep ? "%c - %s\t%6ld %s"
+                                    : "%c - %-45s %6ld %s",
+                (dot && use_invlet ? obj->invlet : let),
+                (txt ? txt : doname(obj)), cost, currency(cost));
     } else {
         /* ordinary inventory display or pickup message */
-        if (use_invlet)
-            let = obj->invlet;
-        Strcpy(suffix, dot ? "." : "");
+        Sprintf(li, "%c - %s%s", (use_invlet ? obj->invlet : let),
+                (txt ? txt : doname(obj)), (dot ? "." : ""));
     }
-    sfxlen = (int) strlen(suffix);
-    if (txtlen > BUFSZ - 1 - (4 + sfxlen)) /* 4: "c - " prefix */
-        txtlen = BUFSZ - 1 - (4 + sfxlen);
-    Sprintf(li, fmt, let, txtlen, txt, suffix);
-
     if (savequan)
         obj->quan = savequan;
 
@@ -2556,7 +2558,8 @@ struct obj *list, **last_found;
 /* for perm_invent when operating on a partial inventory display, so that
    the persistent one doesn't get shrunk during filtering for item selection
    then regrown to full inventory, possibly being resized in the process */
-static winid cached_pickinv_win = WIN_ERR;
+/* cached_pickinv_win migrated to nle_ctx_t->s_cached_pickinv_win.
+ * Initialized to WIN_ERR in init_nle() (nle.c). */
 
 void
 free_pickinv_cache()
@@ -3113,7 +3116,7 @@ dounpaid()
 }
 
 /* query objlist callback: return TRUE if obj type matches "this_type" */
-static int this_type;
+/* this_type migrated to nle_ctx_t->s_this_type */
 
 STATIC_OVL boolean
 this_type_only(obj)
@@ -3324,7 +3327,7 @@ char *buf;
     struct rm *lev = &levl[x][y];
     int ltyp = lev->typ, cmap = -1;
     const char *dfeature = 0;
-    static char altbuf[BUFSZ];
+    /* Altbuf migrated to nle_ctx_t */
 
     if (IS_DOOR(ltyp)) {
         switch (lev->doormask) {
@@ -3455,7 +3458,7 @@ boolean picked_some;
         There("is %s here.",
               an(defsyms[trap_to_defsym(trap->ttyp)].explanation));
 
-    otmp = level.objects[u.ux][u.uy];
+    otmp = level.objs[u.ux][u.uy];
     dfeature = dfeature_at(u.ux, u.uy, fbuf2);
     if (dfeature && !strcmp(dfeature, "pool of water") && Underwater)
         dfeature = 0;
@@ -3624,7 +3627,7 @@ struct obj *obj;
 {
     struct obj *otmp;
 
-    for (otmp = level.objects[obj->ox][obj->oy]; otmp; otmp = otmp->nexthere)
+    for (otmp = level.objs[obj->ox][obj->oy]; otmp; otmp = otmp->nexthere)
         if (otmp != obj && merged(&obj, &otmp))
             break;
     return;
@@ -3935,8 +3938,8 @@ STATIC_VAR NEARDATA const char *names[] = {
 STATIC_VAR NEARDATA const char oth_symbols[] = { CONTAINED_SYM, '\0' };
 STATIC_VAR NEARDATA const char *oth_names[] = { "Bagged/Boxed items" };
 
-STATIC_VAR NEARDATA char *invbuf = (char *) 0;
-STATIC_VAR NEARDATA unsigned invbufsiz = 0;
+/* invbuf / invbufsiz migrated to nle_ctx_t->s_invbuf / s_invbufsiz.
+ * Calloc-zero is the correct initial state. */
 
 char *
 let_to_name(let, unpaid, showsym)
@@ -4432,13 +4435,17 @@ register struct obj *obj;
 }
 
 /* query objlist callback: return TRUE if obj is at given location */
-static coord only;
+/* `only` (coord) migrated to nle_ctx_t->s_only_x / s_only_y.
+ * Access sites rewritten in-place — no macro, to
+ * keep coord.h out of nle.h (the .x/.y syntax can't be hidden behind
+ * a single object-like macro). */
 
 STATIC_OVL boolean
 only_here(obj)
 struct obj *obj;
 {
-    return (obj->ox == only.x && obj->oy == only.y);
+    return (obj->ox == nh_cur->g_invent_c_only_x
+            && obj->oy == nh_cur->g_invent_c_only_y);
 }
 
 /*
@@ -4465,13 +4472,13 @@ boolean as_if_seen;
         }
 
     if (n) {
-        only.x = x;
-        only.y = y;
+        nh_cur->g_invent_c_only_x = x;
+        nh_cur->g_invent_c_only_y = y;
         if (query_objlist("Things that are buried here:",
                           &level.buriedobjlist, INVORDER_SORT,
                           &selected, PICK_NONE, only_here) > 0)
             free((genericptr_t) selected);
-        only.x = only.y = 0;
+        nh_cur->g_invent_c_only_x = nh_cur->g_invent_c_only_y = 0;
     }
     return n;
 }

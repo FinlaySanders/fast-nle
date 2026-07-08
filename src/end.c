@@ -7,6 +7,11 @@
 
 #include "hack.h"
 #include "lev.h"
+
+/* Per-env replacement for vanq_sortmode (end.c).
+ * VANQ_MLVL_MNDX == 0, so the calloc default matches the original
+ * static initializer. */
+#define vanq_sortmode (nh_cur->g_end_c_vanq_sortmode)
 #ifndef NO_SIGNAL
 #include <signal.h>
 #endif
@@ -31,16 +36,45 @@ struct valuable_data {
     int typ;
 };
 
-static struct valuable_data
-    gems[LAST_GEM + 1 - FIRST_GEM + 1], /* 1 extra for glass */
-    amulets[LAST_AMULET + 1 - FIRST_AMULET];
-
-static struct val_list {
+/* gems, amulets, valuables — migrated to nle_end_state (runtime init) */
+struct val_list {
     struct valuable_data *list;
     int size;
-} valuables[] = { { gems, sizeof gems / sizeof *gems },
-                  { amulets, sizeof amulets / sizeof *amulets },
-                  { 0, 0 } };
+};
+
+/* Per-env end.c state. Extends earlier Schroedingers_cat migration with
+ * aborting, gems[], amulets[], valuables[]. */
+struct nle_end_state {
+    boolean _Schroedingers_cat;
+    boolean _aborting;
+    struct valuable_data _gems[LAST_GEM + 1 - FIRST_GEM + 1];
+    struct valuable_data _amulets[LAST_AMULET + 1 - FIRST_AMULET];
+    struct val_list _valuables[3]; /* {gems,sz}, {amulets,sz}, {0,0} */
+    boolean _valuables_inited;
+};
+static struct nle_end_state *nle_end_st(void) {
+    if (!nh_cur) return NULL;
+    struct nle_end_state *s = (struct nle_end_state *) nh_cur->nh_lazy[39];
+    if (!s) {
+        s = (struct nle_end_state *) calloc(1, sizeof(struct nle_end_state));
+        nh_cur->nh_lazy[39] = s;
+    }
+    if (!s->_valuables_inited) {
+        s->_valuables[0].list = s->_gems;
+        s->_valuables[0].size = (int)(sizeof s->_gems / sizeof *s->_gems);
+        s->_valuables[1].list = s->_amulets;
+        s->_valuables[1].size = (int)(sizeof s->_amulets / sizeof *s->_amulets);
+        s->_valuables[2].list = 0;
+        s->_valuables[2].size = 0;
+        s->_valuables_inited = TRUE;
+    }
+    return s;
+}
+#define Schroedingers_cat (nle_end_st()->_Schroedingers_cat)
+#define aborting          (nle_end_st()->_aborting)
+#define gems              (nle_end_st()->_gems)
+#define amulets           (nle_end_st()->_amulets)
+#define valuables         (nle_end_st()->_valuables)
 
 #ifndef NO_SIGNAL
 STATIC_PTR void FDECL(done_intr, (int));
@@ -187,7 +221,6 @@ NH_abort()
 {
     int gdb_prio = SYSOPT_PANICTRACE_GDB;
     int libc_prio = SYSOPT_PANICTRACE_LIBC;
-    static boolean aborting = FALSE;
 
     if (aborting)
         return;
@@ -291,7 +324,7 @@ NH_panictrace_gdb()
 /*
  * The order of these needs to match the macros in hack.h.
  */
-static NEARDATA const char *deaths[] = {
+static const char *deaths[] = {
     /* the array of death */
     "died", "choked", "poisoned", "starvation", "drowning", "burning",
     "dissolving under the heat and pressure", "crushed", "turned to stone",
@@ -299,7 +332,7 @@ static NEARDATA const char *deaths[] = {
     "escaped", "ascended"
 };
 
-static NEARDATA const char *ends[] = {
+static const char *ends[] = {
     /* "when you %s" */
     "died", "choked", "were poisoned",
     "starved", "drowned", "burned",
@@ -309,8 +342,6 @@ static NEARDATA const char *ends[] = {
     "panicked", "were tricked", "quit",
     "escaped", "ascended"
 };
-
-static boolean Schroedingers_cat = FALSE;
 
 /*ARGSUSED*/
 void
@@ -485,7 +516,12 @@ int how;
         Strcat(buf, "ghost");
         if (has_mname(mtmp))
             Sprintf(eos(buf), " of %s", MNAME(mtmp));
-    } else if (mtmp->isshk) {
+    } else if (mtmp->isshk && has_eshk(mtmp)) {
+        /* Has_eshk() guard. dealloc_mextra() can null
+         * mtmp->mextra while leaving mtmp->isshk set; in that case
+         * shkname()/shkname_is_pname() would dereference ESHK(mtmp)
+         * (= mtmp->mextra->eshk) and segfault. Fall through to the
+         * generic monster-name branch below. */
         const char *shknm = shkname(mtmp),
                    *honorific = shkname_is_pname(mtmp) ? ""
                                    : mtmp->female ? "Ms. " : "Mr. ";
@@ -1204,6 +1240,23 @@ int how;
     /*NOTREACHED*/
 }
 
+/* NLE: serialize env-death across OMP threads.
+ *
+ * The done() / really_done() path walks display_inventory →
+ * tty_end_menu → various TTY allocators. Several of those helpers
+ * still hold residual process-shared state (file-scope statics that
+ * the bulk-TLS sweep missed: condition tables, menu scratch). Under
+ * concurrent stepping that races and segfaults. Until each of those
+ * sites is migrated, we hold one process-wide mutex around the
+ * entire death path. The fast (non-dying) step path is unaffected.
+ * Death happens at most once per env, so the contention is tiny.
+ */
+/* Removed pthread mutex around death path. It was added for
+ * the old multithreaded mode; under single-thread vecenv it caused
+ * deadlock when an env yielded mid-death (via a --more-- prompt or
+ * dump output) — the mutex was never unlocked, so the NEXT env's
+ * really_done() blocked forever. Single-thread vecenv doesn't need it. */
+
 /* separated from done() in order to specify the __noreturn__ attribute */
 STATIC_OVL void
 really_done(how)
@@ -1761,7 +1814,7 @@ static const char *vanqorders[NUM_VANQ_ORDER_MODES] = {
     "by count, high to low, by internal index within tied count",
     "by count, low to high, by internal index within tied count",
 };
-static int vanq_sortmode = VANQ_MLVL_MNDX;
+/* vanq_sortmode moved into nle_ctx_t — macro above. */
 
 STATIC_PTR int CFDECLSPEC
 vanqsort_cmp(vptr1, vptr2)

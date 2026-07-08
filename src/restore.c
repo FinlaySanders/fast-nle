@@ -4,8 +4,18 @@
 /* NetHack may be freely redistributed.  See license for details. */
 
 #include "hack.h"
+#include "nle.h" /* nle_ctx_t for the level-blob save/load API */
 #include "lev.h"
 #include "tcap.h" /* for TERMLIB and ASCIIGRAPH */
+#include <sys/stat.h>
+#include <errno.h>
+#include <string.h>
+#include <fcntl.h> /* O_RDONLY for nle_load_player scratch reload */
+
+/* Per-env restore state. Same direct-ctx pattern
+ * as save.c; see vendor/nle/src/include/nle.h for the fields. */
+#define oldfruit (nh_cur->g_restore_c_oldfruit)
+#define omoves   (nh_cur->g_restore_c_omoves)
 
 #if defined(MICRO)
 extern int dotcnt; /* shared with save */
@@ -42,19 +52,19 @@ STATIC_OVL void FDECL(restore_msghistory, (int));
 STATIC_DCL void FDECL(reset_oattached_mids, (BOOLEAN_P));
 STATIC_DCL void FDECL(rest_levl, (int, BOOLEAN_P));
 
-static struct restore_procs {
-    const char *name;
-    int mread_flags;
-    void NDECL((*restore_minit));
-    void FDECL((*restore_mread), (int, genericptr_t, unsigned int));
-    void FDECL((*restore_bclose), (int));
-} restoreprocs = {
-#if !defined(ZEROCOMP) || (defined(COMPRESS) || defined(ZLIB_COMP))
-    "externalcomp", 0, def_minit, def_mread, def_bclose,
-#else
-    "zerocomp", 0, zerocomp_minit, zerocomp_mread, zerocomp_bclose,
-#endif
-};
+/* `restoreprocs` migrated to nle_ctx_t. Was file-scope static
+ * struct; mutated by set_restpref() / validate() and read by mread().
+ * Under OMP vecenv, env B's set_restpref could swap env A's restore_mread
+ * mid-restore, causing wrong-codec short-read panics. Per-env init is in
+ * init_nle (nle.c) — must mirror the original static initializer. */
+#define restoreprocs_name             (nh_cur->g_restore_c_procs_name)
+#define restoreprocs_mread_flags      (nh_cur->g_restore_c_procs_mread_flags)
+#define restoreprocs_restore_minit    (nh_cur->g_restore_c_procs_minit)
+#define restoreprocs_restore_mread    (nh_cur->g_restore_c_procs_mread)
+#define restoreprocs_restore_bclose   (nh_cur->g_restore_c_procs_bclose)
+/* Sfrestinfo / sfsaveinfo per-env (was process-global in decl.c).
+ * Cast over the 3 contiguous ulongs in nle_ctx_t so existing struct-field
+ * uses (`sfrestinfo.sfi1`) and address-of uses keep working. */
 
 /*
  * Save a mapping of IDs from ghost levels to the current level.  This
@@ -72,8 +82,11 @@ struct bucket {
 STATIC_DCL void NDECL(clear_id_mapping);
 STATIC_DCL void FDECL(add_id_mapping, (unsigned, unsigned));
 
-static int n_ids_mapped = 0;
-static struct bucket *id_map = 0;
+/* Per-env restore ID-map. Were __thread; OMP coroutine-
+ * resume on a different thread would see empty TLS during savefile restore. */
+#define n_ids_mapped (nh_cur->g_restore_c_n_ids_mapped)
+#define id_map       ((struct bucket *) nh_cur->g_restore_c_id_map_p)
+#define set_id_map(v) (nh_cur->g_restore_c_id_map_p = (void *)(v))
 
 #ifdef AMII_GRAPHICS
 void FDECL(amii_setpens, (int)); /* use colors from save file */
@@ -82,13 +95,20 @@ extern int amii_numcolors;
 
 #include "display.h"
 
-boolean restoring = FALSE;
-static NEARDATA struct fruit *oldfruit;
-static NEARDATA long omoves;
+/* restoring migrated to nle_ctx_t (refactor stage 3d). */
+/* oldfruit/omoves migrated to nle_ctx_t. */
+
+/* exp_038 hypothesis 1: enforce identical struct sizes between save.c and
+ * restore.c. Sizes verified to match save.c (see save.c comment block). */
+#if defined(__GNUC__) || defined(__clang__)
+_Static_assert(sizeof(struct eshk)  == 4936, "restore.c: sizeof(struct eshk) drifted");
+_Static_assert(sizeof(struct monst) ==  144, "restore.c: sizeof(struct monst) drifted");
+_Static_assert(sizeof(struct obj)   ==   96, "restore.c: sizeof(struct obj) drifted");
+#endif
 
 #define Is_IceBox(o) ((o)->otyp == ICE_BOX ? TRUE : FALSE)
 
-/* Recalculate level.objects[x][y], since this info was not saved. */
+/* Recalculate level.objs[x][y], since this info was not saved. */
 STATIC_OVL void
 find_lev_obj()
 {
@@ -98,7 +118,7 @@ find_lev_obj()
 
     for (x = 0; x < COLNO; x++)
         for (y = 0; y < ROWNO; y++)
-            level.objects[x][y] = (struct obj *) 0;
+            level.objs[x][y] = (struct obj *) 0;
 
     /*
      * Reverse the entire fobj chain, which is necessary so that we can
@@ -113,7 +133,7 @@ find_lev_obj()
     }
     /* fobj should now be empty */
 
-    /* Set level.objects (as well as reversing the chain back again) */
+    /* Set level.objs (as well as reversing the chain back again) */
     while ((otmp = fobjtmp) != 0) {
         fobjtmp = otmp->nobj;
         place_object(otmp, otmp->ox, otmp->oy);
@@ -346,6 +366,19 @@ boolean ghostly, frozen;
     return first;
 }
 
+/* exp_039 agent_e: trace mread sequence in restmon to compare against
+ * SAVE_MON output. NLE_TRACE_MON=1 to enable. */
+static int
+rest_mon_trace_enabled(void)
+{
+    static int cached = -1;
+    if (cached < 0) {
+        const char *e = getenv("NLE_TRACE_MON");
+        cached = (e && *e == '1') ? 1 : 0;
+    }
+    return cached;
+}
+
 /* restore one monster */
 STATIC_OVL void
 restmon(fd, mtmp)
@@ -353,6 +386,8 @@ int fd;
 struct monst *mtmp;
 {
     int buflen;
+    int trace = rest_mon_trace_enabled();
+    int pid = current_nle_ctx ? hackpid : -1;
 
     mread(fd, (genericptr_t) mtmp, sizeof(struct monst));
 
@@ -364,42 +399,49 @@ struct monst *mtmp;
 
         /* mname - monster's name */
         mread(fd, (genericptr_t) &buflen, sizeof(buflen));
+        if (trace) fprintf(stderr, "REST_MON pid=%d fd=%d kind=mname buflen=%d\n", pid, fd, buflen);
         if (buflen > 0) { /* includes terminating '\0' */
             new_mname(mtmp, buflen);
             mread(fd, (genericptr_t) MNAME(mtmp), buflen);
         }
         /* egd - vault guard */
         mread(fd, (genericptr_t) &buflen, sizeof(buflen));
+        if (trace) fprintf(stderr, "REST_MON pid=%d fd=%d kind=egd buflen=%d\n", pid, fd, buflen);
         if (buflen > 0) {
             newegd(mtmp);
             mread(fd, (genericptr_t) EGD(mtmp), sizeof(struct egd));
         }
         /* epri - temple priest */
         mread(fd, (genericptr_t) &buflen, sizeof(buflen));
+        if (trace) fprintf(stderr, "REST_MON pid=%d fd=%d kind=epri buflen=%d\n", pid, fd, buflen);
         if (buflen > 0) {
             newepri(mtmp);
             mread(fd, (genericptr_t) EPRI(mtmp), sizeof(struct epri));
         }
         /* eshk - shopkeeper */
         mread(fd, (genericptr_t) &buflen, sizeof(buflen));
+        if (trace) fprintf(stderr, "REST_MON pid=%d fd=%d kind=eshk buflen=%d\n", pid, fd, buflen);
         if (buflen > 0) {
             neweshk(mtmp);
             mread(fd, (genericptr_t) ESHK(mtmp), sizeof(struct eshk));
         }
         /* emin - minion */
         mread(fd, (genericptr_t) &buflen, sizeof(buflen));
+        if (trace) fprintf(stderr, "REST_MON pid=%d fd=%d kind=emin buflen=%d\n", pid, fd, buflen);
         if (buflen > 0) {
             newemin(mtmp);
             mread(fd, (genericptr_t) EMIN(mtmp), sizeof(struct emin));
         }
         /* edog - pet */
         mread(fd, (genericptr_t) &buflen, sizeof(buflen));
+        if (trace) fprintf(stderr, "REST_MON pid=%d fd=%d kind=edog buflen=%d\n", pid, fd, buflen);
         if (buflen > 0) {
             newedog(mtmp);
             mread(fd, (genericptr_t) EDOG(mtmp), sizeof(struct edog));
         }
         /* mcorpsenm - obj->corpsenm for mimic posing as corpse or
            statue (inline int rather than pointer to something) */
+        if (trace) fprintf(stderr, "REST_MON pid=%d fd=%d kind=corpsenm\n", pid, fd);
         mread(fd, (genericptr_t) &MCORPSENM(mtmp), sizeof MCORPSENM(mtmp));
     } /* mextra */
 }
@@ -412,14 +454,23 @@ boolean ghostly;
     register struct monst *mtmp, *mtmp2 = 0;
     register struct monst *first = (struct monst *) 0;
     int offset, buflen;
+    int trace = rest_mon_trace_enabled();
+    int pid = current_nle_ctx ? hackpid : -1;
+    int iter = 0;
+
+    if (trace)
+        fprintf(stderr, "REST_MCHN_BEGIN pid=%d fd=%d ghostly=%d\n", pid, fd, (int) ghostly);
 
     while (1) {
         mread(fd, (genericptr_t) &buflen, sizeof(buflen));
+        if (trace)
+            fprintf(stderr, "REST_MCHN pid=%d fd=%d iter=%d gate_buflen=%d\n", pid, fd, iter, buflen);
         if (buflen == -1)
             break;
 
         mtmp = newmonst();
         restmon(fd, mtmp);
+        iter++;
         if (!first)
             first = mtmp;
         else
@@ -856,10 +907,10 @@ register int fd;
     if (!WINDOWPORT("X11"))
         putstr(WIN_MAP, 0, "Restoring:");
 #endif
-    restoreprocs.mread_flags = 1; /* return despite error */
+    restoreprocs_mread_flags = 1; /* return despite error */
     while (1) {
         mread(fd, (genericptr_t) &ltmp, sizeof ltmp);
-        if (restoreprocs.mread_flags == -1)
+        if (restoreprocs_mread_flags == -1)
             break;
         getlev(fd, 0, ltmp, FALSE);
 #ifdef MICRO
@@ -877,7 +928,7 @@ register int fd;
         if (rtmp < 2)
             return rtmp; /* dorecover called recursively */
     }
-    restoreprocs.mread_flags = 0;
+    restoreprocs_mread_flags = 0;
 
 #ifdef BSD
     (void) lseek(fd, 0L, 0);
@@ -944,6 +995,111 @@ register int fd;
     welcome(FALSE);
     check_special_room(FALSE);
     return 1;
+}
+
+/* ===================================================================
+ * Hero (player) state blob load.
+ *
+ * nle_load_player restores a hero gamestate blob (produced by
+ * nle_save_player) onto an ALREADY-LOADED level. It mirrors dorecover()'s
+ * gamestate tail -- restgamestate() then restlevelstate() plus the worn
+ * ball/chain fixup -- but does NOT call getlev() (the level is already
+ * installed) and does NOT re-render (no docrt/pline/window calls, which
+ * would yield the game coroutine from this main-context entry point and
+ * SIGSEGV; the caller steps once to repaint, exactly like nle_load_level).
+ *
+ * LOAD ORDERING CONTRACT: the caller MUST call nle_load_level BEFORE
+ * nle_load_player. restgamestate() reads stuckid/steedid and the worn
+ * ball/chain fixup, and restlevelstate() relinks u.ustuck / u.usteed
+ * against the CURRENT level's fmon, while the ball/chain fixup walks the
+ * current level's fobj -- so the target level must already be in place.
+ *
+ * Implemented here (not nle.c) because restgamestate() / restlevelstate()
+ * are file-static. Returns 0 on success, nonzero on error.
+ * =================================================================== */
+int
+nle_load_player(nle, blob, len)
+nle_ctx_t *nle;
+const void *blob;
+long len;
+{
+    int fd, ledger;
+    char fq_player[BUFSZ];
+    const char *fq_save;
+    unsigned int stuckid = 0, steedid = 0;
+    struct obj *otmp;
+
+    current_nle_ctx = nle;
+    if (!blob || len <= 0) /* reject NULL/empty blobs before touching disk */
+        return 4;
+
+    /* Derive the same per-env scratch path nle_save_player used: populate
+     * lock[] via set_levelfile_name (NLE leaves it empty during play), root it
+     * in the hackdir via fqname, and append `.player`. Then stamp the blob to
+     * it and reopen for the restore reader. */
+    ledger = ledger_no(&u.uz);
+    set_levelfile_name(lock, ledger);
+    fq_save = fqname(lock, LEVELPREFIX, 0);
+    if ((strlen(fq_save) + sizeof ".player") > sizeof fq_player)
+        return 6;
+    Strcpy(fq_player, fq_save);
+    Strcat(fq_player, ".player");
+
+    {
+        int wfd = open(fq_player, O_WRONLY | O_CREAT | O_TRUNC, FCMASK);
+
+        if (wfd < 0)
+            return 1;
+        if (write(wfd, blob, (unsigned) len) != (long) len) {
+            (void) close(wfd);
+            (void) unlink(fq_player);
+            return 2;
+        }
+        (void) close(wfd);
+    }
+
+    fd = open(fq_player, O_RDONLY, FCMASK);
+    if (fd < 0) {
+        (void) unlink(fq_player);
+        return 3;
+    }
+
+    /* Mirror dorecover()'s gamestate tail. restoring guards the timer /
+     * container restore paths; minit() arms the ZEROCOMP read codec (same
+     * as nle_load_level before getlev). We do NOT getlev() here -- the
+     * caller already installed the target level via nle_load_level. */
+    restoring = TRUE;
+    minit();
+    if (!restgamestate(fd, &stuckid, &steedid)) {
+        (void) nhclose(fd);
+        (void) unlink(fq_player);
+        restoring = FALSE;
+        return 7;
+    }
+    /* relink u.ustuck / u.usteed against the CURRENT level's monster chain */
+    restlevelstate(stuckid, steedid);
+    (void) nhclose(fd);
+    (void) unlink(fq_player);
+
+    /* take care of iron ball & chain (copied from dorecover's post-restore
+     * fixup): rebind owornmask'd floor objects, then sanity-check ball/chain */
+    for (otmp = fobj; otmp; otmp = otmp->nobj)
+        if (otmp->owornmask)
+            setworn(otmp, otmp->owornmask);
+    if ((uball && !uchain) || (uchain && !uball)) {
+        impossible("nle_load_player: lost ball & chain");
+        /* poor man's unpunish() */
+        setworn((struct obj *) 0, W_CHAIN);
+        setworn((struct obj *) 0, W_BALL);
+    }
+
+    restoring = FALSE;
+
+    /* vision_reset() is pure computation (no window calls) and is safe from
+     * this entry point; the caller's next nle_step() runs docrt() inside the
+     * coroutine to repaint. Same two-phase contract as nle_load_level. */
+    vision_reset();
+    return 0;
 }
 
 void
@@ -1070,7 +1226,11 @@ boolean ghostly;
     restcemetery(fd, &level.bonesinfo);
     rest_levl(fd,
               (boolean) ((sfrestinfo.sfi1 & SFI1_RLECOMP) == SFI1_RLECOMP));
-    mread(fd, (genericptr_t) lastseentyp, sizeof(lastseentyp));
+    /* sizeof(lastseentyp) used to give COLNO*ROWNO*sizeof(schar) when
+     * lastseentyp was an array global; after stage 7' it is a macro
+     * resolving to a `schar *` whose sizeof is pointer-sized. Use the
+     * literal byte count. */
+    mread(fd, (genericptr_t) lastseentyp, COLNO * ROWNO * sizeof(schar));
     mread(fd, (genericptr_t) &omoves, sizeof(omoves));
     elapsed = monstermoves - omoves;
     mread(fd, (genericptr_t) &upstair, sizeof(stairway));
@@ -1081,7 +1241,8 @@ boolean ghostly;
     mread(fd, (genericptr_t) &updest, sizeof(dest_area));
     mread(fd, (genericptr_t) &dndest, sizeof(dest_area));
     mread(fd, (genericptr_t) &level.lflags, sizeof(level.lflags));
-    mread(fd, (genericptr_t) doors, sizeof(doors));
+    /* stage 7': `doors` is now a `coord *` macro, not an array. */
+    mread(fd, (genericptr_t) doors, DOORMAX * sizeof(coord));
     rest_rooms(fd); /* No joke :-) */
     if (nroom)
         doorindex = rooms[nroom - 1].fdoor + rooms[nroom - 1].doorct;
@@ -1246,7 +1407,7 @@ clear_id_mapping()
     struct bucket *curr;
 
     while ((curr = id_map) != 0) {
-        id_map = curr->next;
+        set_id_map(curr->next);
         free((genericptr_t) curr);
     }
     n_ids_mapped = 0;
@@ -1265,7 +1426,7 @@ unsigned gid, nid;
     if (idx == 0) {
         struct bucket *gnu = (struct bucket *) alloc(sizeof(struct bucket));
         gnu->next = id_map;
-        id_map = gnu;
+        set_id_map(gnu);
     }
 
     id_map->map[idx].gid = gid;
@@ -1404,7 +1565,7 @@ winid bannerwin; /* if not WIN_ERR, clear window and show copyright in menu */
 void
 minit()
 {
-    (*restoreprocs.restore_minit)();
+    (*restoreprocs_restore_minit)();
     return;
 }
 
@@ -1414,7 +1575,7 @@ register int fd;
 register genericptr_t buf;
 register unsigned int len;
 {
-    (*restoreprocs.restore_mread)(fd, buf, len);
+    (*restoreprocs_restore_mread)(fd, buf, len);
     return;
 }
 
@@ -1516,14 +1677,43 @@ reset_restpref()
         set_restpref("!rlecomp");
 }
 
+/* Per-env init for the migrated `restoreprocs` table. Called
+ * from init_nle (nle.c) before any restore/level-load path can run. Must
+ * mirror the original file-scope static initializer in restore.c. */
+void
+nle_restoreprocs_init()
+{
+    /* zerocomp_minit / zerocomp_mread / etc. are STATIC_OVL in this TU, so
+     * the init MUST happen here; nle.c cannot see them. */
+#if !defined(ZEROCOMP) || (defined(COMPRESS) || defined(ZLIB_COMP))
+    restoreprocs_name = "externalcomp";
+    restoreprocs_restore_minit  = def_minit;
+    restoreprocs_restore_mread  = def_mread;
+    restoreprocs_restore_bclose = def_bclose;
+#else
+    restoreprocs_name = "zerocomp";
+    restoreprocs_restore_minit  = zerocomp_minit;
+    restoreprocs_restore_mread  = zerocomp_mread;
+    restoreprocs_restore_bclose = zerocomp_bclose;
+#endif
+    restoreprocs_mread_flags = 0;
+    /* zerocomp read-side buffer: calloc gives all zeros, but inrunlength
+     * must start at -1 per the original initializer. */
+    nh_cur->g_restore_c_zc_inrunlength = -1;
+    /* sfrestinfo: original was zero-initialized (only sfsaveinfo had flags). */
+    sfrestinfo.sfi1 = 0;
+    sfrestinfo.sfi2 = 0;
+    sfrestinfo.sfi3 = 0;
+}
+
 void
 set_restpref(suitename)
 const char *suitename;
 {
     if (!strcmpi(suitename, "externalcomp")) {
-        restoreprocs.name = "externalcomp";
-        restoreprocs.restore_mread = def_mread;
-        restoreprocs.restore_minit = def_minit;
+        restoreprocs_name = "externalcomp";
+        restoreprocs_restore_mread = def_mread;
+        restoreprocs_restore_minit = def_minit;
         sfrestinfo.sfi1 |= SFI1_EXTERNALCOMP;
         sfrestinfo.sfi1 &= ~SFI1_ZEROCOMP;
         def_minit();
@@ -1533,9 +1723,9 @@ const char *suitename;
     }
 #ifdef ZEROCOMP
     if (!strcmpi(suitename, "zerocomp")) {
-        restoreprocs.name = "zerocomp";
-        restoreprocs.restore_mread = zerocomp_mread;
-        restoreprocs.restore_minit = zerocomp_minit;
+        restoreprocs_name = "zerocomp";
+        restoreprocs_restore_mread = zerocomp_mread;
+        restoreprocs_restore_minit = zerocomp_minit;
         sfrestinfo.sfi1 |= SFI1_ZEROCOMP;
         sfrestinfo.sfi1 &= ~SFI1_EXTERNALCOMP;
         zerocomp_minit();
@@ -1554,11 +1744,17 @@ const char *suitename;
 #ifndef ZEROCOMP_BUFSIZ
 #define ZEROCOMP_BUFSIZ BUFSZ
 #endif
-static NEARDATA unsigned char inbuf[ZEROCOMP_BUFSIZ];
-static NEARDATA unsigned short inbufp = 0;
-static NEARDATA unsigned short inbufsz = 0;
-static NEARDATA short inrunlength = -1;
-static NEARDATA int mreadfd;
+/* Zerocomp read-side buffer migrated to nle_ctx_t. Was a
+ * single file-scope `static` shared by all envs in-process; two concurrent
+ * envs decoding savefiles would clobber each other's mreadfd and partial
+ * buffer, producing wrong-codec short reads downstream. Per-env init: all
+ * fields are zeroed by calloc except inrunlength, which is set to -1 in
+ * init_nle and every zerocomp_minit() entry. */
+#define inbuf        (nh_cur->g_restore_c_zc_inbuf)
+#define inbufp       (nh_cur->g_restore_c_zc_inbufp)
+#define inbufsz      (nh_cur->g_restore_c_zc_inbufsz)
+#define inrunlength  (nh_cur->g_restore_c_zc_inrunlength)
+#define mreadfd      (nh_cur->g_restore_c_zc_mreadfd)
 
 STATIC_OVL int
 zerocomp_mgetc()
@@ -1601,7 +1797,7 @@ register unsigned len;
         } else {
             register short ch = zerocomp_mgetc();
             if (ch < 0) {
-                restoreprocs.mread_flags = -1;
+                restoreprocs_mread_flags = -1;
                 return;
             }
             if ((*(*(char **) &buf)++ = (char) ch) == RLESC) {
@@ -1634,10 +1830,29 @@ register unsigned int len;
 
     rlen = read(fd, buf, (readLenType) len);
     if ((readLenType) rlen != (readLenType) len) {
-        if (restoreprocs.mread_flags == 1) { /* means "return anyway" */
-            restoreprocs.mread_flags = -1;
+        if (restoreprocs_mread_flags == 1) { /* means "return anyway" */
+            restoreprocs_mread_flags = -1;
             return;
         } else {
+            /* Short-read instrumentation: distinguishes "file truly truncated"
+             * (pos+rlen == size, the writer dropped bytes) from "read errored
+             * mid-file" (pos+rlen < size, EIO/EINTR). Goes to stderr because
+             * pline() may not be wired up before the panic chain dumps. */
+            {
+                off_t pos = lseek(fd, 0, SEEK_CUR);
+                struct stat st;
+                long long st_size = -1;
+                if (fstat(fd, &st) == 0) st_size = (long long) st.st_size;
+                fprintf(stderr,
+                        "DEF_MREAD_SHORT pid=%d hackdir=%s fd=%d "
+                        "pos=%lld size=%lld expected=%u got=%d errno=%d (%s)\n",
+                        current_nle_ctx ? hackpid : -1,
+                        (current_nle_ctx && fqn_prefix[HACKPREFIX])
+                            ? fqn_prefix[HACKPREFIX] : "(null)",
+                        fd, (long long) pos, st_size, len, rlen,
+                        errno, strerror(errno));
+                fflush(stderr);
+            }
             pline("Read %d instead of %u bytes.", rlen, len);
             if (restoring) {
                 (void) nhclose(fd);

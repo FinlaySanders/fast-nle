@@ -8,6 +8,12 @@
 #include "hack.h"
 #include "dlb.h"
 
+/* Misc-2 per-env redirects (files.c) */
+#define wizkit                 (nh_cur->g_files_c_wizkit)
+#define lockptr                (nh_cur->g_files_c_lockptr)
+#define config_section_chosen  (nh_cur->g_files_c_config_section_chosen)
+#define config_section_current (nh_cur->g_files_c_config_section_current)
+
 #ifdef TTY_GRAPHICS
 #include "wintty.h" /* more() */
 #endif
@@ -57,6 +63,8 @@ const
 #else
 #include <sys/stat.h>
 #endif
+#else
+#include <sys/stat.h> /* exp_039 agent_d: fstat in open_levelfile */
 #endif
 #ifndef O_BINARY /* used for micros, no-op for others */
 #define O_BINARY 0
@@ -64,25 +72,24 @@ const
 
 #ifdef PREFIXES_IN_USE
 #define FQN_NUMBUF 4
-static char fqn_filename_buffer[FQN_NUMBUF][FQN_MAX_FILENAME];
+/* fqn_filename_buffer — per-env scratch buffer for file-path formatting.
+ * Migrated to nle_ctx_t (heap). */
+#define fqn_filename_buffer ((char (*)[FQN_MAX_FILENAME]) nh_cur->g_files_c_fqn_fname)
 #endif
 
+/* `bones` and `lock` migrated to nle_ctx_t (s_bones,
+ * s_lock). `lock` is exposed via decl.h's NLE_PER_ENV_FILES macro;
+ * `bones` is not in decl.h so a local file-level macro is used here
+ * (and a matching one in bones.c). nle.c initializes both fields on
+ * each new env: s_lock = "1lock" (historical default), s_bones =
+ * "bonesnn.xxx" (template that set_bonesfile_name() then overwrites
+ * with the per-level filename). Only the UNIX/__BEOS__ sizing applies
+ * to the library build; non-UNIX ports would need their own per-env
+ * sizing if ever reintroduced. */
 #if !defined(MFLOPPY) && !defined(VMS) && !defined(WIN32)
-char bones[] = "bonesnn.xxx";
-char lock[PL_NSIZ + 14] = "1lock"; /* long enough for uid+name+.99 */
+#define bones (nh_cur->g_files_c_bones)
 #else
-#if defined(MFLOPPY)
-char bones[FILENAME]; /* pathname of bones files */
-char lock[FILENAME];  /* pathname of level files */
-#endif
-#if defined(VMS)
-char bones[] = "bonesnn.xxx;1";
-char lock[PL_NSIZ + 17] = "1lock"; /* long enough for _uid+name+.99;1 */
-#endif
-#if defined(WIN32)
-char bones[] = "bonesnn.xxx";
-char lock[PL_NSIZ + 25]; /* long enough for username+-+name+.99 */
-#endif
+#error "Per-env lock/bones migration only implemented for UNIX/__BEOS__ ports."
 #endif
 
 #if defined(UNIX) || defined(__BEOS__)
@@ -108,7 +115,12 @@ char lock[PL_NSIZ + 25]; /* long enough for username+-+name+.99 */
 #endif
 #endif
 
-char SAVEF[SAVESIZE]; /* holds relative path of save file from playground */
+/* SAVEF migrated to nh_cur->g_files_c_savef. Sized
+ * 45 bytes there (matches SAVESIZE = PL_NSIZ + 13 on UNIX/__BEOS__).
+ * Verified at compile time below. */
+#if SAVESIZE > 45
+#error "SAVESIZE exceeds s_SAVEF[45] in nle.h; widen the field."
+#endif
 #ifdef MICRO
 char SAVEP[SAVESIZE]; /* holds path of directory for save file */
 #endif
@@ -126,14 +138,14 @@ struct level_ftrack {
 #endif /*HOLD_LOCKFILE_OPEN*/
 
 #define WIZKIT_MAX 128
-static char wizkit[WIZKIT_MAX];
+/* wizkit[WIZKIT_MAX] migrated to nle_ctx_t.s_wizkit */
 STATIC_DCL FILE *NDECL(fopen_wizkit_file);
 STATIC_DCL void FDECL(wizkit_addinv, (struct obj *));
 
 #ifdef AMIGA
 extern char PATH[]; /* see sys/amiga/amidos.c */
 extern char bbs_id[];
-static int lockptr;
+/* lockptr migrated to nle_ctx_t.s_lockptr */
 #ifdef __SASC_60
 #include <proto/dos.h>
 #endif
@@ -143,7 +155,7 @@ extern void FDECL(amii_set_text_font, (char *, int));
 #endif
 
 #if defined(WIN32) || defined(MSDOS)
-static int lockptr;
+/* lockptr migrated to nle_ctx_t.s_lockptr */
 #ifdef MSDOS
 #define Delay(a) msleep(a)
 #endif
@@ -171,7 +183,7 @@ extern char *FDECL(translate_path_variables, (const char *, char *));
 extern char *sounddir;
 #endif
 
-extern int n_dgns; /* from dungeon.c */
+#define n_dgns (nh_cur->g_dungeon_c_n_dgns) /* was extern from dungeon.c */
 
 #if defined(UNIX) && defined(QT_GRAPHICS)
 #define SELECTSAVED
@@ -221,8 +233,8 @@ STATIC_DCL int FDECL(open_levelfile_exclusively, (const char *, int, int));
 #endif
 
 
-static char *config_section_chosen = (char *) 0;
-static char *config_section_current = (char *) 0;
+/* config_section_chosen / config_section_current migrated to nle_ctx_t.
+ * calloc zero-init handles the (char *) 0 default. */
 
 /*
  * fname_encode()
@@ -1656,10 +1668,31 @@ boolean uncomp;
 
 /* ----------  BEGIN FILE LOCKING HANDLING ----------- */
 
-static int nesting = 0;
-
+/* Per-env files.c state. nesting / lockfd / config_error_data /
+ * symset_count / symset_which_set bundled into one struct. */
+struct _config_error_frame; /* forward */
+struct nle_files_state {
+    int   _nesting;
+    int   _lockfd;
+    struct _config_error_frame *_config_error_data;
+    int   _symset_count;
+    int   _symset_which_set;
+};
+static struct nle_files_state *
+nle_files(void)
+{
+    if (!nh_cur) return NULL;
+    struct nle_files_state *s = (struct nle_files_state *) nh_cur->nh_lazy[23];
+    if (!s) {
+        s = (struct nle_files_state *) calloc(1, sizeof(struct nle_files_state));
+        s->_lockfd = -1;  /* non-zero default */
+        nh_cur->nh_lazy[23] = s;
+    }
+    return s;
+}
+#define nesting           (nle_files()->_nesting)
 #if defined(NO_FILE_LINKS) || defined(USE_FCNTL) /* implies UNIX */
-static int lockfd = -1; /* for lock_file() to pass to unlock_file() */
+#define lockfd            (nle_files()->_lockfd)
 #endif
 #ifdef USE_FCNTL
 struct flock sflock; /* for unlocking, same as above */
@@ -2813,7 +2846,9 @@ struct _config_error_frame {
     struct _config_error_frame *next;
 };
 
-static struct _config_error_frame *config_error_data = 0;
+/* Per-env (struct definition is just above; macro forwards
+ * into nle_files_state which holds the pointer as a generic forward). */
+#define config_error_data (nle_files()->_config_error_data)
 
 void
 config_error_init(from_file, sourcename, secure)
@@ -3229,9 +3264,10 @@ boolean FDECL((*proc), (char *));
 extern struct symsetentry *symset_list;  /* options.c */
 extern const char *known_handling[];     /* drawing.c */
 extern const char *known_restrictions[]; /* drawing.c */
-static int symset_count = 0;             /* for pick-list building only */
+/* Per-env via nle_files_state (above). */
+#define symset_count      (nle_files()->_symset_count)
+#define symset_which_set  (nle_files()->_symset_which_set)
 static boolean chosen_symset_start = FALSE, chosen_symset_end = FALSE;
-static int symset_which_set = 0;
 
 STATIC_OVL
 FILE *
@@ -3646,30 +3682,12 @@ const char *type;   /* panic, impossible, trickery */
 const char *reason; /* explanation */
 {
 #ifdef PANICLOG
-    FILE *lfile;
-    char buf[BUFSZ];
-
-    if (!program_state.in_paniclog) {
-        program_state.in_paniclog = 1;
-        lfile = fopen_datafile(PANICLOG, "a", TROUBLEPREFIX);
-        if (lfile) {
-#ifdef PANICLOG_FMT2
-            (void) fprintf(lfile, "%ld %s: %s %s\n",
-                           ubirthday, (plname ? plname : "(none)"),
-                           type, reason);
-#else
-            time_t now = getnow();
-            int uid = getuid();
-            char playmode = wizard ? 'D' : discover ? 'X' : '-';
-
-            (void) fprintf(lfile, "%s %08ld %06ld %d %c: %s %s\n",
-                           version_string(buf), yyyymmdd(now), hhmmss(now),
-                           uid, playmode, type, reason);
-#endif /* !PANICLOG_FMT2 */
-            (void) fclose(lfile);
-        }
-        program_state.in_paniclog = 0;
-    }
+    /* NLE: file I/O suppressed. Under OMP training the upstream
+     * fopen+fwrite+fclose serializes through glibc + the underlying
+     * filesystem and destroys scaling. RL training never reads
+     * paniclog, so drop the writes. */
+    (void) type;
+    (void) reason;
 #endif /* PANICLOG */
     return;
 }
@@ -4171,13 +4189,8 @@ reveal_paths(VOID_ARGS)
     if (sysopt.portable_device_paths) {
         const char *pd = get_portable_device();
 
-        /* an empty value for pd indicates that portable_device_paths
-           got set TRUE in a sysconf file other than the one containing
-           the executable; disregard it */
-        if (strlen(pd) > 0) {
-            raw_printf("portable_device_paths (set in sysconf):");
-            raw_printf("    \"%s\"", pd);
-	}
+        raw_printf("portable_device_paths (set in sysconf):");
+        raw_printf("    \"%s\"", pd);
     }
 #endif
 

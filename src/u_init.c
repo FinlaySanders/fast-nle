@@ -26,7 +26,7 @@ STATIC_DCL boolean FDECL(restricted_spell_discipline, (int));
  *      Initial inventory for the various roles.
  */
 
-static struct trobj Archeologist[] = {
+static const struct trobj Archeologist_baseline[] = {
     /* if adventure has a name...  idea from tan@uvm-gen */
     { BULLWHIP, 2, WEAPON_CLASS, 1, UNDEF_BLESS },
     { LEATHER_JACKET, 0, ARMOR_CLASS, 1, UNDEF_BLESS },
@@ -38,7 +38,7 @@ static struct trobj Archeologist[] = {
     { SACK, 0, TOOL_CLASS, 1, 0 },
     { 0, 0, 0, 0, 0 }
 };
-static struct trobj Barbarian[] = {
+static const struct trobj Barbarian_baseline[] = {
 #define B_MAJOR 0 /* two-handed sword or battle-axe  */
 #define B_MINOR 1 /* matched with axe or short sword */
     { TWO_HANDED_SWORD, 0, WEAPON_CLASS, 1, UNDEF_BLESS },
@@ -47,7 +47,7 @@ static struct trobj Barbarian[] = {
     { FOOD_RATION, 0, FOOD_CLASS, 1, 0 },
     { 0, 0, 0, 0, 0 }
 };
-static struct trobj Cave_man[] = {
+static const struct trobj Cave_man_baseline[] = {
 #define C_AMMO 2
     { CLUB, 1, WEAPON_CLASS, 1, UNDEF_BLESS },
     { SLING, 2, WEAPON_CLASS, 1, UNDEF_BLESS },
@@ -56,7 +56,7 @@ static struct trobj Cave_man[] = {
     { LEATHER_ARMOR, 0, ARMOR_CLASS, 1, UNDEF_BLESS },
     { 0, 0, 0, 0, 0 }
 };
-static struct trobj Healer[] = {
+static const struct trobj Healer_baseline[] = {
     { SCALPEL, 0, WEAPON_CLASS, 1, UNDEF_BLESS },
     { LEATHER_GLOVES, 1, ARMOR_CLASS, 1, UNDEF_BLESS },
     { STETHOSCOPE, 0, TOOL_CLASS, 1, 0 },
@@ -70,7 +70,7 @@ static struct trobj Healer[] = {
     { APPLE, 0, FOOD_CLASS, 5, 0 },
     { 0, 0, 0, 0, 0 }
 };
-static struct trobj Knight[] = {
+static const struct trobj Knight_baseline[] = {
     { LONG_SWORD, 1, WEAPON_CLASS, 1, UNDEF_BLESS },
     { LANCE, 1, WEAPON_CLASS, 1, UNDEF_BLESS },
     { RING_MAIL, 1, ARMOR_CLASS, 1, UNDEF_BLESS },
@@ -81,7 +81,7 @@ static struct trobj Knight[] = {
     { CARROT, 0, FOOD_CLASS, 10, 0 },
     { 0, 0, 0, 0, 0 }
 };
-static struct trobj Monk[] = {
+static const struct trobj Monk_baseline[] = {
 #define M_BOOK 2
     { LEATHER_GLOVES, 2, ARMOR_CLASS, 1, UNDEF_BLESS },
     { ROBE, 1, ARMOR_CLASS, 1, UNDEF_BLESS },
@@ -97,7 +97,7 @@ static struct trobj Monk[] = {
     { FORTUNE_COOKIE, 0, FOOD_CLASS, 3, UNDEF_BLESS },
     { 0, 0, 0, 0, 0 }
 };
-static struct trobj Priest[] = {
+static const struct trobj Priest_baseline[] = {
     { MACE, 1, WEAPON_CLASS, 1, 1 },
     { ROBE, 0, ARMOR_CLASS, 1, UNDEF_BLESS },
     { SMALL_SHIELD, 0, ARMOR_CLASS, 1, UNDEF_BLESS },
@@ -107,7 +107,7 @@ static struct trobj Priest[] = {
     { UNDEF_TYP, UNDEF_SPE, SPBOOK_CLASS, 2, UNDEF_BLESS },
     { 0, 0, 0, 0, 0 }
 };
-static struct trobj Ranger[] = {
+static const struct trobj Ranger_baseline[] = {
 #define RAN_BOW 1
 #define RAN_TWO_ARROWS 2
 #define RAN_ZERO_ARROWS 3
@@ -119,7 +119,7 @@ static struct trobj Ranger[] = {
     { CRAM_RATION, 0, FOOD_CLASS, 4, 0 },
     { 0, 0, 0, 0, 0 }
 };
-static struct trobj Rogue[] = {
+static const struct trobj Rogue_baseline[] = {
 #define R_DAGGERS 1
     { SHORT_SWORD, 0, WEAPON_CLASS, 1, UNDEF_BLESS },
     { DAGGER, 0, WEAPON_CLASS, 10, 0 }, /* quan is variable */
@@ -129,7 +129,7 @@ static struct trobj Rogue[] = {
     { SACK, 0, TOOL_CLASS, 1, 0 },
     { 0, 0, 0, 0, 0 }
 };
-static struct trobj Samurai[] = {
+static const struct trobj Samurai_baseline[] = {
 #define S_ARROWS 3
     { KATANA, 0, WEAPON_CLASS, 1, UNDEF_BLESS },
     { SHORT_SWORD, 0, WEAPON_CLASS, 1, UNDEF_BLESS }, /* wakizashi */
@@ -138,7 +138,7 @@ static struct trobj Samurai[] = {
     { SPLINT_MAIL, 0, ARMOR_CLASS, 1, UNDEF_BLESS },
     { 0, 0, 0, 0, 0 }
 };
-static struct trobj Tourist[] = {
+static const struct trobj Tourist_baseline[] = {
 #define T_DARTS 0
     { DART, 2, WEAPON_CLASS, 25, UNDEF_BLESS }, /* quan is variable */
     { UNDEF_TYP, UNDEF_SPE, FOOD_CLASS, 10, 0 },
@@ -149,14 +149,14 @@ static struct trobj Tourist[] = {
     { CREDIT_CARD, 0, TOOL_CLASS, 1, 0 },
     { 0, 0, 0, 0, 0 }
 };
-static struct trobj Valkyrie[] = {
+static const struct trobj Valkyrie_baseline[] = {
     { LONG_SWORD, 1, WEAPON_CLASS, 1, UNDEF_BLESS },
     { DAGGER, 0, WEAPON_CLASS, 1, UNDEF_BLESS },
     { SMALL_SHIELD, 3, ARMOR_CLASS, 1, UNDEF_BLESS },
     { FOOD_RATION, 0, FOOD_CLASS, 1, 0 },
     { 0, 0, 0, 0, 0 }
 };
-static struct trobj Wizard[] = {
+static const struct trobj Wizard_baseline[] = {
 #define W_MULTSTART 2
 #define W_MULTEND 6
     { QUARTERSTAFF, 1, WEAPON_CLASS, 1, 1 },
@@ -174,27 +174,122 @@ static struct trobj Wizard[] = {
  *      Optional extra inventory items.
  */
 
-static struct trobj Tinopener[] = { { TIN_OPENER, 0, TOOL_CLASS, 1, 0 },
+static const struct trobj Tinopener_baseline[] = { { TIN_OPENER, 0, TOOL_CLASS, 1, 0 },
                                     { 0, 0, 0, 0, 0 } };
-static struct trobj Magicmarker[] = { { MAGIC_MARKER, UNDEF_SPE, TOOL_CLASS,
+static const struct trobj Magicmarker_baseline[] = { { MAGIC_MARKER, UNDEF_SPE, TOOL_CLASS,
                                         1, 0 },
                                       { 0, 0, 0, 0, 0 } };
-static struct trobj Lamp[] = { { OIL_LAMP, 1, TOOL_CLASS, 1, 0 },
+static const struct trobj Lamp_baseline[] = { { OIL_LAMP, 1, TOOL_CLASS, 1, 0 },
                                { 0, 0, 0, 0, 0 } };
-static struct trobj Blindfold[] = { { BLINDFOLD, 0, TOOL_CLASS, 1, 0 },
+static const struct trobj Blindfold_baseline[] = { { BLINDFOLD, 0, TOOL_CLASS, 1, 0 },
                                     { 0, 0, 0, 0, 0 } };
-static struct trobj Instrument[] = { { WOODEN_FLUTE, 0, TOOL_CLASS, 1, 0 },
+static const struct trobj Instrument_baseline[] = { { WOODEN_FLUTE, 0, TOOL_CLASS, 1, 0 },
                                      { 0, 0, 0, 0, 0 } };
-static struct trobj Xtra_food[] = { { UNDEF_TYP, UNDEF_SPE, FOOD_CLASS, 2, 0 },
+static const struct trobj Xtra_food_baseline[] = { { UNDEF_TYP, UNDEF_SPE, FOOD_CLASS, 2, 0 },
                                     { 0, 0, 0, 0, 0 } };
-static struct trobj Leash[] = { { LEASH, 0, TOOL_CLASS, 1, 0 },
+static const struct trobj Leash_baseline[] = { { LEASH, 0, TOOL_CLASS, 1, 0 },
                                 { 0, 0, 0, 0, 0 } };
-static struct trobj Towel[] = { { TOWEL, 0, TOOL_CLASS, 1, 0 },
+static const struct trobj Towel_baseline[] = { { TOWEL, 0, TOOL_CLASS, 1, 0 },
                                 { 0, 0, 0, 0, 0 } };
-static struct trobj Wishing[] = { { WAN_WISHING, 3, WAND_CLASS, 1, 0 },
+static const struct trobj Wishing_baseline[] = { { WAN_WISHING, 3, WAND_CLASS, 1, 0 },
                                   { 0, 0, 0, 0, 0 } };
-static struct trobj Money[] = { { GOLD_PIECE, 0, COIN_CLASS, 1, 0 },
+static const struct trobj Money_baseline[] = { { GOLD_PIECE, 0, COIN_CLASS, 1, 0 },
                                 { 0, 0, 0, 0, 0 } };
+
+/* fast-nle: the trobj tables above are written during u_init
+ * (trquan adjustments, ini_inv bookkeeping), so each env gets a
+ * private copy seeded from the const baselines (lazy slot 5). */
+struct nle_uinit_state {
+    struct trobj T_Archeologist[sizeof(Archeologist_baseline) / sizeof(struct trobj)];
+    struct trobj T_Barbarian[sizeof(Barbarian_baseline) / sizeof(struct trobj)];
+    struct trobj T_Cave_man[sizeof(Cave_man_baseline) / sizeof(struct trobj)];
+    struct trobj T_Healer[sizeof(Healer_baseline) / sizeof(struct trobj)];
+    struct trobj T_Knight[sizeof(Knight_baseline) / sizeof(struct trobj)];
+    struct trobj T_Monk[sizeof(Monk_baseline) / sizeof(struct trobj)];
+    struct trobj T_Priest[sizeof(Priest_baseline) / sizeof(struct trobj)];
+    struct trobj T_Ranger[sizeof(Ranger_baseline) / sizeof(struct trobj)];
+    struct trobj T_Rogue[sizeof(Rogue_baseline) / sizeof(struct trobj)];
+    struct trobj T_Samurai[sizeof(Samurai_baseline) / sizeof(struct trobj)];
+    struct trobj T_Tourist[sizeof(Tourist_baseline) / sizeof(struct trobj)];
+    struct trobj T_Valkyrie[sizeof(Valkyrie_baseline) / sizeof(struct trobj)];
+    struct trobj T_Wizard[sizeof(Wizard_baseline) / sizeof(struct trobj)];
+    struct trobj T_Tinopener[sizeof(Tinopener_baseline) / sizeof(struct trobj)];
+    struct trobj T_Magicmarker[sizeof(Magicmarker_baseline) / sizeof(struct trobj)];
+    struct trobj T_Lamp[sizeof(Lamp_baseline) / sizeof(struct trobj)];
+    struct trobj T_Blindfold[sizeof(Blindfold_baseline) / sizeof(struct trobj)];
+    struct trobj T_Instrument[sizeof(Instrument_baseline) / sizeof(struct trobj)];
+    struct trobj T_Xtra_food[sizeof(Xtra_food_baseline) / sizeof(struct trobj)];
+    struct trobj T_Leash[sizeof(Leash_baseline) / sizeof(struct trobj)];
+    struct trobj T_Towel[sizeof(Towel_baseline) / sizeof(struct trobj)];
+    struct trobj T_Wishing[sizeof(Wishing_baseline) / sizeof(struct trobj)];
+    struct trobj T_Money[sizeof(Money_baseline) / sizeof(struct trobj)];
+    short nocreate, nocreate2, nocreate3, nocreate4;
+};
+static struct nle_uinit_state *
+nle_uinit(void)
+{
+    struct nle_uinit_state *s =
+        (struct nle_uinit_state *) nh_cur->nh_lazy[5];
+    if (!s) { /* slot 5: u_init.c per-env tables */
+        s = (struct nle_uinit_state *)
+            calloc(1, sizeof(struct nle_uinit_state));
+        memcpy(s->T_Archeologist, Archeologist_baseline, sizeof(Archeologist_baseline));
+        memcpy(s->T_Barbarian, Barbarian_baseline, sizeof(Barbarian_baseline));
+        memcpy(s->T_Cave_man, Cave_man_baseline, sizeof(Cave_man_baseline));
+        memcpy(s->T_Healer, Healer_baseline, sizeof(Healer_baseline));
+        memcpy(s->T_Knight, Knight_baseline, sizeof(Knight_baseline));
+        memcpy(s->T_Monk, Monk_baseline, sizeof(Monk_baseline));
+        memcpy(s->T_Priest, Priest_baseline, sizeof(Priest_baseline));
+        memcpy(s->T_Ranger, Ranger_baseline, sizeof(Ranger_baseline));
+        memcpy(s->T_Rogue, Rogue_baseline, sizeof(Rogue_baseline));
+        memcpy(s->T_Samurai, Samurai_baseline, sizeof(Samurai_baseline));
+        memcpy(s->T_Tourist, Tourist_baseline, sizeof(Tourist_baseline));
+        memcpy(s->T_Valkyrie, Valkyrie_baseline, sizeof(Valkyrie_baseline));
+        memcpy(s->T_Wizard, Wizard_baseline, sizeof(Wizard_baseline));
+        memcpy(s->T_Tinopener, Tinopener_baseline, sizeof(Tinopener_baseline));
+        memcpy(s->T_Magicmarker, Magicmarker_baseline, sizeof(Magicmarker_baseline));
+        memcpy(s->T_Lamp, Lamp_baseline, sizeof(Lamp_baseline));
+        memcpy(s->T_Blindfold, Blindfold_baseline, sizeof(Blindfold_baseline));
+        memcpy(s->T_Instrument, Instrument_baseline, sizeof(Instrument_baseline));
+        memcpy(s->T_Xtra_food, Xtra_food_baseline, sizeof(Xtra_food_baseline));
+        memcpy(s->T_Leash, Leash_baseline, sizeof(Leash_baseline));
+        memcpy(s->T_Towel, Towel_baseline, sizeof(Towel_baseline));
+        memcpy(s->T_Wishing, Wishing_baseline, sizeof(Wishing_baseline));
+        memcpy(s->T_Money, Money_baseline, sizeof(Money_baseline));
+        s->nocreate = s->nocreate2 = s->nocreate3 = s->nocreate4 =
+            STRANGE_OBJECT;
+        nh_cur->nh_lazy[5] = s;
+    }
+    return s;
+}
+#define Archeologist (nle_uinit()->T_Archeologist)
+#define Barbarian (nle_uinit()->T_Barbarian)
+#define Cave_man (nle_uinit()->T_Cave_man)
+#define Healer (nle_uinit()->T_Healer)
+#define Knight (nle_uinit()->T_Knight)
+#define Monk (nle_uinit()->T_Monk)
+#define Priest (nle_uinit()->T_Priest)
+#define Ranger (nle_uinit()->T_Ranger)
+#define Rogue (nle_uinit()->T_Rogue)
+#define Samurai (nle_uinit()->T_Samurai)
+#define Tourist (nle_uinit()->T_Tourist)
+#define Valkyrie (nle_uinit()->T_Valkyrie)
+#define Wizard (nle_uinit()->T_Wizard)
+#define Tinopener (nle_uinit()->T_Tinopener)
+#define Magicmarker (nle_uinit()->T_Magicmarker)
+#define Lamp (nle_uinit()->T_Lamp)
+#define Blindfold (nle_uinit()->T_Blindfold)
+#define Instrument (nle_uinit()->T_Instrument)
+#define Xtra_food (nle_uinit()->T_Xtra_food)
+#define Leash (nle_uinit()->T_Leash)
+#define Towel (nle_uinit()->T_Towel)
+#define Wishing (nle_uinit()->T_Wishing)
+#define Money (nle_uinit()->T_Money)
+#define nocreate (nle_uinit()->nocreate)
+#define nocreate2 (nle_uinit()->nocreate2)
+#define nocreate3 (nle_uinit()->nocreate3)
+#define nocreate4 (nle_uinit()->nocreate4)
+
 
 /* race-based substitutions for initial inventory;
    the weaker cloak for elven rangers is intentional--they shoot better */
@@ -973,16 +1068,32 @@ register struct trobj *trop;
 {
     struct obj *obj;
     int otyp, i;
+    /* The trobj arrays passed in here (Archeologist[], Monk[], ...) are
+     * file-scope static. ini_inv mutates trop->trquan via --trop->trquan
+     * (and trop->trquan = 1 for weapons). In a single-libnethack vecenv
+     * setup, that mutation persists across envs — env 2 sees env 1's
+     * decremented trquan and ends up with the wrong initial inventory
+     * (zero quantities, wrong-class items, duplicate spellbooks).
+     *
+     * Fix: snapshot onto a stack-local copy and walk that instead. The
+     * buffer lives for the whole function (one stack frame), so trop is
+     * valid until ini_inv returns. */
+    struct trobj _trop_local[24];   /* generous; longest list is ~12 rows */
+    {
+        int n = 0;
+        struct trobj *p = trop;
+        while (p->trclass && n < 23) { _trop_local[n++] = *p; p++; }
+        _trop_local[n] = *p;        /* copy the {0,...} terminator */
+        trop = _trop_local;
+    }
 
     while (trop->trclass) {
         otyp = (int) trop->trotyp;
         if (otyp != UNDEF_TYP) {
             obj = mksobj(otyp, TRUE, FALSE);
         } else { /* UNDEF_TYP */
-            static NEARDATA short nocreate = STRANGE_OBJECT;
-            static NEARDATA short nocreate2 = STRANGE_OBJECT;
-            static NEARDATA short nocreate3 = STRANGE_OBJECT;
-            static NEARDATA short nocreate4 = STRANGE_OBJECT;
+            /* nocreate1-4 are per-env (nle_uinit_state): they dedup random
+             * initial items across ini_inv calls within one game. */
             /*
              * For random objects, do not create certain overly powerful
              * items: wand of wishing, ring of levitation, or the

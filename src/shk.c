@@ -5,6 +5,12 @@
 
 #include "hack.h"
 
+/* Per-env return buffer */
+#define empty_shops (nh_cur->g_shk_c_empty_shops)
+
+/* Function-local statics migrated to nle_ctx_t */
+#define pickmovetime  (nh_cur->g_shk_c_pickmovetime)
+
 #define PAY_SOME 2
 #define PAY_BUY 1
 #define PAY_CANT 0 /* too poor */
@@ -25,7 +31,31 @@ STATIC_DCL void FDECL(kops_gone, (BOOLEAN_P));
 
 extern const struct shclass shtypes[]; /* defined in shknam.c */
 
-STATIC_VAR NEARDATA long int followmsg; /* last time of follow message */
+/* Per-env shop/billing state. Five file-statics
+ * (followmsg, repo, sell_response, sell_how, auto_credit) raced across
+ * PufferLib envs at N>=256, producing the dopay() segfault on a
+ * corrupted struct monst* (0xffffffff00000034 pattern). Definitions and
+ * nle_shk() are hoisted to file-top so the `repo` macro at ~line 1691
+ * can dereference the struct. */
+struct nle_shk_repo { struct monst *shopkeeper; coord location; };
+struct nle_shk_state {
+    long int             _followmsg;
+    struct nle_shk_repo  _repo;
+    char                 _sell_response;
+    int                  _sell_how;
+    boolean              _auto_credit;
+};
+static struct nle_shk_state *nle_shk(void) {
+    if (!nh_cur) return NULL;
+    struct nle_shk_state *s = (struct nle_shk_state *) nh_cur->nh_lazy[24];
+    if (!s) {
+        s = (struct nle_shk_state *) calloc(1, sizeof(struct nle_shk_state));
+        if (s) s->_sell_response = 'a';
+        nh_cur->nh_lazy[24] = s;
+    }
+    return s;
+}
+
 STATIC_VAR const char and_its_contents[] = " and its contents";
 STATIC_VAR const char the_contents_of[] = "the contents of ";
 
@@ -163,10 +193,21 @@ next_shkp(shkp, withbill)
 register struct monst *shkp;
 register boolean withbill;
 {
+    /* Fix: also require has_eshk(). dealloc_mextra() clears
+     * mtmp->mextra to NULL but does NOT clear mtmp->isshk — the bytes of
+     * the old mextra survive (arena no-op free) but the pointer is nulled,
+     * and shopkeeper death paths don't always clear rooms[].resident.
+     * Without this guard, a still-listed shopkeeper monster whose mextra
+     * was dealloc'd causes ESHK(shkp)->billct to segfault at offset 0x18.
+     * The invariant `isshk => has_eshk` is asserted in mon.c:82 but only
+     * fires impossible() warnings — actual deref still crashes. At N=256
+     * PufferLib vecenv this stops being statistically rare and consistently
+     * fires around 130K steps into a rollout. */
     for (; shkp; shkp = shkp->nmon) {
         if (DEADMONSTER(shkp))
             continue;
-        if (shkp->isshk && (ESHK(shkp)->billct || !withbill))
+        if (shkp->isshk && has_eshk(shkp)
+            && (ESHK(shkp)->billct || !withbill))
             break;
     }
 
@@ -204,7 +245,7 @@ struct monst *mtmp;
         /* items on shop floor revert to ordinary objects */
         for (sx = sroom->lx; sx <= sroom->hx; sx++)
             for (sy = sroom->ly; sy <= sroom->hy; sy++)
-                for (otmp = level.objects[sx][sy]; otmp;
+                for (otmp = level.objs[sx][sy]; otmp;
                      otmp = otmp->nexthere)
                     otmp->no_charge = 0;
 
@@ -539,7 +580,7 @@ char *enterstring;
     register int rt;
     register struct monst *shkp;
     register struct eshk *eshkp;
-    static char empty_shops[5];
+    /* Empty_shops migrated to nle_ctx_t */
 
     if (!*enterstring)
         return;
@@ -690,7 +731,7 @@ struct obj *obj;
         return;
     shkp = shop_keeper(*u.ushops);
     if (shkp && inhishop(shkp)) {
-        static NEARDATA long pickmovetime = 0L;
+        /* Pickmovetime migrated to nle_ctx_t */
 
         /* if you bring a sack of N picks into a shop to sell,
            don't repeat this N times when they're taken out */
@@ -1685,10 +1726,10 @@ boolean itemize;
     return buy;
 }
 
-static struct repo { /* repossession context */
-    struct monst *shopkeeper;
-    coord location;
-} repo;
+/* repo (repossession context) migrated to per-env nle_shk_state. The
+ * fields are accessed as repo.shopkeeper / repo.location.x / .y; the
+ * `repo` macro below resolves to the per-env struct nle_shk_repo. */
+#define repo (nle_shk()->_repo)
 
 /* routine called after dying (or quitting) */
 boolean
@@ -2999,12 +3040,12 @@ boolean peaceful, silent;
     return value;
 }
 
-/* auto-response flag for/from "sell foo?" 'a' => 'y', 'q' => 'n' */
-static char sell_response = 'a';
-static int sell_how = SELL_NORMAL;
-/* can't just use sell_response='y' for auto_credit because the 'a' response
-   shouldn't carry over from ordinary selling to credit selling */
-static boolean auto_credit = FALSE;
+/* per-env migration macros (struct + nle_shk() defined at file top).
+ * Note: `repo` macro is at the original static-def site (~line 1691). */
+#define followmsg     (nle_shk()->_followmsg)
+#define sell_response (nle_shk()->_sell_response)
+#define sell_how      (nle_shk()->_sell_how)
+#define auto_credit   (nle_shk()->_auto_credit)
 
 void
 sellobj_state(deliberate)
@@ -3727,7 +3768,7 @@ boolean catchup; /* restoring a level */
 #define horiz(i) ((i % 3) - 1)
 #define vert(i) ((i / 3) - 1)
     k = 0; /* number of adjacent shop spots */
-    if (level.objects[x][y] && !IS_ROOM(levl[x][y].typ)) {
+    if (level.objs[x][y] && !IS_ROOM(levl[x][y].typ)) {
         for (i = 0; i < 9; i++) {
             ix = x + horiz(i);
             iy = y + vert(i);
@@ -3763,7 +3804,7 @@ boolean catchup; /* restoring a level */
             unplacebc(); /* pick 'em up */
             placebc();   /* put 'em down */
         }
-        while ((otmp = level.objects[x][y]) != 0)
+        while ((otmp = level.objs[x][y]) != 0)
             /* Don't mess w/ boulders -- just merge into wall */
             if (otmp->otyp == BOULDER || otmp->otyp == ROCK) {
                 obj_extract_self(otmp);
@@ -3771,7 +3812,7 @@ boolean catchup; /* restoring a level */
             } else {
                 int trylimit = 50;
 
-                /* otmp must be moved otherwise level.objects[x][y] will
+                /* otmp must be moved otherwise level.objs[x][y] will
                    never become Null and while-loop won't terminate */
                 do {
                     i = rn2(9);
@@ -4285,7 +4326,7 @@ register xchar x, y;
     if (!(shkp = shop_keeper(*in_rooms(x, y, SHOPBASE))) || !inhishop(shkp))
         return (struct obj *) 0;
 
-    for (otmp = level.objects[x][y]; otmp; otmp = otmp->nexthere)
+    for (otmp = level.objs[x][y]; otmp; otmp = otmp->nexthere)
         if (otmp->oclass != COIN_CLASS)
             break;
     /* note: otmp might have ->no_charge set, but that's ok */

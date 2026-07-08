@@ -173,3 +173,293 @@ global | cold | struct plinemsg_type * | plinemsg_types | | 0
 global | cold | unsigned | nhUse_dummy | | 0
 options.c | cold | short | n_menu_mapped | | 0
 attrib.c | cold | char | from_what_buf | [256] | 0   # BUFSZ; from_what() return buffer
+# cmd.c (ported wholesale from old fork; lazy slots 3=cmd_state 4=clicklook_cc)
+global | cold | struct cmd | Cmd | | 0
+cmd.c | cold | int | alt_esc | | 0
+cmd.c | cold | int (*{NAME})(void) | timed_occ_fn | | 0
+cmd.c | cold | char | pushq | [20] | 0   # BSIZE
+cmd.c | cold | char | saveq | [20] | 0   # BSIZE
+cmd.c | cold | int | phead | | 0
+cmd.c | cold | int | ptail | | 0
+cmd.c | cold | int | shead | | 0
+cmd.c | cold | int | stail | | 0
+cmd.c | cold | short | en_win | | 0        # fixup: WIN_ERR
+cmd.c | cold | boolean | en_via_menu | | 0
+cmd.c | cold | const char * | readchar_queue | | 0   # fixup: ""
+# vision.c (ported from old fork; lazy slots 6=close_dy 7=far_dy)
+vision.c | hot | char | could_see | [2][ROWNO][COLNO] | 0
+vision.c | hot | char | viz_clear | [ROWNO][COLNO] | 0
+vision.c | hot | char | left_ptrs | [ROWNO][COLNO] | 0
+vision.c | hot | char | right_ptrs | [ROWNO][COLNO] | 0
+vision.c | hot | char * | viz_clear_rows | [ROWNO] | 0
+vision.c | hot | char * | cs_rows0 | [ROWNO] | 0
+vision.c | hot | char * | cs_rows1 | [ROWNO] | 0
+vision.c | hot | char | cs_rmin0 | [ROWNO] | 0
+vision.c | hot | char | cs_rmax0 | [ROWNO] | 0
+vision.c | hot | char | cs_rmin1 | [ROWNO] | 0
+vision.c | hot | char | cs_rmax1 | [ROWNO] | 0
+vision.c | hot | char * | viz_rmin | | 0
+vision.c | hot | char * | viz_rmax | | 0
+vision.c | cold | int | vis_start_row | | 0
+vision.c | cold | int | vis_start_col | | 0
+vision.c | cold | int | vis_step | | 0
+vision.c | cold | char ** | vis_cs_rows | | 0
+vision.c | cold | char * | vis_cs_left | | 0
+vision.c | cold | char * | vis_cs_right | | 0
+vision.c | cold | void (*{NAME})() | vis_func | | 0
+vision.c | cold | void * | vis_varg | | 0
+vision.c | cold | int | vision_recur_depth | | 0
+vision.c | cold | unsigned char | vision_colbump | [COLNO + 1] | 0
+# botl.c (ported from old fork; lazy slots 8=blstats 9=status_hilites 10=state)
+botl.c | cold | char | strength_buf | [32] | 0
+botl.c | cold | boolean | blinit | | 0
+botl.c | cold | boolean | update_all | | 0
+botl.c | cold | boolean | valset | [23] | 0        # MAXBLSTATS
+botl.c | cold | long | bl_hilite_moves | | 0
+botl.c | cold | unsigned long | cond_hilites | [21] | 0  # BL_ATTCLR_MAX
+botl.c | cold | int | now_or_before_idx | | 0
+botl.c | cold | int | status_hilite_str_id | | 0
+botl.c | cold | char | blstats_initalready | | 0
+botl.c | cold | void * | status_hilite_str_p | | 0
+# sp_lev.c (lazy slot 12 = function-local state; lregions shared with mkmaze.c)
+sp_lev.c | cold | int | min_rx | | 0
+sp_lev.c | cold | int | max_rx | | 0
+sp_lev.c | cold | int | min_ry | | 0
+sp_lev.c | cold | int | max_ry | | 0
+sp_lev.c | cold | char | splev_map | [COLNO][ROWNO] | 0
+sp_lev.c | cold | schar | xstart | | 0
+sp_lev.c | cold | schar | ystart | | 0
+sp_lev.c | cold | char | xsize | | 0
+sp_lev.c | cold | char | ysize | | 0
+sp_lev.c | cold | char * | lev_message | | 0
+sp_lev.c | cold | void * | lregions_p | | 0
+sp_lev.c | cold | int | num_lregions | | 0
+sp_lev.c | cold | boolean | splev_init_present | | 0
+sp_lev.c | cold | boolean | icedpools | | 0
+sp_lev.c | cold | int | container_idx | | 0
+sp_lev.c | cold | struct obj * | container_obj | [10] | 0
+sp_lev.c | cold | struct monst * | invent_carrying_monster | | 0
+sp_lev.c | cold | int | mines_prize_count | | 0
+sp_lev.c | cold | int | soko_prize_count | | 0
+sp_lev.c | cold | schar | floodfillchk_match_under_typ | | 0
+# mkmaze.c (lazy slot 13 = bughack lev_region)
+mkmaze.c | cold | void * | bbubbles | | 0
+mkmaze.c | cold | void * | ebubbles | | 0
+mkmaze.c | cold | boolean | movebubbles_up | | 0
+mkmaze.c | cold | int | water_xmin | | 0
+mkmaze.c | cold | int | water_ymin | | 0
+mkmaze.c | cold | int | water_xmax | | 0
+mkmaze.c | cold | int | water_ymax | | 0
+mkmaze.c | cold | struct trap * | wportal | | 0
+# display.c (lazy slots 14=state 15=gbuf)
+display.c | hot | char | gbuf_start | [ROWNO] | 0
+display.c | hot | char | gbuf_stop | [ROWNO] | 0
+display.c | cold | int | bad_count | [36] | 0    # MAX_TYPE
+display.c | cold | void * | tglyph_p | | 0
+display.c | cold | boolean | in_cls | | 0
+display.c | cold | int | flushing | | 0
+display.c | cold | int | delay_flushing | | 0
+display.c | cold | schar | swallowed_lastx | | 0
+display.c | cold | schar | swallowed_lasty | | 0
+display.c | cold | schar | under_water_lastx | | 0
+display.c | cold | schar | under_water_lasty | | 0
+display.c | cold | boolean | under_water_dela | | 0
+display.c | cold | boolean | under_ground_dela | | 0
+display.c | cold | int | nul_gbuf_new | | 0
+display.c | cold | int | nul_gbuf_glyph | | 0
+# invent.c (lazy slot 16 = let_to_name scratch buffer)
+invent.c | cold | int | lastinvnr | | 0    # fixup: 51
+invent.c | cold | unsigned | sortlootmode | | 0
+invent.c | cold | int | cached_pickinv_win | | 0   # fixup: WIN_ERR
+invent.c | cold | int | this_type | | 0
+invent.c | cold | unsigned | invbufsiz | | 0
+invent.c | cold | schar | only_x | | 0
+invent.c | cold | schar | only_y | | 0
+invent.c | cold | char | safeq_xprn_let | | 0
+invent.c | cold | boolean | safeq_xprn_dot | | 0
+invent.c | cold | char | armcat | [8] | 0
+invent.c | cold | char | li | [256] | 0     # BUFSZ
+invent.c | cold | char | altbuf | [256] | 0 # BUFSZ
+# windows.c (lazy slot 22 = state) — status arrays shared with wintty.c
+windows.c | cold | void * | last_winchoice | | 0
+windows.c | cold | boolean | status_activefields | [23] | 0  # MAXBLSTATS
+windows.c | cold | const char * | status_fieldfmt | [23] | 0
+windows.c | cold | const char * | status_fieldnm | [23] | 0
+windows.c | cold | char * | status_vals | [23] | 0
+# wintty.c (lazy slots 17=tty_status 18=state)
+wintty.c | cold | int | base_window | | 0
+wintty.c | cold | char | compress_cbuf | [256] | 0
+wintty.c | cold | int | hpbar_color | | 0
+wintty.c | cold | int | hpbar_percent | | 0
+wintty.c | cold | unsigned long * | tty_colormasks | | 0
+wintty.c | cold | long | tty_condition_bits | | 0
+wintty.c | cold | int | tty_nhgetch_nesting | | 0
+# topl.c (lazy slot 21 = state)
+topl.c | cold | boolean | initd | | 0
+topl.c | cold | int | nxtidx | | 0
+# getline.c
+getline.c | cold | boolean | suppress_history | | 0
+# NLE-layer flag read by both getline.c and winrl.cc
+global | hot | int | xwaitingforspace | | 0
+wintty.c | cold | struct WinDesc * | wins | [20] | 0    # MAXWIN
+wintty.c | cold | struct DisplayDesc * | ttydisplay | | 0
+wintty.c | cold | char | morc | | 0
+# files.c (lazy slot 23 = state)
+files.c | cold | char | savef | [45] | 0
+files.c | cold | char | bones | [16] | 0
+files.c | cold | char * | config_section_chosen | | 0
+files.c | cold | char * | config_section_current | | 0
+files.c | cold | char | fqn_fname | [2048] | 0
+files.c | cold | int | lockptr | | 0
+files.c | cold | char | wizkit | [128] | 0
+# dungeon.c cross-TU counter (files.c also uses it)
+dungeon.c | cold | int | n_dgns | | 0
+# shk.c (lazy slot 24 = state)
+shk.c | cold | long | pickmovetime | | 0
+shk.c | cold | char | empty_shops | [5] | 0
+# muse.c (lazy slot 25 = struct musable)
+muse.c | cold | boolean | m_using | | 0
+muse.c | cold | int | trapx | | 0
+muse.c | cold | int | trapy | | 0
+muse.c | cold | boolean | zap_oseen | | 0
+# pickup.c
+pickup.c | cold | boolean | abort_looting | | 0
+pickup.c | cold | boolean | autopick_costly | | 0
+pickup.c | cold | boolean | bucx_filter | | 0
+pickup.c | cold | boolean | class_filter | | 0
+pickup.c | cold | struct obj * | current_container | | 0
+pickup.c | cold | int | encumber_msg_oldcap | | 0
+pickup.c | cold | boolean | shop_filter | | 0
+pickup.c | cold | long | val_for_n_or_more | | 0
+pickup.c | cold | char | valid_menu_classes | [24] | 0
+pickup.c | cold | int | vmc_count | | 0
+# hack.c
+hack.c | cold | int | domove_skates | | 0
+hack.c | cold | char | in_rooms_buf | [5] | 0
+hack.c | cold | int | inspoteffects | | 0
+hack.c | cold | long | moverock_lastmovetime | | 0
+hack.c | cold | schar | spotloc_x | | 0
+hack.c | cold | schar | spotloc_y | | 0
+hack.c | cold | int | spotterrain | | 0
+hack.c | cold | struct trap * | spottrap | | 0
+hack.c | cold | unsigned | spottraptyp | | 0
+hack.c | cold | void * | tmp_anything_p | | 0
+hack.c | cold | int | wc | | 0
+# do_name.c (lazy slot 26 = state)
+do_name.c | cold | char | dxdy_buf | [30] | 0
+do_name.c | cold | char | rndmonnam_buf | [256] | 0
+do_name.c | cold | int | gloc_filter_match_glyph | | 0
+do_name.c | cold | void * | gloc_filter_map_p | | 0
+do_name.c | cold | int | mbuf_idx | | 0
+do_name.c | cold | char | mbufs | [5 * 256] | 0
+do_name.c | cold | int | via_naming | | 0
+# trap.c (lazy slots 27=acid_ctx 28=launchplace)
+trap.c | cold | char | tnbuf | [12] | 0
+trap.c | cold | int | force_mintrap | | 0
+trap.c | cold | boolean | recursive_mine | | 0
+drawing.c | cold | int | currentgraphics | | 0
+files.c | cold | char | lock | [46] | 0   # PL_NSIZ+14; cross-TU via decl.h macro
+# restoring flag (decl.h global, defined in restore.c in stock)
+global | cold | boolean | restoring | | 0
+# notonhead (decl.h global; cross-TU: artifact/apply/potion etc.)
+global | cold | boolean | notonhead | | 0
+# NLE RNG seed record (hacklib.c / nlernd.c)
+global | cold | unsigned long | nle_seeds | [3] | 0
+# rumors.c (lazy slots 29=oracle_loc 30=state)
+rumors.c | cold | int | oracle_flg | | 0
+rumors.c | cold | unsigned | oracle_cnt | | 0
+rumors.c | cold | long | true_rumor_size | | 0
+# artifact.c (lazy slot 31 = artilist copy)
+artifact.c | cold | schar | artidisco | [33] | 0
+artifact.c | cold | boolean | artiexist | [35] | 0
+artifact.c | cold | int | nesting | | 0
+artifact.c | cold | char | resbuf | [20] | 0
+artifact.c | cold | int | mkot_trap_warn_count | | 0
+artifact.c | cold | int | spec_dbon_applies | | 0
+artifact.c | cold | boolean | touch_blasted | | 0
+# apply.c (lazy slot 11 = state)
+apply.c | cold | int | jumping_is_magic | | 0
+apply.c | cold | int | polearm_range_max | | 0
+apply.c | cold | int | polearm_range_min | | 0
+# save.c
+save.c | cold | void * | bw_file | | 0
+save.c | cold | int | bwritefd | | 0
+save.c | cold | boolean | compressing | | 0
+save.c | cold | int | count_only | | 0
+save.c | cold | unsigned char | outbuf | [256] | 0
+save.c | cold | unsigned short | outbufp | | 0
+save.c | cold | short | outrunlength | | 0
+save.c | cold | const char * | procs_name | | 0
+save.c | cold | void (*{NAME})(int) | procs_bclose | | 0
+save.c | cold | void (*{NAME})(int) | procs_bflush | | 0
+save.c | cold | void (*{NAME})(int) | procs_bufoff | | 0
+save.c | cold | void (*{NAME})(int) | procs_bufon | | 0
+save.c | cold | void (*{NAME})(int, void *, unsigned int) | procs_bwrite | | 0
+save.c | cold | unsigned | usteed_id | | 0
+save.c | cold | unsigned | ustuck_id | | 0
+# role.c
+role.c | cold | char | pa | [4] | 0
+role.c | cold | int | post_attribs | | 0
+# lock.c
+lock.c | cold | void * | xlock_door_p | | 0
+# restore.c
+restore.c | cold | void * | id_map_p | | 0
+restore.c | cold | int | n_ids_mapped | | 0
+restore.c | cold | struct fruit * | oldfruit | | 0
+restore.c | cold | long | omoves | | 0
+restore.c | cold | int | procs_mread_flags | | 0
+restore.c | cold | const char * | procs_name | | 0
+restore.c | cold | void (*{NAME})(int) | procs_bclose | | 0
+restore.c | cold | void (*{NAME})(void) | procs_minit | | 0
+restore.c | cold | void (*{NAME})(int, void *, unsigned int) | procs_mread | | 0
+restore.c | cold | unsigned char | zc_inbuf | [256] | 0
+restore.c | cold | short | zc_inrunlength | | 0
+restore.c | cold | int | zc_mreadfd | | 0
+# hacklib.c
+hacklib.c | cold | char | ing_suffix_buf | [256] | 0   # BUFSZ
+hacklib.c | cold | char | datestr | [15] | 0
+hacklib.c | cold | int | visctrl_nbuf | | 0
+hacklib.c | cold | char | visctrl_bufs | [5][5] | 0
+role.c | cold | struct Role | urole_store | | 0    # accessor 'urole' in you.h
+role.c | cold | struct Race | urace_store | | 0    # accessor 'urace' in you.h
+# eat.c (lazy slot 33 = eatmbuf)
+eat.c | cold | boolean | force_save_hs | | 0
+eat.c | cold | char | msgbuf | [256] | 0
+eat.c | cold | long | ate_brains | | 0
+eat.c | cold | unsigned | newuhs_save_hs | | 0
+eat.c | cold | boolean | newuhs_saved_hs | | 0
+# potion.c
+potion.c | cold | int | nothing | | 0
+potion.c | cold | int | unkn | | 0
+# do.c
+do.c | cold | char | at_ladder | | 0
+do.c | cold | char * | dfr_post_msg | | 0
+do.c | cold | char * | dfr_pre_msg | | 0
+do.c | cold | char | dowipe_buf | [39] | 0
+do.c | cold | d_level | save_dlevel_store | | 0
+# questpgr.c (lazy slot 34 = qt_list)
+questpgr.c | cold | char | cvt_buf | [64] | 0
+questpgr.c | cold | char | nambuf | [64] | 0
+questpgr.c | cold | void * | msg_file_p | | 0
+# pline.c (lazy slot 35 = state)
+pline.c | cold | unsigned | pline_flags | | 0
+pline.c | cold | int | in_pline | | 0
+pline.c | cold | char | prevmsg | [256] | 0
+# mon.c (lazy slot 36 = animal_list)
+mon.c | cold | int | animal_list_count | | 0
+mon.c | cold | boolean | disintegested | | 0
+mon.c | cold | long | elemental_clog_msgmv | | 0
+mon.c | cold | boolean | vamp_rise_msg | | 0
+# mhitm.c
+mhitm.c | cold | int | dieroll | | 0
+mhitm.c | cold | boolean | far_noise | | 0
+mhitm.c | cold | struct obj * | otmp | | 0
+mhitm.c | cold | long | noisetime | | 0
+mhitm.c | cold | boolean | vis | | 0
+# spell.c (lazy slot 37 = orderindx)
+spell.c | cold | int | sortmode | | 0
+# makemon.c (lazy slot 38 = rndmonst state)
+makemon.c | cold | void * | align_shift_lev_p | | 0
+makemon.c | cold | long | align_shift_oldmoves | | 0
+# end.c (lazy slot 39 = Schroedingers_cat)
+end.c | cold | int | vanq_sortmode | | 0

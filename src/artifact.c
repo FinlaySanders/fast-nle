@@ -4,8 +4,45 @@
 /* NetHack may be freely redistributed.  See license for details. */
 
 #include "hack.h"
+
+/* Per-env return buffer */
+#define resbuf (nh_cur->g_artifact_c_resbuf)
 #include "artifact.h"
 #include "artilist.h"
+
+/* Per-env artifact table — lazy slot 31, seeded from artilist_baseline
+ * on first use. */
+static struct artifact *
+nle_artilist(void)
+{
+    if (!nh_cur->nh_lazy[31]) {
+        size_t n = sizeof(artilist_baseline) / sizeof(artilist_baseline[0]);
+        struct artifact *p = (struct artifact *) calloc(n, sizeof(struct artifact));
+        memcpy(p, artilist_baseline, n * sizeof(struct artifact));
+        nh_cur->nh_lazy[31] = p;
+    }
+    return (struct artifact *) nh_cur->nh_lazy[31];
+}
+#define artilist (nle_artilist())
+
+/* Per-env artifact-existence + touch-blast flag.
+ * artiexist[] was the biggest cross-env leak source: env A creating
+ * Excalibur set artiexist[ART_EXCALIBUR] for every env in the process,
+ * so env B's universe could never generate Excalibur (or could re-
+ * generate it after env A's slot was reused). Now per-env. */
+#define artiexist     (nh_cur->g_artifact_c_artiexist)
+#define touch_blasted (nh_cur->g_artifact_c_touch_blasted)
+/* Artidisco[] per-env via nle_ctx_t — was STATIC_OVL xchar
+ * artidisco[NROFARTIFACTS] in this file; init_artifacts() memset()s on
+ * every reset (racing with discover_artifact() on concurrent envs). */
+#define artidisco     (nh_cur->g_artifact_c_artidisco)
+
+/* Catch drift in the generated NROFARTIFACTS — nle.h sizes
+ * s_artiexist[35] as 1 + NROFARTIFACTS + 1 with NROFARTIFACTS == 33. */
+_Static_assert(NROFARTIFACTS == 33,
+               "s_artiexist[35] assumes NROFARTIFACTS == 33; "
+               "update vendor/nle/src/include/nle.h if onames.h changed.");
+
 
 /*
  * Note:  both artilist[] and artiexist[] have a dummy element #0,
@@ -14,7 +51,7 @@
  *        the contents, just the total size.
  */
 
-extern boolean notonhead; /* for long worms */
+/* Notonhead per-env via nle_ctx_t (was extern boolean). */
 
 #define get_artifact(o) \
     (((o) && (o)->oartifact) ? &artilist[(int) (o)->oartifact] : 0)
@@ -42,12 +79,10 @@ STATIC_DCL int FDECL(count_surround_traps, (int, int));
 #define FATAL_DAMAGE_MODIFIER 200
 
 /* coordinate effects from spec_dbon() with messages in artifact_hit() */
-STATIC_OVL int spec_dbon_applies = 0;
+#define spec_dbon_applies (nh_cur->g_artifact_c_spec_dbon_applies)
 
-/* flags including which artifacts have already been created */
-static boolean artiexist[1 + NROFARTIFACTS + 1];
-/* and a discovery list for them (no dummy first entry here) */
-STATIC_OVL xchar artidisco[NROFARTIFACTS];
+/* artiexist[] migrated to nle_ctx_t — see macros above. */
+/* artidisco[] migrated to nle_ctx_t — see macros above. */
 
 STATIC_DCL void NDECL(hack_artifacts);
 STATIC_DCL boolean FDECL(attacks, (int, struct obj *));
@@ -635,7 +670,7 @@ long wp_mask;
 /* touch_artifact()'s return value isn't sufficient to tell whether it
    dished out damage, and tracking changes to u.uhp, u.mh, Lifesaved
    when trying to avoid second wounding is too cumbersome */
-STATIC_VAR boolean touch_blasted; /* for retouch_object() */
+/* touch_blasted migrated to nle_ctx_t — macro above. */
 
 /*
  * creature (usually hero) tries to touch (pick up or wield) an artifact obj.
@@ -1395,8 +1430,8 @@ int dieroll; /* needed for Magicbane and vorpal blades */
     return FALSE;
 }
 
-static NEARDATA const char recharge_type[] = { ALLOW_COUNT, ALL_CLASSES, 0 };
-static NEARDATA const char invoke_types[] = { ALL_CLASSES, 0 };
+static const char recharge_type[] = { ALLOW_COUNT, ALL_CLASSES, 0 };
+static const char invoke_types[] = { ALL_CLASSES, 0 };
 /* #invoke: an "ugly check" filters out most objects */
 
 /* the #invoke command */
@@ -1519,7 +1554,7 @@ struct obj *obj;
         case CREATE_PORTAL: {
             int i, num_ok_dungeons, last_ok_dungeon = 0;
             d_level newlev;
-            extern int n_dgns; /* from dungeon.c */
+            #define n_dgns (nh_cur->g_dungeon_c_n_dgns) /* was extern from dungeon.c */
             winid tmpwin = create_nhwindow(NHW_MENU);
             anything any;
 
@@ -1768,10 +1803,10 @@ STATIC_OVL unsigned long
 abil_to_spfx(abil)
 long *abil;
 {
-    /* Was 'long *abil' initialized with &Eprop addresses. Since 'u' now
-     * lives in the per-env ctx, those aren't compile-time constants. Store
-     * the property index instead; compute the extrinsic pointer at
-     * comparison time. */
+    /* Refactor stage 4: was 'long *abil' which required static
+     * initialization with &Eprop addresses. Since 'u' is now per-instance
+     * heap-alloc, those aren't compile-time constants. Store the property
+     * index instead; compute the extrinsic pointer at comparison time. */
     static const struct abil2spfx_tag {
         int prop_idx;
         unsigned long spfx;
@@ -1880,7 +1915,7 @@ glow_verb(count, ingsfx)
 int count; /* 0 means blind rather than no applicable creatures */
 boolean ingsfx;
 {
-    static char resbuf[20];
+    /* Resbuf migrated to nle_ctx_t */
 
     Strcpy(resbuf, glow_verbs[glow_strength(count)]);
     /* ing_suffix() will double the last consonant for all the words
@@ -2041,7 +2076,8 @@ void
 retouch_equipment(dropflag)
 int dropflag; /* 0==don't drop, 1==drop all, 2==drop weapon */
 {
-    static int nesting = 0; /* recursion control */
+    /* Per-env recursion guard. */
+    #define nesting (nh_cur->g_artifact_c_nesting)
     struct obj *obj;
     boolean dropit, had_gloves = (uarmg != 0);
     int had_rings = (!!uleft + !!uright);
@@ -2105,7 +2141,8 @@ int dropflag; /* 0==don't drop, 1==drop all, 2==drop weapon */
         clear_bypasses(); /* reset upon final exit */
 }
 
-static int mkot_trap_warn_count = 0;
+/* Per-env (was __thread). Trap warning counter. */
+#define mkot_trap_warn_count (nh_cur->g_artifact_c_mkot_trap_warn_count)
 
 STATIC_OVL int
 count_surround_traps(x, y)
@@ -2137,7 +2174,7 @@ int x, y;
                 ++ret;
                 continue;
             }
-            for (otmp = level.objects[dx][dy]; otmp; otmp = otmp->nexthere)
+            for (otmp = level.objs[dx][dy]; otmp; otmp = otmp->nexthere)
                 if (Is_container(otmp) && otmp->otrapped) {
                     ++ret; /* we're counting locations, so just */
                     break; /* count the first one in a pile     */

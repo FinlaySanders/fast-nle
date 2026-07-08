@@ -5,6 +5,33 @@
 
 #include "hack.h"
 
+/* Per-env return buffer for in_rooms() (renamed from `buf` so
+ * the file-level macro doesn't collide with the dozens of other `buf`
+ * locals in this TU). */
+#define in_rooms_buf (nh_cur->g_hack_c_in_rooms_buf)
+
+/* Per-env replacements for two hack.c file-statics.
+ * tmp_anything is heap-allocated (forward-decl'd as `union any` in nle.h);
+ * the helper below allocates on first use and is idempotent per env. */
+static union any *
+nle_get_tmp_anything(void)
+{
+    if (!nh_cur->g_hack_c_tmp_anything_p)
+        nh_cur->g_hack_c_tmp_anything_p =
+            (union any *) calloc(1, sizeof(anything));
+    return nh_cur->g_hack_c_tmp_anything_p;
+}
+#define tmp_anything  (*nle_get_tmp_anything())
+#define wc            (nh_cur->g_hack_c_wc)
+/* Function-local statics promoted to nle_ctx_t fields. */
+#define lastmovetime    (nh_cur->g_hack_c_moverock_lastmovetime)
+#define skates          (nh_cur->g_hack_c_domove_skates)
+#define spotloc_x       (nh_cur->g_hack_c_spotloc_x)
+#define spotloc_y       (nh_cur->g_hack_c_spotloc_y)
+#define spotterrain     (nh_cur->g_hack_c_spotterrain)
+#define spottrap        (nh_cur->g_hack_c_spottrap)
+#define spottraptyp     (nh_cur->g_hack_c_spottraptyp)
+
 /* #define DEBUG */ /* uncomment for debugging */
 
 STATIC_DCL void NDECL(maybe_wail);
@@ -26,7 +53,7 @@ STATIC_DCL void NDECL(domove_core);
 #define TRAVP_GUESS  1
 #define TRAVP_VALID  2
 
-static anything tmp_anything;
+/* tmp_anything moved into nle_ctx_t — macro above. */
 
 anything *
 uint_to_any(ui)
@@ -74,7 +101,7 @@ const char *msg;
     coord cc;
     boolean revived = FALSE;
 
-    for (otmp = level.objects[x][y]; otmp; otmp = otmp2) {
+    for (otmp = level.objs[x][y]; otmp; otmp = otmp2) {
         otmp2 = otmp->nexthere;
         if (otmp->otyp == CORPSE
             && (is_rider(&mons[otmp->corpsenm])
@@ -112,7 +139,7 @@ moverock()
     sx = u.ux + u.dx, sy = u.uy + u.dy; /* boulder starting position */
     while ((otmp = sobj_at(BOULDER, sx, sy)) != 0) {
         /* make sure that this boulder is visible as the top object */
-        if (otmp != level.objects[sx][sy])
+        if (otmp != level.objs[sx][sy])
             movobj(otmp, sx, sy);
 
         rx = u.ux + 2 * u.dx; /* boulder destination position */
@@ -292,13 +319,8 @@ moverock()
             }
 
             {
-#ifdef LINT /* static long lastmovetime; */
-                long lastmovetime;
-                lastmovetime = 0;
-#else
-                /* note: reset to zero after save/restore cycle */
-                static NEARDATA long lastmovetime;
-#endif
+                /* Lastmovetime moved to nle_ctx_t
+                 * (s_moverock_lastmovetime). See macro at top of file. */
  dopush:
                 if (!u.usteed) {
                     if (moves > lastmovetime + 2 || moves < lastmovetime)
@@ -549,7 +571,7 @@ register xchar ox, oy;
     newsym(ox, oy);
 }
 
-static NEARDATA const char fell_on_sink[] = "fell onto a sink";
+static const char fell_on_sink[] = "fell onto a sink";
 
 STATIC_OVL void
 dosinkfall()
@@ -582,7 +604,7 @@ dosinkfall()
         losehp(Maybe_Half_Phys(dmg), fell_on_sink, NO_KILLER_PREFIX);
         exercise(A_DEX, FALSE);
         selftouch("Falling, you");
-        for (obj = level.objects[u.ux][u.uy]; obj; obj = obj->nexthere)
+        for (obj = level.objs[u.ux][u.uy]; obj; obj = obj->nexthere)
             if (obj->oclass == WEAPON_CLASS || is_weptool(obj)) {
                 You("fell on %s.", doname(obj));
                 losehp(Maybe_Half_Phys(rnd(3)), fell_on_sink,
@@ -1421,7 +1443,8 @@ domove_core()
         /* check slippery ice */
         on_ice = !Levitation && is_ice(u.ux, u.uy);
         if (on_ice) {
-            static int skates = 0;
+            /* Skates moved to nle_ctx_t (s_domove_skates).
+             * See macro at top of file. */
 
             if (!skates)
                 skates = find_skates();
@@ -2146,11 +2169,12 @@ void
 spoteffects(pick)
 boolean pick;
 {
-    static int inspoteffects = 0;
-    static coord spotloc;
-    static int spotterrain;
-    static struct trap *spottrap = (struct trap *) 0;
-    static unsigned spottraptyp = NO_TRAP;
+    /* Inspoteffects was a process-wide recursion guard
+     * (function-local static); moved to nle_ctx_t. */
+    #define inspoteffects (nh_cur->g_hack_c_inspoteffects)
+    /* Spotloc/spotterrain/spottrap/spottraptyp moved
+     * to nle_ctx_t. See macros at top of file. spotloc was 'coord' (x,y);
+     * accessed as spotloc_x / spotloc_y per-component. */
 
     struct monst *mtmp;
     struct trap *trap = t_at(u.ux, u.uy);
@@ -2159,7 +2183,7 @@ boolean pick;
     /* prevent recursion from affecting the hero all over again
        [hero poly'd to iron golem enters water here, drown() inflicts
        damage that triggers rehumanize() which calls spoteffects()...] */
-    if (inspoteffects && u.ux == spotloc.x && u.uy == spotloc.y
+    if (inspoteffects && u.ux == spotloc_x && u.uy == spotloc_y
         /* except when reason is transformed terrain (ice -> water) */
         && spotterrain == levl[u.ux][u.uy].typ
         /* or transformed trap (land mine -> pit) */
@@ -2168,7 +2192,7 @@ boolean pick;
 
     ++inspoteffects;
     spotterrain = levl[u.ux][u.uy].typ;
-    spotloc.x = u.ux, spotloc.y = u.uy;
+    spotloc_x = u.ux, spotloc_y = u.uy;
 
     /* moving onto different terrain might cause Lev or Fly to toggle */
     if (spotterrain != levl[u.ux0][u.uy0].typ || !on_level(&u.uz, &u.uz0))
@@ -2284,7 +2308,7 @@ boolean pick;
  spotdone:
     if (!--inspoteffects) {
         spotterrain = STONE; /* 0 */
-        spotloc.x = spotloc.y = 0;
+        spotloc_x = spotloc_y = 0;
     }
     return;
 }
@@ -2312,8 +2336,8 @@ in_rooms(x, y, typewanted)
 register xchar x, y;
 register int typewanted;
 {
-    static char buf[5];
-    char rno, *ptr = &buf[4];
+    /* In_rooms_buf (was `buf`) migrated to nle_ctx_t */
+    char rno, *ptr = &in_rooms_buf[4];
     int typefound, min_x, min_y, max_x, max_y_offset, step;
     register struct rm *lev;
 
@@ -3074,7 +3098,8 @@ weight_cap()
     return (int) carrcap;
 }
 
-static int wc; /* current weight_cap(); valid after call to inv_weight() */
+/* wc moved into nle_ctx_t — macro above.
+ * inv_weight()'s last weight_cap() value; valid after call to inv_weight(). */
 
 /* returns how far beyond the normal capacity the player is currently. */
 /* inv_weight() is negative if the player is below normal capacity. */

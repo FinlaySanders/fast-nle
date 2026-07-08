@@ -6,6 +6,10 @@
 /* Contains code for 'd', 'D' (drop), '>', '<' (up, down) */
 
 #include "hack.h"
+
+/* Per-env return buffer for dowipe() (renamed from `buf` to
+ * avoid clobbering other `buf` locals in this TU). */
+#define dowipe_buf (nh_cur->g_do_c_dowipe_buf)
 #include "lev.h"
 
 STATIC_DCL void FDECL(trycall, (struct obj *));
@@ -19,9 +23,9 @@ STATIC_DCL int NDECL(currentlevel_rewrite);
 STATIC_DCL void NDECL(final_level);
 /* static boolean FDECL(badspot, (XCHAR_P,XCHAR_P)); */
 
-extern int n_dgns; /* number of dungeons, from dungeon.c */
+#define n_dgns (nh_cur->g_dungeon_c_n_dgns) /* was extern from dungeon.c */
 
-static NEARDATA const char drop_types[] = { ALLOW_COUNT, COIN_CLASS,
+static const char drop_types[] = { ALLOW_COUNT, COIN_CLASS,
                                             ALL_CLASSES, 0 };
 
 /* 'd' command: drop one inventory item */
@@ -454,7 +458,7 @@ register struct obj *obj;
         break;
     case RIN_HUNGER:
         ideed = FALSE;
-        for (otmp = level.objects[u.ux][u.uy]; otmp; otmp = otmp2) {
+        for (otmp = level.objs[u.ux][u.uy]; otmp; otmp = otmp2) {
             otmp2 = otmp->nexthere;
             if (otmp != uball && otmp != uchain
                 && !obj_resists(otmp, 1, 99)) {
@@ -933,7 +937,10 @@ int retry;
 }
 
 /* on a ladder, used in goto_level */
-static NEARDATA boolean at_ladder = FALSE;
+/* Per-env (was static). do.c calls goto_level which
+ * yields through pline; at_ladder must persist across the yield as
+ * per-env state. */
+#define at_ladder (*(boolean *)&nh_cur->g_do_c_at_ladder)
 
 /* the '>' command */
 int
@@ -1142,7 +1149,8 @@ doup()
     return 1;
 }
 
-d_level save_dlevel = { 0, 0 };
+/* save_dlevel — per-env ctx field. */
+#define save_dlevel (nh_cur->g_do_c_save_dlevel_store)
 
 /* check that we can write out the current level */
 STATIC_OVL int
@@ -1710,8 +1718,11 @@ final_level()
     gain_guardian_angel();
 }
 
-static char *dfr_pre_msg = 0,  /* pline() before level change */
-            *dfr_post_msg = 0; /* pline() after level change */
+/* Per-env (was __thread). Affects level-change pline() between
+ * the schedule_goto() and deferred_goto() calls; env A's strings would
+ * leak into env B's level change. */
+#define dfr_pre_msg  (nh_cur->g_do_c_dfr_pre_msg)
+#define dfr_post_msg (nh_cur->g_do_c_dfr_post_msg)
 
 /* change levels at the end of this turn, after monsters finish moving */
 void
@@ -1949,10 +1960,10 @@ int
 dowipe()
 {
     if (u.ucreamed) {
-        static NEARDATA char buf[39];
+        /* Dowipe_buf (was `buf`) migrated to nle_ctx_t */
 
-        Sprintf(buf, "wiping off your %s", body_part(FACE));
-        set_occupation(wipeoff, buf, 0);
+        Sprintf(dowipe_buf, "wiping off your %s", body_part(FACE));
+        set_occupation(wipeoff, dowipe_buf, 0);
         /* Not totally correct; what if they change back after now
          * but before they're finished wiping?
          */

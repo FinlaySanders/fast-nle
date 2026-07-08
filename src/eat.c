@@ -5,6 +5,17 @@
 
 #include "hack.h"
 
+/* Function-local statics migrated to nle_ctx_t */
+#define ate_brains    (nh_cur->g_eat_c_ate_brains)
+#define save_hs       (nh_cur->g_eat_c_newuhs_save_hs)
+#define saved_hs      (nh_cur->g_eat_c_newuhs_saved_hs)
+/* File-statics msgbuf / force_save_hs per-env via nle_ctx_t.
+ * Originals (char msgbuf[BUFSZ]; STATIC_OVL boolean force_save_hs = FALSE;)
+ * removed below. The Static_assert guards the literal-256 sizing in nle.h. */
+#define msgbuf            (nh_cur->g_eat_c_msgbuf)
+#define force_save_hs     (nh_cur->g_eat_c_force_save_hs)
+_Static_assert(BUFSZ == 256, "eat.c: s_eat_msgbuf hard-coded to 256 in nle.h; update if BUFSZ changes");
+
 STATIC_PTR int NDECL(eatmdone);
 STATIC_PTR int NDECL(eatfood);
 STATIC_PTR struct obj *FDECL(costly_tin, (int));
@@ -39,7 +50,7 @@ STATIC_DCL const char *FDECL(foodword, (struct obj *));
 STATIC_DCL int FDECL(tin_variety, (struct obj *, BOOLEAN_P));
 STATIC_DCL boolean FDECL(maybe_cannibal, (int, BOOLEAN_P));
 
-char msgbuf[BUFSZ];
+/* Char msgbuf[BUFSZ] migrated to nh_cur->g_eat_c_msgbuf via macro at top of file. */
 
 /* also used to see if you're allowed to eat cats and dogs */
 #define CANNIBAL_ALLOWED() (Role_if(PM_CAVEMAN) || Race_if(PM_ORC))
@@ -69,7 +80,8 @@ STATIC_OVL NEARDATA const char allobj[] = {
     BALL_CLASS,   CHAIN_CLASS,  SPBOOK_CLASS, 0
 };
 
-STATIC_OVL boolean force_save_hs = FALSE;
+/* STATIC_OVL boolean force_save_hs migrated to
+ * nh_cur->g_eat_c_force_save_hs via macro at top of file. */
 
 /* see hunger states in hack.h - texts used on bottom line */
 const char *hu_stat[] = { "Satiated", "        ", "Hungry  ", "Weak    ",
@@ -148,7 +160,8 @@ static const struct {
                 { "", 0, 0, 0 } };
 #define TTSZ SIZE(tintxts)
 
-static char *eatmbuf = 0; /* set by cpostfx() */
+/* Per-env. Was __thread; OMP coroutine-resume hazard. */
+#define eatmbuf ((*(char **) &nh_cur->nh_lazy[33]))
 
 /* called after mimicing is over */
 STATIC_PTR int
@@ -580,7 +593,7 @@ int *dmg_p; /* for dishing out extra damage in lieu of Int loss */
          */
         /* no such thing as mindless players */
         if (ABASE(A_INT) <= ATTRMIN(A_INT)) {
-            static NEARDATA const char brainlessness[] = "brainlessness";
+            static const char brainlessness[] = "brainlessness";
 
             if (Lifesaved) {
                 Strcpy(killer.name, brainlessness);
@@ -643,7 +656,7 @@ maybe_cannibal(pm, allowmsg)
 int pm;
 boolean allowmsg;
 {
-    static NEARDATA long ate_brains = 0L;
+    /* Ate_brains migrated to nle_ctx_t */
     struct permonst *fptr = &mons[pm]; /* food type */
 
     /* when poly'd into a mind flayer, multiple tentacle hits in one
@@ -2789,6 +2802,8 @@ bite()
 void
 gethungry()
 {
+    int hunger_before = u.uhunger; /* hunger_rate_scale: scale net consumption */
+
     if (u.uinvulnerable)
         return; /* you don't feel hungrier */
 
@@ -2839,6 +2854,8 @@ gethungry()
             break;
         }
     }
+
+    
     newuhs(TRUE);
 }
 
@@ -2929,8 +2946,7 @@ newuhs(incr)
 boolean incr;
 {
     unsigned newhs;
-    static unsigned save_hs;
-    static boolean saved_hs = FALSE;
+    /* Save_hs, saved_hs migrated to nle_ctx_t */
     int h = u.uhunger;
 
     newhs = (h > 1000)
@@ -3141,7 +3157,7 @@ int corpsecheck; /* 0, no check, 1, corpses, 2, tinnable corpses */
     }
 
     /* Is there some food (probably a heavy corpse) here on the ground? */
-    for (otmp = level.objects[u.ux][u.uy]; otmp; otmp = otmp->nexthere) {
+    for (otmp = level.objs[u.ux][u.uy]; otmp; otmp = otmp->nexthere) {
         if (corpsecheck
                 ? (otmp->otyp == CORPSE
                    && (corpsecheck == 1 || tinnable(otmp)))

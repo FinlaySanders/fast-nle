@@ -19,7 +19,9 @@
 
 struct symsetentry symset[NUM_GRAPHICS];
 
+#ifdef NLE_OBJECTS_GLOBAL
 int currentgraphics = 0;
+#endif
 
 nhsym showsyms[SYM_MAX] = DUMMY; /* symbols to be displayed */
 nhsym primary_syms[SYM_MAX] = DUMMY;   /* primary symbols          */
@@ -632,7 +634,7 @@ const char *known_restrictions[] = {
     "primary", "rogue", (const char *) 0,
 };
 
-struct symparse loadsyms[] = {
+const struct symparse loadsyms[] = {
     { SYM_CONTROL, 0, "start" },
     { SYM_CONTROL, 0, "begin" },
     { SYM_CONTROL, 1, "finish" },

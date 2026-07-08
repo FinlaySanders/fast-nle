@@ -1485,15 +1485,22 @@ STATIC_OVL int
 align_shift(ptr)
 register struct permonst *ptr;
 {
-    static NEARDATA long oldmoves = 0L; /* != 1, starting value of moves */
-    static NEARDATA s_level *lev;
+    /* Was `static NEARDATA long oldmoves = 0L` and
+     * `static NEARDATA s_level *lev`. Two OMP threads in makemon() could
+     * race on the update (one updates oldmoves/lev while the other reads),
+     * corrupting the stale lev pointer and causing SIGSEGV.
+     * Now per-env via nle_ctx_t. Initial value 0L matches the old initializer;
+     * calloc zero-init is correct for oldmoves. lev is a void* cast. */
+#define oldmoves    (nh_cur->g_makemon_c_align_shift_oldmoves)
+#define lev_cached  ((s_level *) nh_cur->g_makemon_c_align_shift_lev_p)
+#define set_lev_cached(v) (nh_cur->g_makemon_c_align_shift_lev_p = (void *)(v))
     register int alshift;
 
     if (oldmoves != moves) {
-        lev = Is_special(&u.uz);
+        set_lev_cached(Is_special(&u.uz));
         oldmoves = moves;
     }
-    switch ((lev) ? lev->dflags.align : dungeons[u.uz.dnum].dflags.align) {
+    switch ((lev_cached) ? lev_cached->dflags.align : dungeons[u.uz.dnum].dflags.align) {
     default: /* just in case */
     case AM_NONE:
         alshift = 0;
@@ -1510,11 +1517,30 @@ register struct permonst *ptr;
     }
     return alshift;
 }
+/* Undefine local macros after align_shift to avoid leaking
+ * them into subsequent functions in this translation unit. */
+#undef oldmoves
+#undef lev_cached
+#undef set_lev_cached
 
-static NEARDATA struct {
+/* rndmonst_state — per-env random-monster choice cache. Migrated to
+ * nle_ctx_t. Initial value (choice_count = -1) re-applied in init_nle. */
+struct nle_rndmonst_state {
     int choice_count;
     char mchoices[SPECIAL_PM]; /* value range is 0..127 */
-} rndmonst_state = { -1, { 0 } };
+};
+static struct nle_rndmonst_state *
+nle_rndmonst_state(void)
+{
+    if (!nh_cur->nh_lazy[38]) { /* slot 38: makemon.c choice cache */
+        struct nle_rndmonst_state *p =
+            (struct nle_rndmonst_state *) calloc(1, sizeof(*p));
+        p->choice_count = -1; /* stock initializer: needs recalculation */
+        nh_cur->nh_lazy[38] = p;
+    }
+    return (struct nle_rndmonst_state *) nh_cur->nh_lazy[38];
+}
+#define rndmonst_state (*nle_rndmonst_state())
 
 /* select a random monster type */
 struct permonst *
@@ -2154,7 +2180,7 @@ register struct monst *mtmp;
 
     if (OBJ_AT(mx, my)) {
         ap_type = M_AP_OBJECT;
-        appear = level.objects[mx][my]->otyp;
+        appear = level.objs[mx][my]->otyp;
     } else if (IS_DOOR(typ) || IS_WALL(typ) || typ == SDOOR || typ == SCORR) {
         ap_type = M_AP_FURNITURE;
         /*

@@ -3741,7 +3741,7 @@ struct obj *no_wish;
             del_engr_at(x, y);
             pline("A %s.", (lev->typ == POOL) ? "pool" : "moat");
             /* Must manually make kelp! */
-            water_damage_chain(level.objects[x][y], TRUE);
+            water_damage_chain(level.objs[x][y], TRUE);
             madeterrain = TRUE;
 
         /* also matches "molten lava" */

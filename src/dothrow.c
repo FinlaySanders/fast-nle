@@ -28,7 +28,6 @@ static NEARDATA const char bullets[] = { ALLOW_COUNT, COIN_CLASS, ALL_CLASSES,
 
 /* thrownobj (decl.c) tracks an object until it lands */
 
-extern boolean notonhead; /* for long worms */
 
 /* Throw the selected object, asking for direction */
 STATIC_OVL int

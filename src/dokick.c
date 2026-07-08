@@ -14,7 +14,6 @@ static NEARDATA const char *gate_str;
 
 /* kickedobj (decl.c) tracks a kicked object until placed or destroyed */
 
-extern boolean notonhead; /* for long worms */
 
 STATIC_DCL void FDECL(kickdmg, (struct monst *, BOOLEAN_P));
 STATIC_DCL boolean FDECL(maybe_kick_monster, (struct monst *,
@@ -467,7 +466,7 @@ char *kickobjnam;
 
     *kickobjnam = '\0';
     /* if a pile, the "top" object gets kicked */
-    kickedobj = level.objects[x][y];
+    kickedobj = level.objs[x][y];
     if (kickedobj) {
         /* kick object; if doing is fatal, done() will clean up kickedobj */
         Strcpy(kickobjnam, killer_xname(kickedobj)); /* matters iff res==0 */
@@ -1418,7 +1417,7 @@ xchar dlev;          /* if !0 send to dlev near player */
 
     isrock = (missile && missile->otyp == ROCK);
     oct = dct = 0L;
-    for (obj = level.objects[x][y]; obj; obj = obj2) {
+    for (obj = level.objs[x][y]; obj; obj = obj2) {
         obj2 = obj->nexthere;
         if (obj == missile)
             continue;
@@ -1528,7 +1527,7 @@ boolean shop_floor_obj;
     unpaid = is_unpaid(otmp);
 
     if (OBJ_AT(x, y)) {
-        for (obj = level.objects[x][y]; obj; obj = obj->nexthere)
+        for (obj = level.objs[x][y]; obj; obj = obj->nexthere)
             if (obj != otmp)
                 n += obj->quan;
         if (n)

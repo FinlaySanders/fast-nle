@@ -39,7 +39,7 @@ init_random(int FDECL((*fn), (int) ))
     }
 }
 
-unsigned long nle_seeds[] = { 0L, 0L, 0L };
+/* nle_seeds: per-env ctx field now (see globals.def) */
 
 /* We define the number of dungeons explicitly here.
    NetHack works it out from the "dungeon.def" file,

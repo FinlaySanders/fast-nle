@@ -7,11 +7,45 @@
 #include "sp_lev.h"
 #include "lev.h" /* save & restore info */
 
-/* from sp_lev.c, for fixup_special() */
-extern lev_region *lregions;
-extern int num_lregions;
+/* File-statics migrated to nle_ctx_t for per-env
+ * isolation. `bughack` is a lev_region value at the source level; the ctx
+ * field is a pointer to that struct (forward-declared in nle.h as
+ * `struct nle_lev_region_s`). Lazy-allocated via nle_get_bughack() the
+ * first time a baalz wall_cleanup / fix_wall_spines fires for this env.
+ * The canonical "uninitialized" lev_region in the original code is
+ * { {COLNO, ROWNO, 0, 0}, {COLNO, ROWNO, 0, 0}, ... } and the reset block
+ * in baalz_fixup() restores it to that same state after use; we mirror
+ * that init exactly in the alloc path. */
+static lev_region *
+nle_get_bughack(void)
+{
+    if (!nh_cur->nh_lazy[13]) { /* slot 13: mkmaze.c bughack */
+        lev_region *p = (lev_region *) calloc(1, sizeof(lev_region));
+        p->inarea.x1 = COLNO;
+        p->inarea.y1 = ROWNO;
+        p->inarea.x2 = 0;
+        p->inarea.y2 = 0;
+        p->delarea.x1 = COLNO;
+        p->delarea.y1 = ROWNO;
+        p->delarea.x2 = 0;
+        p->delarea.y2 = 0;
+        nh_cur->nh_lazy[13] = p;
+    }
+    return (lev_region *) nh_cur->nh_lazy[13];
+}
+#define bughack   (*nle_get_bughack())
+#define wportal   (nh_cur->g_mkmaze_c_wportal)
+
+/* Lregions/num_lregions are NON-static cross-TU globals that
+ * were freed in mkmaze.c:649 against the heap pointer set in sp_lev.c.
+ * Migrated to per-env nle_ctx_t fields; the extern decls are replaced
+ * with macros routing to current_nle_ctx (same per-env slot as sp_lev.c). */
+#define lregions       ((lev_region *) nh_cur->g_sp_lev_c_lregions_p)
+#define num_lregions   (nh_cur->g_sp_lev_c_num_lregions)
+#define set_lregions(p) \
+    (nh_cur->g_sp_lev_c_lregions_p = (struct nle_lev_region_s *) (p))
 /* for preserving the insect legs when wallifying baalz level */
-static lev_region bughack = { {COLNO, ROWNO, 0, 0}, {COLNO, ROWNO, 0, 0} };
+/* bughack moved to nle_ctx_t — see macro above. */
 
 STATIC_DCL int FDECL(iswall, (int, int));
 STATIC_DCL int FDECL(iswall_or_stone, (int, int));
@@ -614,8 +648,10 @@ fixup_special()
        stolen_booty();
     }
 
-    if (lregions)
-        free((genericptr_t) lregions), lregions = 0;
+    if (lregions) {
+        free((genericptr_t) lregions);
+        set_lregions(0);
+    }
     num_lregions = 0;
 }
 
@@ -1376,10 +1412,19 @@ fumaroles()
  * other source files, but they are all so nicely encapsulated here.
  */
 
-static struct bubble *bbubbles, *ebubbles;
+/* Water-level bubble linked-list head/tail + bounds were
+ * file-scope statics. Two envs concurrently entering the water level
+ * (Plane of Water) would clobber each other's lists. Migrated to per-env.
+ * NB: this block is below bound_digging() (which has its own locals named
+ * xmin/xmax/ymin/ymax) so the macros only affect code from here downward. */
+#define bbubbles (*(struct bubble **) &nh_cur->g_mkmaze_c_bbubbles)
+#define ebubbles (*(struct bubble **) &nh_cur->g_mkmaze_c_ebubbles)
 
-static struct trap *wportal;
-static int xmin, ymin, xmax, ymax; /* level boundaries */
+/* wportal moved to nle_ctx_t */
+#define xmin (nh_cur->g_mkmaze_c_water_xmin)
+#define ymin (nh_cur->g_mkmaze_c_water_ymin)
+#define xmax (nh_cur->g_mkmaze_c_water_xmax)
+#define ymax (nh_cur->g_mkmaze_c_water_ymax)
 /* bubble movement boundaries */
 #define bxmin (xmin + 1)
 #define bymin (ymin + 1)
@@ -1397,7 +1442,11 @@ movebubbles()
                                          0, 0, 0, 0, 0, 0 };
     static const struct rm air_pos = { cmap_to_glyph(S_cloud), AIR, 0, 0, 0,
                                        1, 0, 0, 0, 0 };
-    static boolean up = FALSE;
+    /* `static boolean up = FALSE;` migrated to per-env
+     * nh_cur->g_mkmaze_c_movebubbles_up (calloc zero = FALSE). Renamed
+     * to nle_mb_up to avoid shadowing/colliding with generic `up`
+     * identifiers in headers. */
+#define up (nh_cur->g_mkmaze_c_movebubbles_up)
     struct bubble *b;
     struct container *cons;
     struct trap *btrap;
@@ -1433,7 +1482,7 @@ movebubbles()
                         if (OBJ_AT(x, y)) {
                             struct obj *olist = (struct obj *) 0, *otmp;
 
-                            while ((otmp = level.objects[x][y]) != 0) {
+                            while ((otmp = level.objs[x][y]) != 0) {
                                 remove_object(otmp);
                                 otmp->ox = otmp->oy = 0;
                                 otmp->nexthere = olist;
@@ -1532,6 +1581,7 @@ movebubbles()
         lift_covet_and_placebc(bcpin);
     vision_full_recalc = 1;
 }
+#undef up /* Scope of macro limited to movebubbles. */
 
 /* when moving in water, possibly (1 in 3) alter the intended destination */
 void

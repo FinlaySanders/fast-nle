@@ -607,7 +607,7 @@ struct obj *otmp;
         obj->nobj = otmp;
         obj->nexthere = otmp;
         extract_nobj(obj, &fobj);
-        extract_nexthere(obj, &level.objects[obj->ox][obj->oy]);
+        extract_nexthere(obj, &level.objs[obj->ox][obj->oy]);
         break;
     default:
         panic("replace_object: obj position");
@@ -1732,7 +1732,7 @@ register struct obj *otmp;
 }
 
 /*
- * These routines maintain the single-linked lists headed in level.objects[][]
+ * These routines maintain the single-linked lists headed in level.objs[][]
  * and threaded through the nexthere fields in the object-instance structure.
  */
 
@@ -1742,7 +1742,7 @@ place_object(otmp, x, y)
 register struct obj *otmp;
 int x, y;
 {
-    register struct obj *otmp2 = level.objects[x][y];
+    register struct obj *otmp2 = level.objs[x][y];
 
     if (!isok(x, y)) { /* validate location */
         void VDECL((*func), (const char *, ...)) PRINTF_F(1, 2);
@@ -1777,7 +1777,7 @@ int x, y;
     } else {
         /* put on top of current pile */
         otmp->nexthere = otmp2;
-        level.objects[x][y] = otmp;
+        level.objs[x][y] = otmp;
     }
 
     /* set the new object's location */
@@ -1804,7 +1804,7 @@ boolean do_buried;
 {
     struct obj *otmp;
 
-    for (otmp = level.objects[x][y]; otmp; otmp = otmp->nexthere) {
+    for (otmp = level.objs[x][y]; otmp; otmp = otmp->nexthere) {
         if (otmp->timed)
             obj_timer_checks(otmp, x, y, 0);
     }
@@ -1920,7 +1920,7 @@ register struct obj *otmp;
 
     if (otmp->where != OBJ_FLOOR)
         panic("remove_object: obj not on floor");
-    extract_nexthere(otmp, &level.objects[x][y]);
+    extract_nexthere(otmp, &level.objs[x][y]);
     extract_nobj(otmp, &fobj);
     /* update vision iff this was the only boulder at its spot */
     if (otmp->otyp == BOULDER && !sobj_at(BOULDER, x, y))
@@ -2295,7 +2295,7 @@ obj_sanity_check()
        the floor list so container contents are skipped here */
     for (x = 0; x < COLNO; x++)
         for (y = 0; y < ROWNO; y++)
-            for (obj = level.objects[x][y]; obj; obj = obj->nexthere) {
+            for (obj = level.objs[x][y]; obj; obj = obj->nexthere) {
                 /* <ox,oy> should match <x,y>; <0,*> should always be empty */
                 if (obj->where != OBJ_FLOOR || x == 0
                     || obj->ox != x || obj->oy != y) {

@@ -9,6 +9,22 @@
 
 #include "hack.h"
 
+/* Pickup.c per-env state. Four file-scope statics. */
+#define current_container   (nh_cur->g_pickup_c_current_container)
+#define abort_looting       (nh_cur->g_pickup_c_abort_looting)
+#define val_for_n_or_more   (nh_cur->g_pickup_c_val_for_n_or_more)
+#define valid_menu_classes  (nh_cur->g_pickup_c_valid_menu_classes)
+/* Function-local statics migrated to nle_ctx_t */
+#define costly        (nh_cur->g_pickup_c_autopick_costly)
+#define oldcap        (nh_cur->g_pickup_c_encumber_msg_oldcap)
+/* Add_valid_menu_class vmc_count accumulator -> per-env. */
+#define vmc_count     (nh_cur->g_pickup_c_vmc_count)
+/* Per-action filter flags (set/cleared on each query_objlist
+ * pass). Per-env via nle_ctx_t to avoid cross-env races under OMP. */
+#define class_filter  (nh_cur->g_pickup_c_class_filter)
+#define bucx_filter   (nh_cur->g_pickup_c_bucx_filter)
+#define shop_filter   (nh_cur->g_pickup_c_shop_filter)
+
 #define CONTAINED_SYM '>' /* from invent.c */
 
 STATIC_DCL void FDECL(simple_look, (struct obj *, BOOLEAN_P));
@@ -57,8 +73,8 @@ STATIC_DCL void FDECL(tipcontainer, (struct obj *));
 /* A variable set in use_container(), to be used by the callback routines
    in_container() and out_container() from askchain() and use_container().
    Also used by menu_loot() and container_gone(). */
-static NEARDATA struct obj *current_container;
-static NEARDATA boolean abort_looting;
+/* current_container / abort_looting migrated to nle_ctx_t->
+ * s_current_container / s_abort_looting. */
 #define Icebox (current_container->otyp == ICE_BOX)
 
 static const char
@@ -299,7 +315,7 @@ boolean picked_some;
     register int ct = 0;
 
     /* count the objects here */
-    for (obj = level.objects[u.ux][u.uy]; obj; obj = obj->nexthere) {
+    for (obj = level.objs[u.ux][u.uy]; obj; obj = obj->nexthere) {
         if (obj != uchain)
             ct++;
     }
@@ -316,7 +332,7 @@ boolean picked_some;
 }
 
 /* Value set by query_objlist() for n_or_more(). */
-static long val_for_n_or_more;
+/* val_for_n_or_more migrated to nle_ctx_t->s_val_for_n_or_more. */
 
 /* query_objlist callback: return TRUE if obj's count is >= reference value */
 STATIC_OVL boolean
@@ -330,8 +346,14 @@ struct obj *obj;
 
 /* list of valid menu classes for query_objlist() and allow_category callback
    (with room for all object classes, 'u'npaid, BUCX, and terminator) */
-static char valid_menu_classes[MAXOCLASSES + 1 + 4 + 1];
-static boolean class_filter, bucx_filter, shop_filter;
+/* valid_menu_classes migrated to nle_ctx_t->s_valid_menu_classes.
+ * The size literal in nle.h (24) matches
+ * MAXOCLASSES(18) + 1 + 4 + 1; the _Static_assert catches future
+ * MAXOCLASSES drift. */
+_Static_assert(MAXOCLASSES + 1 + 4 + 1 == 24,
+               "MAXOCLASSES changed; update s_valid_menu_classes size in nle.h");
+/* Class_filter/bucx_filter/shop_filter migrated to nle_ctx_t
+ * via macros above. */
 
 /* check valid_menu_classes[] for an entry; also used by askchain() */
 boolean
@@ -345,7 +367,7 @@ void
 add_valid_menu_class(c)
 int c;
 {
-    static int vmc_count = 0;
+    /* Vmc_count migrated to nh_cur->g_pickup_c_vmc_count. */
 
     if (c == 0) { /* reset */
         vmc_count = 0;
@@ -549,7 +571,7 @@ int what; /* should be a long */
 
     add_valid_menu_class(0); /* reset */
     if (!u.uswallow) {
-        objchain_p = &level.objects[u.ux][u.uy];
+        objchain_p = &level.objs[u.ux][u.uy];
         traverse_how = BY_NEXTHERE;
     } else {
         objchain_p = &u.ustuck->minvent;
@@ -735,7 +757,7 @@ struct obj *otmp;
 boolean calc_costly;
 {
     struct autopickup_exception *ape;
-    static boolean costly = FALSE;
+    /* Costly migrated to nle_ctx_t */
     const char *otypes = flags.pickup_types;
     boolean pickit;
 
@@ -1607,7 +1629,7 @@ struct obj *otmp;
 int
 encumber_msg()
 {
-    static int oldcap = UNENCUMBERED;
+    /* Oldcap migrated to nle_ctx_t (UNENCUMBERED == 0, zero-init OK) */
     int newcap = near_capacity();
 
     if (oldcap < newcap) {
@@ -1660,7 +1682,7 @@ boolean countem;
     struct obj *cobj, *nobj;
     int container_count = 0;
 
-    for (cobj = level.objects[x][y]; cobj; cobj = nobj) {
+    for (cobj = level.objs[x][y]; cobj; cobj = nobj) {
         nobj = cobj->nexthere;
         if (Is_container(cobj)) {
             container_count++;
@@ -1828,7 +1850,7 @@ doloot()
             win = create_nhwindow(NHW_MENU);
             start_menu(win);
 
-            for (cobj = level.objects[cc.x][cc.y]; cobj;
+            for (cobj = level.objs[cc.x][cc.y]; cobj;
                  cobj = cobj->nexthere)
                 if (Is_container(cobj)) {
                     any.a_obj = cobj;
@@ -1854,7 +1876,7 @@ doloot()
             if (n != 0)
                 c = 'y';
         } else {
-            for (cobj = level.objects[cc.x][cc.y]; cobj; cobj = nobj) {
+            for (cobj = level.objs[cc.x][cc.y]; cobj; cobj = nobj) {
                 nobj = cobj->nexthere;
 
                 if (Is_container(cobj)) {
@@ -2390,7 +2412,7 @@ observe_quantum_cat(box, makecat, givemsg)
 struct obj *box;
 boolean makecat, givemsg;
 {
-    static NEARDATA const char sc[] = "Schroedinger's Cat";
+    static const char sc[] = "Schroedinger's Cat";
     struct obj *deadcat;
     struct monst *livecat = 0;
     xchar ox, oy;
@@ -2995,7 +3017,7 @@ dotip()
                 win = create_nhwindow(NHW_MENU);
                 start_menu(win);
 
-                for (cobj = level.objects[cc.x][cc.y], i = 0; cobj;
+                for (cobj = level.objs[cc.x][cc.y], i = 0; cobj;
                      cobj = cobj->nexthere)
                     if (Is_container(cobj)) {
                         ++i;
@@ -3037,7 +3059,7 @@ dotip()
                     return 0;
                 /* else pick-from-invent below */
             } else {
-                for (cobj = level.objects[cc.x][cc.y]; cobj; cobj = nobj) {
+                for (cobj = level.objs[cc.x][cc.y]; cobj; cobj = nobj) {
                     nobj = cobj->nexthere;
                     if (!Is_container(cobj))
                         continue;

@@ -592,11 +592,11 @@ int ttyp;
     else
         Strcpy(surface_type, surface(x, y));
     shopdoor = IS_DOOR(lev->typ) && *in_rooms(x, y, SHOPBASE);
-    oldobjs = level.objects[x][y];
+    oldobjs = level.objs[x][y];
     ttmp = maketrap(x, y, ttyp);
     if (!ttmp)
         return;
-    newobjs = level.objects[x][y];
+    newobjs = level.objs[x][y];
     ttmp->madeby_u = madeby_u;
     ttmp->tseen = 0;
     if (cansee(x, y))
@@ -1900,10 +1900,10 @@ int x, y;
     costly = ((shkp = shop_keeper(*in_rooms(x, y, SHOPBASE)))
               && costly_spot(x, y));
 
-    if (level.objects[x][y] != (struct obj *) 0) {
+    if (level.objs[x][y] != (struct obj *) 0) {
         debugpline2("bury_objs: at <%d,%d>", x, y);
     }
-    for (otmp = level.objects[x][y]; otmp; otmp = otmp2) {
+    for (otmp = level.objs[x][y]; otmp; otmp = otmp2) {
         if (costly) {
             loss += stolen_value(otmp, x, y, (boolean) shkp->mpeaceful, TRUE);
             if (otmp->oclass != COIN_CLASS)

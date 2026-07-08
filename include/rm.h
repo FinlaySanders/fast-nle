@@ -306,7 +306,13 @@ struct symsetentry {
 
 extern const struct symdef defsyms[MAXPCHARS]; /* defaults */
 extern const struct symdef def_warnsyms[WARNCOUNT];
-extern int currentgraphics; /* from drawing.c */
+#ifndef NLE_OBJECTS_GLOBAL
+/* per-env ctx field; util tools (lev_comp etc.) define NLE_OBJECTS_GLOBAL
+ * and keep the plain global from drawing.c */
+#define currentgraphics (nh_cur->g_drawing_c_currentgraphics)
+#else
+extern int currentgraphics;
+#endif /* from drawing.c */
 extern nhsym showsyms[];
 extern nhsym primary_syms[];
 extern nhsym rogue_syms[];
@@ -592,10 +598,10 @@ struct levelflags {
 typedef struct {
     struct rm locations[COLNO][ROWNO];
 #ifndef MICROPORT_BUG
-    struct obj *objects[COLNO][ROWNO];
+    struct obj *objs[COLNO][ROWNO]; /* renamed from objects: collides with the objects[] global */
     struct monst *monsters[COLNO][ROWNO];
 #else
-    struct obj *objects[1][ROWNO];
+    struct obj *objs[1][ROWNO];
     char *yuk1[COLNO - 1][ROWNO];
     struct monst *monsters[1][ROWNO];
     char *yuk2[COLNO - 1][ROWNO];
@@ -627,7 +633,7 @@ extern dlevel_t level; /* structure describing the current level */
 #define trap_to_defsym(t) (S_arrow_trap + (t) -1)
 #define defsym_to_trap(d) ((d) -S_arrow_trap + 1)
 
-#define OBJ_AT(x, y) (level.objects[x][y] != (struct obj *) 0)
+#define OBJ_AT(x, y) (level.objs[x][y] != (struct obj *) 0)
 /*
  * Macros for encapsulation of level.monsters references.
  */

@@ -31,7 +31,9 @@ static const char *artifact_names[] = {
 #define     STUN(a,b)   {0,AD_STUN,a,b}         /* magical attack */
 /* clang-format on */
 
-STATIC_OVL NEARDATA struct artifact artilist[] = {
+/* Per-game artifact table — baseline is shared const; artifact.c
+ * defines `artilist` as a macro to a per-env heap copy. */
+STATIC_OVL const struct artifact artilist_baseline[] = {
 #endif /* MAKEDEFS_C */
 
     /* Artifact cost rationale:

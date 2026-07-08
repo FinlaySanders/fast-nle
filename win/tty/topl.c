@@ -5,6 +5,12 @@
 
 #include "hack.h"
 
+/* Function-local statics in tty_getmsghistory/tty_putmsghistory.
+ * These are reached from the RL frontend via winrl.cc:rl_get/putmsghistory,
+ * so they race across envs sharing one libnethack.so. Migrate to per-env. */
+#define nxtidx           (nh_cur->g_topl_c_nxtidx)
+#define initd            (nh_cur->g_topl_c_initd)
+
 #ifdef TTY_GRAPHICS
 
 #include "tcap.h"
@@ -540,8 +546,26 @@ char def;
     return q;
 }
 
-/* shared by tty_getmsghistory() and tty_putmsghistory() */
-static char **snapshot_mesgs = 0;
+/* Per-env snapshot buffer for message history.
+ * Was `static char **snapshot_mesgs = 0`. Shared by
+ * tty_getmsghistory() and tty_putmsghistory() across coroutine yields,
+ * so it must live in the env, not the calling thread. */
+struct nle_topl_state {
+    char **_snapshot_mesgs;
+};
+static struct nle_topl_state *
+nle_topl(void)
+{
+    if (!nh_cur)
+        return NULL;
+    struct nle_topl_state *s = (struct nle_topl_state *) nh_cur->nh_lazy[21];
+    if (!s) {
+        s = (struct nle_topl_state *) calloc(1, sizeof(struct nle_topl_state));
+        nh_cur->nh_lazy[21] = s;
+    }
+    return s;
+}
+#define snapshot_mesgs (nle_topl()->_snapshot_mesgs)
 
 /* collect currently available message history data into a sequential array;
    optionally, purge that data from the active circular buffer set as we go */
@@ -626,7 +650,7 @@ char *
 tty_getmsghistory(init)
 boolean init;
 {
-    static int nxtidx;
+    /* nxtidx migrated to nh_cur->g_topl_c_nxtidx. */
     char *nextmesg;
     char *result = 0;
 
@@ -668,7 +692,8 @@ tty_putmsghistory(msg, restoring_msghist)
 const char *msg;
 boolean restoring_msghist;
 {
-    static boolean initd = FALSE;
+    /* initd migrated to nh_cur->g_topl_c_initd; ctx is
+     * calloc-zero'd which gives FALSE on first call (matches original init). */
     int idx;
 #ifdef DUMPLOG
     extern unsigned saved_pline_index; /* pline.c */

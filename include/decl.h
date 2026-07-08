@@ -20,7 +20,8 @@ E int locknum;
 E char *catmore;
 #endif /* DEF_PAGER */
 
-E char SAVEF[];
+/* per-env ctx (util binaries never touch it: files.c not linked there) */
+#define SAVEF (nh_cur->g_files_c_savef)
 #ifdef MICRO
 E char SAVEP[];
 #endif
@@ -198,7 +199,8 @@ E NEARDATA char horsename[];
 E char preferred_pet;
 E const char *occtxt; /* defined when occupation != NULL */
 E const char *nomovemsg;
-E char lock[];
+/* per-env ctx: cross-env level-file clash from a shared lock buffer */
+#define lock (nh_cur->g_files_c_lock)
 
 E const schar xdir[], ydir[], zdir[];
 

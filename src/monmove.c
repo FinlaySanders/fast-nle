@@ -7,7 +7,6 @@
 #include "mfndpos.h"
 #include "artifact.h"
 
-extern boolean notonhead;
 
 STATIC_DCL void FDECL(watch_on_duty, (struct monst *));
 STATIC_DCL int FDECL(disturb, (struct monst *));
