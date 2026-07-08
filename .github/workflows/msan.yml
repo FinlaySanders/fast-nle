@@ -92,6 +92,25 @@ jobs:
           clang -O2 -g -Iinclude \
             -Ibuild/_deps/deboost_context-src/include \
             tests/replay_golden.c -ldl -o build/replay_golden
+      - name: Old-harness vs new-harness, same engine, same host
+        run: |
+          # The fa405d82 run produced got=4693a84f... at step 54957; every
+          # later run (different harness binary) produced 5c5ebba7....
+          # Rebuild that exact old harness here and run both against the
+          # same engine build on the same host to separate binary-content
+          # dependence from host variance.
+          git show fa405d82:tests/replay_golden.c > /tmp/replay_old.c
+          clang -O2 -g -Iinclude \
+            -Ibuild/_deps/deboost_context-src/include \
+            /tmp/replay_old.c -ldl -o build/replay_old
+          g=tests/msan/aa_seed7010_7010.golden
+          NLE_REPLAY_KEEP_GOING=1 build/replay_old \
+            build/libnethack.so build/dat $g \
+            | grep -E "kg-mismatch step (11222|54957)" || true
+          NLE_REPLAY_KEEP_GOING=1 build/replay_golden \
+            build/libnethack.so build/dat $g \
+            | grep -E "kg-mismatch step (11222|54957)" || true
+
       - name: Replay 7010 4x (2x ASLR on, 2x off)
         run: |
           g=tests/msan/aa_seed7010_7010.golden
