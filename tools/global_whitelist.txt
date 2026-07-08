@@ -32,3 +32,5 @@ render_status.once_only	# wintty warn-once latch
 BZ2_crc32Table	# bzip2 CRC table (read-only after lib init)
 BZ2_rNums	# bzip2 randomization table (read-only)
 defattrs	# libtmt default attrs; written only by terminal escape parsing (tty obs cosmetic)
+_ZN10nethack_rl14win_proc_callsB5cxx11E	# same debug deque, libstdc++ cxx11 ABI mangling (Linux)
+completed.0	# gcc/clang static-init guard variables (ELF)
