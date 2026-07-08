@@ -29,7 +29,11 @@ jobs:
         run: |
           pip install "numpy<2" scipy numba opencv-python-headless toolz \
             pandas matplotlib nltk pillow seaborn gymnasium
-          pip install "git+https://github.com/${GITHUB_REPOSITORY}.git@2319f298"
+          # clang: stock must evaluate rng-drawing call arguments in the
+          # canonical order (the one our sequenced engine encodes). gcc -O3
+          # reorders them; clang matches at every opt level we tested.
+          CC=clang CXX=clang++ \
+            pip install "git+https://github.com/${GITHUB_REPOSITORY}.git@2319f298"
 
       - name: Clone AutoAscend + BLStats align patch
         run: |

@@ -733,8 +733,14 @@ makelevel()
 
     /* construct stairs (up and down in different rooms if possible) */
     croom = &rooms[rn2(nroom)];
-    if (!Is_botlevel(&u.uz))
-        mkstairs(somex(croom), somey(croom), 0, croom); /* down */
+    if (!Is_botlevel(&u.uz)) {
+        /* fast-nle: sequence rng draws; C leaves call-argument evaluation
+           order unspecified and gcc -O3 reordered these, generating a
+           different (still deterministic) level than -O2/clang builds. */
+        xchar sx = somex(croom), sy = somey(croom);
+
+        mkstairs(sx, sy, 0, croom); /* down */
+    }
     if (nroom > 1) {
         troom = croom;
         croom = &rooms[rn2(nroom - 1)];
@@ -867,8 +873,12 @@ makelevel()
             x = 2;
                 while (!rn2(x))
             mktrap(0, 0, croom, (coord *) 0);
-        if (!rn2(3))
-            (void) mkgold(0L, somex(croom), somey(croom));
+        if (!rn2(3)) {
+            /* fast-nle: sequence rng draws (arg eval order unspecified) */
+            xchar gx = somex(croom), gy = somey(croom);
+
+            (void) mkgold(0L, gx, gy);
+        }
         if (Is_rogue_level(&u.uz))
             goto skip_nonrogue;
         if (!rn2(10))
@@ -884,18 +894,25 @@ makelevel()
             mkgrave(croom);
 
         /* put statues inside */
-        if (!rn2(20))
+        if (!rn2(20)) {
+            /* fast-nle: sequence rng draws (arg eval order unspecified) */
+            xchar cx = somex(croom), cy = somey(croom);
+
             (void) mkcorpstat(STATUE, (struct monst *) 0,
-                              (struct permonst *) 0, somex(croom),
-                              somey(croom), CORPSTAT_INIT);
+                              (struct permonst *) 0, cx, cy, CORPSTAT_INIT);
+        }
         /* put box/chest inside;
          *  40% chance for at least 1 box, regardless of number
          *  of rooms; about 5 - 7.5% for 2 boxes, least likely
          *  when few rooms; chance for 3 or more is negligible.
          */
-        if (!rn2(nroom * 5 / 2))
-            (void) mksobj_at((rn2(3)) ? LARGE_BOX : CHEST, somex(croom),
-                             somey(croom), TRUE, FALSE);
+        if (!rn2(nroom * 5 / 2)) {
+            /* fast-nle: sequence rng draws (arg eval order unspecified) */
+            int botyp = (rn2(3)) ? LARGE_BOX : CHEST;
+            xchar bx = somex(croom), by = somey(croom);
+
+            (void) mksobj_at(botyp, bx, by, TRUE, FALSE);
+        }
 
         /* maybe make some graffiti */
         if (!rn2(27 + 3 * abs(depth(&u.uz)))) {
@@ -915,14 +932,18 @@ makelevel()
 
  skip_nonrogue:
         if (!rn2(3)) {
-            (void) mkobj_at(0, somex(croom), somey(croom), TRUE);
+            /* fast-nle: sequence rng draws (arg eval order unspecified) */
+            xchar ox = somex(croom), oy = somey(croom);
+
+            (void) mkobj_at(0, ox, oy, TRUE);
             tryct = 0;
             while (!rn2(5)) {
                 if (++tryct > 100) {
                     impossible("tryct overflow4");
                     break;
                 }
-                (void) mkobj_at(0, somex(croom), somey(croom), TRUE);
+                ox = somex(croom), oy = somey(croom);
+                (void) mkobj_at(0, ox, oy, TRUE);
             }
         }
     }

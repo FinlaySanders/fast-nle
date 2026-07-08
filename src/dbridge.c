@@ -955,8 +955,12 @@ int x, y;
         /* doesn't matter if we happen to pick <x,y2> or <x2,y>;
            since drawbridges are never placed diagonally, those
            pairings will always match one of <x,y> or <x2,y2> */
-        otmp = mksobj_at(IRON_CHAIN, rn2(2) ? x : x2, rn2(2) ? y : y2, TRUE,
-                         FALSE);
+        {
+            /* fast-nle: sequence rng draws (arg eval order unspecified) */
+            int cx = rn2(2) ? x : x2, cy = rn2(2) ? y : y2;
+
+            otmp = mksobj_at(IRON_CHAIN, cx, cy, TRUE, FALSE);
+        }
         /* a force of 5 here would yield a radius of 2 for
            iron chain; anything less produces a radius of 1 */
         (void) scatter(otmp->ox, otmp->oy, 1, MAY_HIT, otmp);

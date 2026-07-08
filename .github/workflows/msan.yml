@@ -131,6 +131,25 @@ jobs:
           echo "--- gcc -O3 vs mac-recorded golden (want: INIT mismatch) ---"
           NLE_REPLAY_KEEP_GOING=1 build/replay_golden             build_o3/libnethack.so build/dat             tests/goldens/aa_seed7014_7014.golden 2>&1 | head -3
 
+      - name: Two-build agreement (gcc -O2 vs gcc -O3, sequenced engine)
+        run: |
+          # RNG-drawing call arguments are now explicitly sequenced, so the
+          # game must be identical at any optimization level. Replay the
+          # deep golden keep-going with both builds and diff the streams.
+          cmake -S . -B build_o3s -DCMAKE_BUILD_TYPE=Release > /dev/null
+          cmake --build build_o3s --target nethack -j "$(nproc)" > /dev/null 2>&1
+          g=tests/msan/aa_seed7010_repinned.golden
+          NLE_REPLAY_KEEP_GOING=1 build/replay_golden \
+            build/libnethack.so build/dat $g > /tmp/o2.out 2>&1 || true
+          NLE_REPLAY_KEEP_GOING=1 build/replay_golden \
+            build_o3s/libnethack.so build/dat $g > /tmp/o3.out 2>&1 || true
+          if diff /tmp/o2.out /tmp/o3.out; then
+            echo "BUILDS AGREE over $(grep -oE '[0-9]+ steps' /tmp/o2.out)"
+          else
+            echo "BUILDS DIVERGE - more unsequenced sites remain"
+          fi
+          tail -2 /tmp/o2.out
+
       - name: UB flag bisect at gcc -O3
         run: |
           # gcc -O3 produces a different level-1 than -O2/clang (same

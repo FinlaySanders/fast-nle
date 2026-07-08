@@ -757,9 +757,14 @@ register struct monst *mtmp;
         else if (mtmp->mhp < 5 && !rn2(2)) /* Parthian shot */
             verbalize(rn2(2) ? "I shall return." : "I'll be back.");
         else
-            verbalize("%s %s!",
-                      random_malediction[rn2(SIZE(random_malediction))],
-                      random_insult[rn2(SIZE(random_insult))]);
+        {
+            /* fast-nle: sequence rng draws (arg eval order unspecified) */
+            const char *maled =
+                random_malediction[rn2(SIZE(random_malediction))];
+            const char *insult = random_insult[rn2(SIZE(random_insult))];
+
+            verbalize("%s %s!", maled, insult);
+        }
     } else if (is_lminion(mtmp)
                && !(mtmp->isminion && EMIN(mtmp)->renegade)) {
         com_pager(rn2(QTN_ANGELIC - 1 + (Hallucination ? 1 : 0))

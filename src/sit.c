@@ -163,7 +163,12 @@ dosit()
         if (rnd(6) > 4) {
             switch (rnd(13)) {
             case 1:
-                (void) adjattrib(rn2(A_MAX), -rn1(4, 3), FALSE);
+                {
+                    /* fast-nle: sequence rng draws (arg eval order unspecified) */
+                    int attr = rn2(A_MAX), aloss = -rn1(4, 3);
+
+                    (void) adjattrib(attr, aloss, FALSE);
+                }
                 losehp(rnd(10), "cursed throne", KILLED_BY_AN);
                 break;
             case 2:

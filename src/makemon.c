@@ -728,8 +728,13 @@ register struct monst *mtmp;
         if (ptr == &mons[PM_MASTER_LICH] && !rn2(13))
             (void) mongets(mtmp, (rn2(7) ? ATHAME : WAN_NOTHING));
         else if (ptr == &mons[PM_ARCH_LICH] && !rn2(3)) {
-            otmp = mksobj(rn2(3) ? ATHAME : QUARTERSTAFF, TRUE,
-                          rn2(13) ? FALSE : TRUE);
+            {
+                /* fast-nle: sequence rng draws (arg eval order unspecified) */
+                int lotyp = rn2(3) ? ATHAME : QUARTERSTAFF;
+                boolean linit = rn2(13) ? FALSE : TRUE;
+
+                otmp = mksobj(lotyp, TRUE, linit);
+            }
             if (otmp->spe < 2)
                 otmp->spe = rnd(3);
             if (!rn2(4))
