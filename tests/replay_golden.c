@@ -31,6 +31,26 @@
 
 #include "nletypes.h"
 
+#ifndef __has_feature
+#define __has_feature(x) 0
+#endif
+#if __has_feature(memory_sanitizer)
+#include <sanitizer/msan_interface.h>
+/* Funnel: any uninitialized byte the engine copied into the observation
+ * gets reported here WITH its allocation origin. Plain copying is only
+ * "propagation" to MSan; this check is what fires. */
+#define CHECK_OBS_INIT(o) do { \
+    __msan_check_mem_is_initialized((o)->glyphs, MAPLEN * sizeof(short)); \
+    __msan_check_mem_is_initialized((o)->chars, MAPLEN); \
+    __msan_check_mem_is_initialized((o)->colors, MAPLEN); \
+    __msan_check_mem_is_initialized((o)->specials, MAPLEN); \
+    __msan_check_mem_is_initialized((o)->blstats, NLE_BLSTATS_SIZE * sizeof(long)); \
+    __msan_check_mem_is_initialized((o)->message, NLE_MESSAGE_SIZE); \
+} while (0)
+#else
+#define CHECK_OBS_INIT(o) ((void) 0)
+#endif
+
 /* The library is dlopen'd ONCE and shared by every episode (and, in the
  * multi-env modes, by simultaneously-live envs). This exercises the
  * single-library model the vecenv will use — per-env state must live in
@@ -85,6 +105,79 @@ obs_hash(const nle_obs *obs)
     h = fnv1a64(obs->blstats, NLE_BLSTATS_SIZE * sizeof(long), h);
     h = fnv1a64(obs->message, NLE_MESSAGE_SIZE, h);
     return h;
+}
+
+/* NLE_REPLAY_DUMP_STEPS="54957,55270" + NLE_REPLAY_DUMP_DIR=<dir>: write a
+   human-readable dump of the full observation at those steps, whether or
+   not the hash matches. Diffing dumps from two platforms localizes exactly
+   which bytes disagree at a divergent step. */
+static int
+dump_step_wanted(long step)
+{
+    const char *spec = getenv("NLE_REPLAY_DUMP_STEPS");
+    if (!spec)
+        return 0;
+    while (*spec) {
+        char *end;
+        long v = strtol(spec, &end, 10);
+        if (end == spec)
+            break;
+        if (v == step)
+            return 1;
+        spec = (*end == ',') ? end + 1 : end;
+    }
+    return 0;
+}
+
+static void
+dump_obs(const nle_obs *obs, long step)
+{
+    const char *dir = getenv("NLE_REPLAY_DUMP_DIR");
+    if (!dir)
+        dir = ".";
+    char path[PATH_MAX];
+    snprintf(path, sizeof(path), "%s/obs_step%ld.txt", dir, step);
+    FILE *f = fopen(path, "w");
+    if (!f)
+        return;
+    fprintf(f, "step %ld\n", step);
+    fprintf(f, "hash %016llx\n", (unsigned long long) obs_hash(obs));
+    fprintf(f, "h.glyphs   %016llx\n", (unsigned long long) fnv1a64(
+                obs->glyphs, MAPLEN * sizeof(short), 14695981039346656037ULL));
+    fprintf(f, "h.chars    %016llx\n", (unsigned long long) fnv1a64(
+                obs->chars, MAPLEN, 14695981039346656037ULL));
+    fprintf(f, "h.colors   %016llx\n", (unsigned long long) fnv1a64(
+                obs->colors, MAPLEN, 14695981039346656037ULL));
+    fprintf(f, "h.specials %016llx\n", (unsigned long long) fnv1a64(
+                obs->specials, MAPLEN, 14695981039346656037ULL));
+    fprintf(f, "h.blstats  %016llx\n", (unsigned long long) fnv1a64(
+                obs->blstats, NLE_BLSTATS_SIZE * sizeof(long),
+                14695981039346656037ULL));
+    fprintf(f, "h.message  %016llx\n", (unsigned long long) fnv1a64(
+                obs->message, NLE_MESSAGE_SIZE, 14695981039346656037ULL));
+    fprintf(f, "message: \"%.*s\"\n", NLE_MESSAGE_SIZE,
+            (const char *) obs->message);
+    fprintf(f, "message hex:");
+    for (int i = 0; i < NLE_MESSAGE_SIZE; i++)
+        fprintf(f, "%s%02x", (i % 32) ? " " : "\n",
+                ((const unsigned char *) obs->message)[i]);
+    fprintf(f, "\nblstats:");
+    for (int i = 0; i < NLE_BLSTATS_SIZE; i++)
+        fprintf(f, " %ld", (long) obs->blstats[i]);
+    fprintf(f, "\nchars map:\n");
+    for (int r = 0; r < ROWNO; r++) {
+        for (int c = 0; c < COLNO - 1; c++) {
+            unsigned char ch = obs->chars[r * (COLNO - 1) + c];
+            fputc((ch >= 32 && ch < 127) ? ch : '?', f);
+        }
+        fputc('\n', f);
+    }
+    fprintf(f, "glyphs (nonzero r,c=v):\n");
+    for (int i = 0; i < MAPLEN; i++)
+        if (obs->glyphs[i])
+            fprintf(f, "%d,%d=%d\n", i / (COLNO - 1), i % (COLNO - 1),
+                    (int) obs->glyphs[i]);
+    fclose(f);
 }
 
 static void
@@ -185,6 +278,12 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
     char vardir[PATH_MAX];
     long lineno = 0, steps = 0;
     int rc = 0;
+    /* NLE_REPLAY_KEEP_GOING: step through every recorded action even after
+       hash mismatches, logging each one — for debugging divergences whose
+       trajectory is no longer golden-verified but whose game is still
+       real. Exits 0 regardless; never use in a gate. */
+    int keep_going = getenv("NLE_REPLAY_KEEP_GOING") != NULL;
+    long kg_mismatches = 0;
     /* No mismatch tolerance. The "transient" flickers once tolerated here
      * were wall-clock leaking into gameplay through ubirthday (shopkeeper
      * names etc.); goldens are now recorded with time(2) pinned to the
@@ -242,6 +341,8 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
                 rc = 1;
                 break;
             }
+            if (dump_step_wanted(0))
+                dump_obs(&obs, 0); /* init frame */
             uint64_t h = obs_hash(&obs);
             if (h != init_hash) {
                 fprintf(stderr,
@@ -268,7 +369,36 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
             obs.action = action;
             lib_step(nle, &obs);
             steps++;
+            /* NLE_TRACE_DEPTH: log dungeon-depth changes with their step —
+               locates where a given level was first generated. */
+            {
+                static long prev_depth = -1;
+                if (getenv("NLE_TRACE_DEPTH")
+                    && obs.blstats[12] != prev_depth) {
+                    fprintf(stderr, "DEPTH %ld -> %ld at step %ld\n",
+                            prev_depth, (long) obs.blstats[12], steps);
+                    prev_depth = obs.blstats[12];
+                }
+            }
+            CHECK_OBS_INIT(&obs);
             uint64_t h = obs_hash(&obs);
+            if (dump_step_wanted(steps))
+                dump_obs(&obs, steps);
+            if (keep_going) {
+                if (h != want) {
+                    kg_mismatches++;
+                    /* first 40 in full; the tail is usually one fork
+                       cascading, not new information */
+                    if (kg_mismatches <= 40)
+                        printf("kg-mismatch step %ld action %d got %016llx "
+                               "want %016llx\n",
+                               steps, action, (unsigned long long) h,
+                               (unsigned long long) want);
+                }
+                if (obs.done)
+                    break;
+                continue;
+            }
             if (h != want) {
                 fprintf(stderr,
                         "%s: HASH MISMATCH at step %ld (action %d): "
@@ -294,9 +424,12 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
     if (nle)
         lib_end(nle);
     fclose(f);
-    if (rc == 0)
+    if (keep_going)
+        printf("KEEP-GOING %s (%ld steps, %ld hash mismatches ignored)\n",
+               golden_path, steps, kg_mismatches);
+    else if (rc == 0)
         printf("OK %s (%ld steps)\n", golden_path, steps);
-    return rc;
+    return keep_going ? 0 : rc;
 }
 
 int

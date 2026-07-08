@@ -1,0 +1,8 @@
+# MSan ignorelist: uninstrumented libstdc++ leaves std::string internals
+# with dirty shadow; checks inlined from its headers into our TUs are pure
+# false positives. The C engine keeps full checking.
+src:*/bits/*
+src:*/ext/*
+fun:*basic_string*
+fun:*rl_menu_item*
+fun:*rl_inventory_item*

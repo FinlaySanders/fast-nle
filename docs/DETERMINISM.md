@@ -121,6 +121,12 @@ protocol.
   either stock already behaves canonically in the recording environment
   (like clang argument order), or the change goes into
   `stock_record.patch` (like the sort tiebreak).
-- The investigation tooling (RNG tracer, obs frame dumper, keep-going
-  replay, time sweep, two-build agreement) lives on the `msan-hunt`
-  branch.
+- Debug tooling in the main replayer (`tests/replay_golden.c`):
+  `NLE_REPLAY_KEEP_GOING=1` steps through mismatches and logs them;
+  `NLE_REPLAY_DUMP_STEPS=<n,n,...>` + `NLE_REPLAY_DUMP_DIR` dump full
+  per-array observation frames (step 0 = init) for cross-build diffing;
+  `NLE_TRACE_DEPTH=1` logs level transitions. The MSan obs funnel runs
+  via `.github/workflows/msan.yml`. The per-draw RNG tracer
+  (`NLE_RNG_TRACE`, a getenv in the RND hot path — too slow for main)
+  and the historical experiments (time sweep, ASLR probe, two-build
+  diff) live on the `msan-hunt` branch.

@@ -214,3 +214,6 @@ CMakePresets.json
 
 # cibuildwheel
 wheelhouse/
+# built locally by tools/record_autoascend.py
+tools/faketime_shim.dylib
+tools/faketime_shim.so

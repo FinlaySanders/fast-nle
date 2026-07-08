@@ -1,0 +1,71 @@
+name: msan
+# MemorySanitizer sweep of the engine over deep-game replays. Slow and
+# origin-tracked, so not part of the per-commit gate — run manually (or
+# let the weekly cron catch regressions). The obs funnel in
+# tests/replay_golden.c (CHECK_OBS_INIT) reports any uninitialized byte
+# the engine puts into an observation, with its allocation origin; the
+# C -> C++ boundary checks in win/rl/winrl.cc cover engine strings before
+# they enter (uninstrumented) libstdc++. Baseline 2026-07-08: zero
+# reports over ~118k deep-game steps.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 6 * * 1"
+
+jobs:
+  msan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install deps
+        run: sudo apt-get update && sudo apt-get install -y clang bison flex libbz2-dev
+
+      - name: Configure (MemorySanitizer, origin tracking)
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_C_FLAGS="-O1 -g -fsanitize=memory -fsanitize-memory-track-origins=2 -fsanitize-recover=memory -fno-omit-frame-pointer -fsanitize-ignorelist=$PWD/tools/msan_ignorelist.txt" \
+            -DCMAKE_CXX_FLAGS="-O1 -g -fsanitize=memory -fsanitize-memory-track-origins=2 -fsanitize-recover=memory -fno-omit-frame-pointer -fsanitize-ignorelist=$PWD/tools/msan_ignorelist.txt" \
+            -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=memory" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=memory"
+
+      # build tools (makedefs/lev_comp) run during this step under MSan;
+      # recover mode keeps them alive through their own reports
+      - name: Build engine + data
+        env:
+          MSAN_OPTIONS: halt_on_error=0:exitcode=0
+        run: cmake --build build --target nethack dat -j "$(nproc)"
+
+      - name: Strict no-globals gate on the MSan build
+        run: tools/check_no_globals.sh build/libnethack.so
+
+      - name: Build replay harness (instrumented)
+        run: |
+          clang -O1 -g -fsanitize=memory -fsanitize-memory-track-origins=2 \
+            -fsanitize-recover=memory -fno-omit-frame-pointer \
+            -Iinclude -Ibuild/_deps/deboost_context-src/include \
+            tests/replay_golden.c -ldl -o build/replay_golden
+
+      - name: Replay full corpus under MSan
+        env:
+          MSAN_OPTIONS: halt_on_error=0:exitcode=0
+        run: |
+          build/replay_golden build/libnethack.so build/dat \
+            tests/goldens/*.golden > /tmp/msan_replay.log 2>&1 || true
+          echo "=== replay result ==="
+          grep -cE "^OK " /tmp/msan_replay.log || true
+          grep -E "MISMATCH|FAIL" /tmp/msan_replay.log | head -5 || true
+          echo "=== MSan reports (must be 0) ==="
+          n=$(grep -c "WARNING: MemorySanitizer" /tmp/msan_replay.log || true)
+          echo "$n"
+          awk '/WARNING: MemorySanitizer/{c++} c<=12 && c>0' /tmp/msan_replay.log | head -300
+          test "$n" -eq 0
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: msan-replay-log
+          path: /tmp/msan_replay.log
