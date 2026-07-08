@@ -110,6 +110,18 @@ register int x;
 }
 #endif  /* USE_ISAAC64 */
 
+/* msan-hunt: trace each seeded draw when NLE_RNG_TRACE is set — used to
+   pinpoint call sites whose evaluation order differs across builds. */
+#include <stdlib.h>
+#include <stdio.h>
+static int
+nle_rng_trace(const char *fn, int x, int r)
+{
+    if (getenv("NLE_RNG_TRACE"))
+        fprintf(stderr, "RNGTRACE %s(%d)=%d\n", fn, x, r);
+    return r;
+}
+
 /* 0 <= rn2(x) < x */
 int
 rn2(x)
@@ -120,10 +132,10 @@ register int x;
         impossible("rn2(%d) attempted", x);
         return 0;
     }
-    x = RND(x);
+    x = nle_rng_trace("rn2", x, RND(x));
     return x;
 #else
-    return RND(x);
+    return nle_rng_trace("rn2", x, RND(x));
 #endif
 }
 
@@ -183,7 +195,7 @@ register int x;
         return 1;
     }
 #endif
-    x = RND(x) + 1;
+    x = nle_rng_trace("rnd", x, RND(x) + 1);
     return x;
 }
 

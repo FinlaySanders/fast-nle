@@ -371,6 +371,19 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
                 break;
             }
             uint64_t want = strtoull(hash_hex, NULL, 16);
+            /* NLE_TRACE_AT_STEP=<n>: enable engine RNG tracing for exactly
+               that step, to diff draw sequences across builds/platforms. */
+            {
+                static long trace_step = -2;
+                if (trace_step == -2) {
+                    const char *ts = getenv("NLE_TRACE_AT_STEP");
+                    trace_step = ts ? atol(ts) : -1;
+                }
+                if (steps + 1 == trace_step)
+                    setenv("NLE_RNG_TRACE", "1", 1);
+                else if (steps == trace_step)
+                    unsetenv("NLE_RNG_TRACE");
+            }
             obs.action = action;
             lib_step(nle, &obs);
             steps++;
