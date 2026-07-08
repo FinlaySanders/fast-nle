@@ -346,6 +346,8 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
                 rc = 1;
                 break;
             }
+            if (dump_step_wanted(0))
+                dump_obs(&obs, 0); /* init frame */
             uint64_t h = obs_hash(&obs);
             if (h != init_hash) {
                 fprintf(stderr,

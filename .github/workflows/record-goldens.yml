@@ -49,3 +49,32 @@ jobs:
         with:
           name: goldens
           path: /tmp/goldens/
+
+      - name: Dump stock init frame (seed 7014)
+        run: |
+          python - <<'PYEOF'
+          import numpy as np
+          from nle.nethack import Nethack
+          import os
+          os.environ["NLE_FAKE_TIME"] = str(1600000000 + (7015 % 100000) * 257)
+          F=0xCBF29CE484222325; P=0x100000001B3; M=(1<<64)-1
+          def fnv(b,h=F):
+              for x in b: h=((h^x)*P)&M
+              return h
+          opts = "autopickup,color,disclose:+i +a +v +g +c +o,mention_walls,nobones,nocmdassist,nolegacy,nosparkle,pickup_burden:unencumbered,pickup_types:$?!/,runmode:teleport,showexp,showscore,time,race:random,gender:random,align:random"
+          KEYS=("glyphs","chars","colors","specials","blstats","message")
+          g = Nethack(observation_keys=KEYS+("misc",), playername="Agent-@",
+                      options=opts.split(","), ttyrec=None, fix_moon_phase=True)
+          g.set_initial_seeds(7014, 7014, False)
+          obs = g.reset()
+          h=F
+          for k,a in zip(KEYS,obs[:6]):
+              ah=fnv(np.ascontiguousarray(a).tobytes())
+              h=fnv(np.ascontiguousarray(a).tobytes(),h)
+              print(f"h.{k} {ah:016x}")
+          print(f"combined {h:016x}")
+          msg=bytes(obs[5]).split(b"\x00")[0].decode("latin1")
+          print("message:", repr(msg))
+          print("blstats:", " ".join(str(int(v)) for v in obs[4]))
+          g.close()
+          PYEOF
