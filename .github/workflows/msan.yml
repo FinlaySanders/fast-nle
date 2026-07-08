@@ -95,32 +95,38 @@ jobs:
       - name: Replay 7010 4x (2x ASLR on, 2x off)
         run: |
           g=tests/msan/aa_seed7010_7010.golden
-          mkdir -p /tmp/obsdump
-          for i in 1 2; do
-            NLE_REPLAY_KEEP_GOING=1 \
-            NLE_REPLAY_DUMP_STEPS=11221,11222,54956,54957,55269,55270,55353,55354,56859,56860,57500,57501 \
-            NLE_REPLAY_DUMP_DIR=/tmp/obsdump build/replay_golden \
-              build/libnethack.so build/dat $g \
-              | grep -E "kg-mismatch|KEEP-GOING" > /tmp/aslr_on_$i.txt
-          done
-          for i in 1 2; do
-            NLE_REPLAY_KEEP_GOING=1 setarch "$(uname -m)" -R \
-              build/replay_golden build/libnethack.so build/dat $g \
-              | grep -E "kg-mismatch|KEEP-GOING" > /tmp/aslr_off_$i.txt
-          done
-          echo "=== ASLR ON run 1 ==="; cat /tmp/aslr_on_1.txt
-          echo "=== ASLR ON run 2 ==="; cat /tmp/aslr_on_2.txt
-          echo "=== ASLR OFF run 1 ==="; cat /tmp/aslr_off_1.txt
-          echo "=== ASLR OFF run 2 ==="; cat /tmp/aslr_off_2.txt
-          echo "=== verdict ==="
-          if cmp -s /tmp/aslr_on_1.txt /tmp/aslr_on_2.txt; then
-            echo "ASLR-on runs IDENTICAL"; else echo "ASLR-on runs DIFFER"; fi
-          if cmp -s /tmp/aslr_off_1.txt /tmp/aslr_off_2.txt; then
-            echo "ASLR-off runs IDENTICAL"; else echo "ASLR-off runs DIFFER"; fi
+          # Run A: dump only at the divergent step. dump_obs runs after the
+          # obs is hashed, so no mid-game allocation precedes step 54957 —
+          # this should reproduce the no-dump run's obs (got 4693a84f...).
+          # Run B: also dump at 11221, whose fopen/fclose perturbs the
+          # malloc arena mid-game (got 5c5ebba7...). Diffing A vs B shows
+          # exactly which obs bytes depend on heap allocation history.
+          mkdir -p /tmp/obsdump_a /tmp/obsdump_b
+          NLE_REPLAY_KEEP_GOING=1 \
+            NLE_REPLAY_DUMP_STEPS=99999,54957,55270,56860 \
+            NLE_REPLAY_DUMP_DIR=/tmp/obsdump_a build/replay_golden \
+            build/libnethack.so build/dat $g \
+            | grep -E "kg-mismatch|KEEP-GOING" > /tmp/run_a.txt
+          NLE_REPLAY_KEEP_GOING=1 \
+            NLE_REPLAY_DUMP_STEPS=11221,54957,55270,56860 \
+            NLE_REPLAY_DUMP_DIR=/tmp/obsdump_b build/replay_golden \
+            build/libnethack.so build/dat $g \
+            | grep -E "kg-mismatch|KEEP-GOING" > /tmp/run_b.txt
+          echo "=== run A (no mid-game alloc before 54957) ==="
+          cat /tmp/run_a.txt
+          echo "=== run B (fopen at step 11221) ==="
+          cat /tmp/run_b.txt
+          echo "=== obs diff A vs B at 54957 ==="
+          diff /tmp/obsdump_a/obs_step54957.txt \
+               /tmp/obsdump_b/obs_step54957.txt || true
+          echo "=== obs diff A vs B at 55270 ==="
+          diff /tmp/obsdump_a/obs_step55270.txt \
+               /tmp/obsdump_b/obs_step55270.txt || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: aslr-probe-logs
           path: |
-            /tmp/aslr_*.txt
-            /tmp/obsdump/
+            /tmp/run_*.txt
+            /tmp/obsdump_a/
+            /tmp/obsdump_b/

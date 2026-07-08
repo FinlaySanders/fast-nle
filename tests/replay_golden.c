@@ -450,6 +450,30 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
     return keep_going ? 0 : rc;
 }
 
+/* NLE_REPLAY_PREALLOC="count,size,leak": perturb the malloc arena before
+   the engine starts. If replay results change with this (same binary, same
+   addresses modulo ASLR), the engine depends on heap chunk ORDER — i.e., a
+   pointer-comparison somewhere ties game behavior to allocation history. */
+static void
+prealloc_perturb(void)
+{
+    const char *spec = getenv("NLE_REPLAY_PREALLOC");
+    if (!spec)
+        return;
+    long count = 0, size = 0, leak = 0;
+    if (sscanf(spec, "%ld,%ld,%ld", &count, &size, &leak) != 3)
+        return;
+    for (long i = 0; i < count; i++) {
+        void *p = malloc((size_t) size);
+        if (p && !leak)
+            free(p);
+        else if (p)
+            memset(p, 0, 1); /* keep the leak from being optimized out */
+    }
+    fprintf(stderr, "prealloc: %ld x %ld bytes, leak=%ld\n", count, size,
+            leak);
+}
+
 int
 main(int argc, char **argv)
 {
@@ -460,6 +484,7 @@ main(int argc, char **argv)
         return 2;
     }
     int fails = 0;
+    prealloc_perturb();
     load_lib(argv[1]);
     for (int i = 3; i < argc; i++)
         fails += replay_one(argv[1], argv[2], argv[i]);
