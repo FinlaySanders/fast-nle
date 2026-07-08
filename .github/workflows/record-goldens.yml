@@ -76,5 +76,8 @@ jobs:
           msg=bytes(obs[5]).split(b"\x00")[0].decode("latin1")
           print("message:", repr(msg))
           print("blstats:", " ".join(str(int(v)) for v in obs[4]))
+          ch = obs[1]
+          for r in range(ch.shape[0]):
+              print("row", "".join(chr(c) if 32 <= c < 127 else "?" for c in ch[r]))
           g.close()
           PYEOF
