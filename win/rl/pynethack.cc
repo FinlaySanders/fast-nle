@@ -41,7 +41,9 @@ extern int total_tiles_used; /* also in tile.c */
 boolean
 In_hell(d_level *lev)
 {
-    return (boolean) (dungeons[lev->dnum].dflags.hellish); /* NLE: field renamed flags->dflags */
+    return (
+        boolean) (dungeons[lev->dnum]
+                      .dflags.hellish); /* NLE: field renamed flags->dflags */
 }
 
 /* are you in the mines dungeon? */
@@ -798,7 +800,8 @@ PYBIND11_MODULE(_pynethack, m)
                         "Index should be between 0 and NUMMONS ("
                         + std::to_string(NUMMONS) + ") but got "
                         + std::to_string(index));
-                v_h.value_ptr() = const_cast<permonst *>(&mons[index]); /* NLE: mons[] is const now */
+                v_h.value_ptr() = const_cast<permonst *>(
+                    &mons[index]); /* NLE: mons[] is const now */
                 v_h.inst->owned = false;
                 v_h.set_holder_constructed(true);
             },

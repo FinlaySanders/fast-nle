@@ -184,7 +184,8 @@ init_nle(FILE *ttyrec, nle_obs *obs)
 #endif
 
     nle->observation = obs;
-    nle->tty_emit = (ttyrec != NULL)
+    nle->tty_emit =
+        (ttyrec != NULL)
         || (obs && (obs->tty_chars || obs->tty_colors || obs->tty_cursor));
 
     TMT *vterminal = tmt_open(LI, CO, nle_vt_callback, nle, NULL, true);
@@ -518,8 +519,9 @@ nle_step(nle_ctx_t *nle, nle_obs *obs)
      * appear/vanish mid-game. Keep ttyDisplay's cached copy in sync. */
     {
         char emit = (char) ((nle->ttyrec != NULL)
-                            || (obs && (obs->tty_chars || obs->tty_colors
-                                        || obs->tty_cursor)));
+                            || (obs
+                                && (obs->tty_chars || obs->tty_colors
+                                    || obs->tty_cursor)));
         if (emit != nle->tty_emit) {
             extern void nle_refresh_tty_emit(void);
             nle->tty_emit = emit;

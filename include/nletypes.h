@@ -71,9 +71,9 @@ typedef struct nle_observation {
     /* renamed from program_state: that token is a migrated game global
      * whose accessor macro would expand inside this declaration and at
      * every obs->program_state use site after hack.h. */
-    int *prog_state;         /* Size NLE_PROGRAM_STATE_SIZE */
-    int *internal;           /* Size NLE_INTERNAL_SIZE */
-    short *inv_glyphs;       /* Size NLE_INVENTORY_SIZE */
+    int *prog_state;   /* Size NLE_PROGRAM_STATE_SIZE */
+    int *internal;     /* Size NLE_INTERNAL_SIZE */
+    short *inv_glyphs; /* Size NLE_INVENTORY_SIZE */
     unsigned char
         *inv_strs; /* Size NLE_INVENTORY_SIZE * NLE_INVENTORY_STR_LENGTH */
     unsigned char *inv_letters;         /* Size NLE_INVENTORY_SIZE */

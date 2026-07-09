@@ -33,10 +33,10 @@ extern "C" {
 #if defined(__has_feature)
 #if __has_feature(memory_sanitizer)
 #include <sanitizer/msan_interface.h>
-#define MSAN_CHECK_CSTR(s)                                        \
-    do {                                                          \
-        if (s)                                                    \
-            __msan_check_mem_is_initialized((s), strlen(s) + 1);  \
+#define MSAN_CHECK_CSTR(s)                                       \
+    do {                                                         \
+        if (s)                                                   \
+            __msan_check_mem_is_initialized((s), strlen(s) + 1); \
     } while (0)
 #endif
 #endif
@@ -69,7 +69,6 @@ extern "C" {
 #undef rindex
 #undef wizard
 #undef yn
-
 
 extern "C" {
 extern void *nle_yield(boolean);
@@ -108,7 +107,6 @@ shuffled_glyph(int glyph)
     }
     return glyph;
 }
-
 
 class NetHackRL
 {
@@ -199,7 +197,6 @@ class NetHackRL
         // TODO: Don't heap allocate this stuff.
         std::string object_class_name;
     };
-
 
     // TODO: Don't heap allocate this stuff.
     std::vector<std::unique_ptr<rl_window> > windows_;
@@ -352,7 +349,7 @@ NetHackRL::fill_obs(nle_obs *obs)
         obs->internal[3] = xwaitingforspace;
         obs->internal[4] = stairs_down;
         obs->internal[5] = u.ublesscnt; /* prayer cooldown (was core seed) */
-        obs->internal[6] = 0; /* used to be disp seed */
+        obs->internal[6] = 0;           /* used to be disp seed */
         obs->internal[7] = u.uhunger;
         obs->internal[8] =
             u.urexp; /* score (careful! check botl_score() and end.c) */
@@ -561,7 +558,7 @@ NetHackRL::update_inventory_method()
        is bound; glyphs/letters/oclasses come straight off the obj chain. */
     const nle_obs *o = nle_get_obs();
     const bool want_items = !o || o->inv_glyphs || o->inv_strs
-                        || o->inv_letters || o->inv_oclasses;
+                            || o->inv_letters || o->inv_oclasses;
     const bool want_strs = !o || o->inv_strs;
 
     for (otmp = invent; otmp; otmp = otmp->nobj) {
@@ -569,8 +566,7 @@ NetHackRL::update_inventory_method()
         if (!want_items)
             continue;
         inventory_.emplace_back(rl_inventory_item{
-            glyph,
-            want_strs ? std::string(doname(otmp)) : std::string(),
+            glyph, want_strs ? std::string(doname(otmp)) : std::string(),
             otmp->invlet, otmp->oclass,
             want_strs ? std::string(let_to_name(otmp->oclass, false, false))
                       : std::string() });
@@ -1257,7 +1253,8 @@ nle_rl_timebot_direct(void)
     nethack_rl::NetHackRL::rl_timebot_direct();
 }
 
-extern const struct window_procs rl_procs; /* C++ const needs explicit extern linkage */
+extern const struct window_procs
+    rl_procs; /* C++ const needs explicit extern linkage */
 const struct window_procs rl_procs = {
     "rl",
     (WC_COLOR | WC_HILITE_PET | WC_INVERSE | WC_EIGHT_BIT_IN

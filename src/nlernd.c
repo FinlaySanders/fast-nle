@@ -1,12 +1,12 @@
 #include "nlernd.h"
 #include "hack.h"
-#include "nle.h" /* per-env settings */
 #include "isaac64.h"
+#include "nle.h" /* per-env settings */
 #include <string.h>
 #include <time.h>
 
 /* See rnd.c: per-env RNG state accessors. */
-extern isaac64_ctx *FDECL(nle_rng_state, (int));
+extern isaac64_ctx *FDECL(nle_rng_state, (int) );
 extern int FDECL(whichrng, (int FDECL((*fn), (int) )));
 
 /* See hacklib.c. */
@@ -16,7 +16,6 @@ extern int FDECL(set_random, (unsigned long, int FDECL((*fn), (int) )));
    port-specific code somewhere. It returns a number suitable
    as seed for the random number generator */
 extern unsigned long NDECL(sys_random_seed);
-
 
 /*
  * Initializes the random number generator.
