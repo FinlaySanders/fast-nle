@@ -3437,9 +3437,9 @@ choose_value:
             hilite.rel = TXT_VALUE;
             Strcpy(hilite.textmatch, aligntxt[rv]);
         } else if (fld == BL_HUNGER) {
-            static const char *hutxt[] = { "Satiated", (char *) 0, "Hungry",
-                                           "Weak", "Fainting", "Fainted",
-                                           "Starved" };
+            static const char *const hutxt[] = { "Satiated", (char *) 0,
+                                                 "Hungry", "Weak", "Fainting",
+                                                 "Fainted", "Starved" };
             int rv = query_arrayvalue(qry_buf,
                                       hutxt,
                                       SATIATED, STARVED + 1);

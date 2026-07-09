@@ -7,7 +7,8 @@ mon_trace_enabled.cached	# process-level getenv("NLE_TRACE_MON") cache; debug tr
 rest_mon_trace_enabled.cached	# same, restore-path trace cache
 # gcc spellings of the local statics above/below: clang emits func.var,
 # gcc emits var.N (N = per-TU counter). Same objects, different names.
-cached.0	# = {mon,rest_mon}_trace_enabled.cached on gcc (one per TU, names collide harmlessly)
+cached.0	# = rest_mon_trace_enabled.cached on gcc (restore.c)
+cached.2	# = mon_trace_enabled.cached on gcc (save.c; the .N counter runs over ALL of a TU's statics, so it varies per file — regenerate with --inventory if it drifts)
 once_only.0	# = render_status.once_only on gcc
 buf.0	# = get_login_name.buf on gcc
 pw.1	# = get_unix_pw.pw on gcc
