@@ -117,8 +117,13 @@ main(int argc, char **argv)
     std::unique_ptr<FILE, int (*)(FILE *)> ttyrec(
         fopen("nle.ttyrec.bz2", "a"), fclose);
 
-    nle_settings settings;
+    /* NLE: zero-init + explicit options — stack garbage (or an empty
+       options string) hits the config error prompt during init and
+       crashes fill_obs before the RL window instance exists. */
+    nle_settings settings{};
     strncpy(settings.hackdir, getenv("HACKDIR"), sizeof(settings.hackdir));
+    strncpy(settings.options, "name:Agent-mon-hum-neu-mal,nobones",
+            sizeof(settings.options));
 
     ScopedTC tc;
     nledl_ctx *nle =
