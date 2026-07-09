@@ -430,6 +430,16 @@ new_status_window()
 #endif
 }
 
+/* NLE: re-sync ttyDisplay's cached emit gate with the NLE layer's
+   current view (nle_step recomputes it from the step's obs bindings). */
+void
+nle_refresh_tty_emit()
+{
+    extern int nle_wants_tty_output(void);
+    if (ttyDisplay)
+        ttyDisplay->nle_emit = (char) nle_wants_tty_output();
+}
+
 /*ARGSUSED*/
 void
 tty_init_nhwindows(argcp, argv)
@@ -462,10 +472,7 @@ char **argv UNUSED;
 
     /* Set up tty descriptor */
     ttyDisplay = (struct DisplayDesc *) alloc(sizeof (struct DisplayDesc));
-    {
-        extern int nle_wants_tty_output(void);
-        ttyDisplay->nle_emit = (char) nle_wants_tty_output();
-    }
+    nle_refresh_tty_emit();
     ttyDisplay->toplin = 0;
     ttyDisplay->rows = hgt;
     ttyDisplay->cols = wid;

@@ -265,12 +265,24 @@ do_statusline2()
     return newbot2;
 }
 
+/* NLE: !status_updates (RL perf mode) skips the status pipeline —
+   bot_via_windowport drags recalc_mapseen + sprintf machinery for a
+   status line nothing reads — but the rl port's blstats cache must still
+   be pumped at the SAME trigger points, or observation-time staleness
+   (e.g. energy regen between the last bot() and the obs) diverges from
+   the status_updates path. Gated by the ",!status_updates" full-corpus
+   golden replay (see tests/README.md). */
+extern void nle_rl_bot_direct(void);
+extern void nle_rl_timebot_direct(void);
+
 void
 bot()
 {
     /* dosave() flags completion by setting u.uhp to -1 */
-    if ((u.uhp != -1) && youmonst.data && iflags.status_updates) {
-        if (VIA_WINDOWPORT()) {
+    if ((u.uhp != -1) && youmonst.data) {
+        if (!iflags.status_updates) {
+            nle_rl_bot_direct(); /* NLE: cheap cache pump, same trigger */
+        } else if (VIA_WINDOWPORT()) {
             bot_via_windowport();
         } else {
             curs(WIN_STATUS, 1, 0);
@@ -285,8 +297,10 @@ bot()
 void
 timebot()
 {
-    if (flags.time && iflags.status_updates) {
-        if (VIA_WINDOWPORT()) {
+    if (flags.time) {
+        if (!iflags.status_updates) {
+            nle_rl_timebot_direct(); /* NLE: cheap cache pump */
+        } else if (VIA_WINDOWPORT()) {
             stat_update_time();
         } else {
             /* old status display updates everything */

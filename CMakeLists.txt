@@ -186,7 +186,11 @@ target_link_libraries(nethack PUBLIC m fcontext bz2_static tmt)
 # symbol names (alloc, panic, ...) that collide with embedder symbols, and
 # without this the library's own calls resolve through the PLT to whatever
 # the host binary defines (e.g. a two-arg alloc -> instant SIGSEGV).
-target_link_options(nethack PRIVATE -Wl,-Bsymbolic-functions)
+# ELF only: ld64 rejects the flag, and macOS's two-level namespace already
+# binds intra-library calls to the library's own definitions.
+if(NOT APPLE)
+  target_link_options(nethack PRIVATE -Wl,-Bsymbolic-functions)
+endif()
 
 # dlopen wrapper library
 add_library(nethackdl STATIC "sys/unix/nledl.c")

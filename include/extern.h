@@ -241,14 +241,11 @@ E int NDECL(dxdy_moveok);
 E int FDECL(getdir, (const char *));
 E void NDECL(confdir);
 E const char *FDECL(directionname, (int));
-/* NLE: hot leaf (4% of env CPU), K&R def defeated LTO inlining — moved
-   here as static inline. Old def removed from cmd.c. */
-static inline int
-isok(int x, int y)
-{
-    /* x corresponds to curx, so x==1 is the first column. Ach. %% */
-    return x >= 1 && x <= COLNO - 1 && y >= 0 && y <= ROWNO - 1;
-}
+/* NLE: isok is a hot leaf (4% of env CPU); now a static inline at the
+   bottom of hack.h, not here — extern.h's body is compiled out under
+   LEV_LEX_C/MAKEDEFS_C, but hack.h's inline is_moat (also at the bottom)
+   calls isok in every consumer, including lev_comp. Old def removed
+   from cmd.c. */
 E int FDECL(get_adjacent_loc,
             (const char *, const char *, XCHAR_P, XCHAR_P, coord *));
 E const char *FDECL(click_to_cmd, (int, int, int));

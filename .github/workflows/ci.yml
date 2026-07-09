@@ -50,6 +50,17 @@ jobs:
       - name: Replay goldens (thread-shuffled)
         run: build/replay_multi --shuffled build/libnethack.so build/dat tests/goldens/*.golden
 
+      # Oracle (e): the "!status_updates" RL perf mode swaps the blstats
+      # obs source from the status pipeline to nle_rl_bot_direct (winrl.cc,
+      # pumped from bot()/timebot() in botl.c). Every obs byte must still
+      # match the stock-recorded hashes — including staleness timing (e.g.
+      # energy regen between the last bot() and the observation point).
+      - name: Replay goldens (!status_updates blstats parity)
+        run: |
+          NLE_REPLAY_OPTIONS_APPEND=",!status_updates" \
+            build/replay_golden build/libnethack.so build/dat \
+            tests/goldens/*.golden
+
       # Oracle (d): the game must be identical at any optimization level.
       # C leaves call-argument evaluation order unspecified; gcc -O3 once
       # reordered RNG-drawing arguments (mklev.c gold placement etc.),

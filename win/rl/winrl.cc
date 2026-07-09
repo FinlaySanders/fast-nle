@@ -167,6 +167,11 @@ class NetHackRL
                                  int percent, int color,
                                  unsigned long *colormasks);
 
+    /* !status_updates mode: blstats_ cache pumps from botl.c (see
+       nle_rl_bot_direct / nle_rl_timebot_direct below). */
+    static void rl_bot_direct();
+    static void rl_timebot_direct();
+
   private:
     struct rl_menu_item {
         int glyph;           /* character glyph */
@@ -208,11 +213,14 @@ class NetHackRL
 
     /* Rows of the four display arrays changed since the last fill_obs;
        fill_obs copies only these into the obs buffers (obs rows not
-       re-copied are unchanged from the previous fill, so the obs buffer
-       must be stable per env — a pointer change forces a full copy).
-       All-dirty on construction, map clears, and not-in-game fills. */
+       re-copied are unchanged from the previous fill, so the obs buffers
+       must be stable per env — any buffer-pointer change forces a full
+       copy). All-dirty on construction, map clears, not-in-game fills. */
     uint32_t dirty_rows_ = ~0u;
-    const nle_obs *last_obs_ = nullptr;
+    const int16_t *last_glyphs_buf_ = nullptr;
+    const uint8_t *last_chars_buf_ = nullptr;
+    const uint8_t *last_colors_buf_ = nullptr;
+    const uint8_t *last_specials_buf_ = nullptr;
 
     std::array<char, (COLNO - 1) * ROWNO * NLE_SCREEN_DESCRIPTION_LENGTH>
         screen_descriptions_;
@@ -272,28 +280,20 @@ NetHackRL::player_selection_method()
     windows_[BASE_WINDOW]->strings.clear();
 }
 
-/* Direct blstats refresh for the !status_updates (RL perf) mode: bot()
- * never runs then, so nothing pumps the blstats_ cache — and bot() drags
+/* Direct blstats refresh for the !status_updates (RL perf) mode: called
+ * from bot() (botl.c) in place of the status pipeline, which drags
  * recalc_mapseen plus the status sprintf machinery behind it (~25% of
  * engine instructions at 16 envs) for a status line nothing reads.
- * Delegates to the pipeline's update_blstats() for the field list, then
- * reapplies the descend-staircase hack (see fill_obs) and computes the
- * condition mask that BL_CONDITION delivery would otherwise carry. */
+ * Runs at exactly the pipeline's trigger points so cache staleness at the
+ * observation point is bit-identical to the status_updates path (gated:
+ * full-corpus golden replay with ",!status_updates" appended must match
+ * the stock-recorded hashes). Delegates to update_blstats() for the field
+ * list and computes the condition mask that BL_CONDITION delivery would
+ * otherwise carry. */
 void
 NetHackRL::update_blstats_direct()
 {
-    long px = blstats_[NLE_BL_X];
-    long py = blstats_[NLE_BL_Y];
-    long pt = blstats_[NLE_BL_TIME];
     update_blstats();
-    if (u.dz) {
-        /* On "You descend the stairs.--More--" we are technically on the
-           next floor, but the map obs isn't — keep the previous values,
-           exactly like the cached path's !u.dz guard. */
-        blstats_[NLE_BL_X] = px;
-        blstats_[NLE_BL_Y] = py;
-        blstats_[NLE_BL_TIME] = pt;
-    }
 
     /* Condition mask, mirroring botl.c's BL_CONDITION assembly. */
     long cond = 0L;
@@ -391,8 +391,15 @@ NetHackRL::fill_obs(nle_obs *obs)
     }
     obs->in_normal_game = true;
 
-    uint32_t dirty = (obs == last_obs_) ? dirty_rows_ : ~0u;
-    last_obs_ = obs;
+    bool same_bufs = obs->glyphs == last_glyphs_buf_
+                     && obs->chars == last_chars_buf_
+                     && obs->colors == last_colors_buf_
+                     && obs->specials == last_specials_buf_;
+    uint32_t dirty = same_bufs ? dirty_rows_ : ~0u;
+    last_glyphs_buf_ = obs->glyphs;
+    last_chars_buf_ = obs->chars;
+    last_colors_buf_ = obs->colors;
+    last_specials_buf_ = obs->specials;
     if (dirty) {
         constexpr size_t W = COLNO - 1;
         for (size_t j = 0; j < ROWNO; ++j) {
@@ -442,11 +449,12 @@ NetHackRL::fill_obs(nle_obs *obs)
         }
     }
     if (obs->blstats) {
-        if (!iflags.status_updates) {
-            /* RL perf mode: bot() is disabled, so the cache is never
-               pumped by the status pipeline — compute directly. */
-            update_blstats_direct();
-        } else if (!u.dz) {
+        /* Both modes read the blstats_ cache here; it is pumped at bot()/
+           timebot() time — by the status pipeline when status_updates is
+           on, by nle_rl_bot_direct (botl.c) when it is off — so staleness
+           semantics (e.g. energy regen between the last bot() and the
+           observation point) are identical in both modes. */
+        if (!u.dz) {
             /* Tricky hack: On "You descend the stairs.--More--" we are
                technically on the next floor, but we don't see it yet.
                But x, y needs to be updated at every step (not just when
@@ -1213,7 +1221,41 @@ rl_update_positionbar(char *chrs)
 #endif
 }
 
+/* Mirrors bot(): bot_via_windowport delivers changed fields (incl.
+   BL_CONDITION) then BL_FLUSH -> update_blstats(). */
+void
+NetHackRL::rl_bot_direct()
+{
+    if (current_nle_ctx && current_nle_ctx->rl_instance)
+        instance->update_blstats_direct();
+}
+
+/* Mirrors timebot(): stat_update_time delivers BL_TIME (status_ string
+   only) then BL_FLUSH -> update_blstats() with the CACHED condition mask
+   (no BL_CONDITION delivery), so no condition recompute here. */
+void
+NetHackRL::rl_timebot_direct()
+{
+    if (current_nle_ctx && current_nle_ctx->rl_instance)
+        instance->update_blstats();
+}
+
 } // namespace nethack_rl
+
+/* botl.c hooks for the !status_updates (RL perf) mode: pump the blstats_
+   cache at exactly the status pipeline's trigger points (bot / timebot)
+   so observation-time staleness matches the pipeline bit-for-bit. */
+extern "C" void
+nle_rl_bot_direct(void)
+{
+    nethack_rl::NetHackRL::rl_bot_direct();
+}
+
+extern "C" void
+nle_rl_timebot_direct(void)
+{
+    nethack_rl::NetHackRL::rl_timebot_direct();
+}
 
 extern const struct window_procs rl_procs; /* C++ const needs explicit extern linkage */
 const struct window_procs rl_procs = {

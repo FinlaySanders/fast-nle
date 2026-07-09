@@ -57,6 +57,16 @@ search, stairs, pickup/drop, eat/quaff/read/wear/wield/throw, kick, cast,
 pray, engrave, open/close, pay — with deterministic prompt handling.
 TODO(phase-0b): AutoAscend driver for genuinely deep games.
 
+### Perf-mode blstats parity (!status_updates)
+
+`NLE_REPLAY_OPTIONS_APPEND=",!status_updates"` replays the corpus with the
+RL perf mode that skips the status pipeline; blstats then come from
+`nle_rl_bot_direct` (winrl.cc), pumped from `bot()`/`timebot()` (botl.c) at
+exactly the pipeline's trigger points. Hashes must match the stock-recorded
+goldens byte-for-byte — including staleness timing (energy regen between
+the last `bot()` and the observation point is visible in the obs; a
+fill-time recompute FAILS this gate at deep AutoAscend steps). Runs in CI.
+
 ### Determinism
 
 Stock NLE is NOT a pure function of its seeds — four distinct leaks

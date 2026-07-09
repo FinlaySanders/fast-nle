@@ -545,13 +545,25 @@ enum bodypart_types {
 #include "isaac64.h"
 #include "nh_ctx_gen.h"
 
+/* NLE: hot leaf (4% of env CPU), K&R def defeated LTO inlining — static
+   inline here, not extern.h: extern.h's body is compiled out under
+   LEV_LEX_C/MAKEDEFS_C, and is_moat below needs isok in every hack.h
+   consumer (including lev_comp). Old def removed from cmd.c. */
+static inline int
+isok(int x, int y)
+{
+    /* x corresponds to curx, so x==1 is the first column. Ach. %% */
+    return x >= 1 && x <= COLNO - 1 && y >= 0 && y <= ROWNO - 1;
+}
+
 /* NLE: hot terrain predicates from dbridge.c, inlined so callers testing
    several of them on the same cell (mfndpos etc.) can share the levl
-   load. Bodies unchanged. The levl/u macros need the per-env ctx, so TUs
-   that include hack.h without the ctx accessors visible get extern
-   prototypes instead — none of them call these; a new caller there would
-   fail at link, loudly. */
-#ifndef NH_CTX_GEN_H
+   load. Bodies unchanged. The bodies need the per-env ctx accessors AND
+   extern.h declarations (on_level via Is_juiblex_level), so TUs compiled
+   with extern.h's body disabled (lev_comp/makedefs) get extern prototypes
+   instead — none of them call these; a new caller there would fail at
+   link, loudly. */
+#if !defined(NH_CTX_GEN_H) || defined(LEV_LEX_C) || defined(MAKEDEFS_C)
 extern boolean is_pool(int, int);
 extern boolean is_lava(int, int);
 extern boolean is_pool_or_lava(int, int);

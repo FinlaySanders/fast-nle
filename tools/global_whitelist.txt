@@ -2,6 +2,7 @@
 # Every entry needs a justification.
 # (empty until the migration defines the ctx TLS pointer)
 windowprocs_init_state	# atomic once-only guard for the process-global windowprocs table (write-once function-pointer table, identical for every env; see windows.c choose_windows)
+nle_sysopt_once	# pthread_once guard for the one-time sysopt init (sys.c sys_early_init; sysopt itself is whitelisted below)
 mon_trace_enabled.cached	# process-level getenv("NLE_TRACE_MON") cache; debug tracing only, no game state
 rest_mon_trace_enabled.cached	# same, restore-path trace cache
 # --- NLE-layer per-env-via-dlopen-copy; migrate with the single-lib multi-env milestone ---

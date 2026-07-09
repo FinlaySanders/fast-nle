@@ -307,7 +307,16 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
         } else if (strncmp(line, "meta options=", 13) == 0) {
             char *opts = line + 13;
             opts[strcspn(opts, "\n")] = 0;
-            snprintf(settings.options, sizeof(settings.options), "%s", opts);
+            /* NLE_REPLAY_OPTIONS_APPEND=",!status_updates": replay with
+               extra options. Display-only options must not change any obs
+               byte — e.g. "!status_updates" swaps blstats delivery from the
+               bot() pipeline cache to update_blstats_direct (winrl.cc), and
+               a full-corpus replay with it is the parity gate for that
+               path. Options that change game behavior will (correctly)
+               fail the hashes. */
+            const char *extra = getenv("NLE_REPLAY_OPTIONS_APPEND");
+            snprintf(settings.options, sizeof(settings.options), "%s%s",
+                     opts, extra ? extra : "");
             have_options = 1;
         } else if (strncmp(line, "meta fix_moon_phase=1", 21) == 0) {
             settings.fix_moon_phase = true;

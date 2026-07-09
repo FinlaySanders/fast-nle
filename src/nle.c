@@ -513,6 +513,19 @@ nle_step(nle_ctx_t *nle, nle_obs *obs)
     current_nle_ctx = nle;
     nh_cur = (struct nh_ctx *) nle->nh;
     nle->observation = obs;
+    /* tty gating tracks the CURRENT step's bindings, not nle_start's:
+     * the C API lets each step pass a different obs, so tty_* fields can
+     * appear/vanish mid-game. Keep ttyDisplay's cached copy in sync. */
+    {
+        char emit = (char) ((nle->ttyrec != NULL)
+                            || (obs && (obs->tty_chars || obs->tty_colors
+                                        || obs->tty_cursor)));
+        if (emit != nle->tty_emit) {
+            extern void nle_refresh_tty_emit(void);
+            nle->tty_emit = emit;
+            nle_refresh_tty_emit();
+        }
+    }
     if (nle->ttyrec) {
         write_ttyrec_header(1, 1);
         write_ttyrec_data(&obs->action, 1);
