@@ -88,20 +88,36 @@ nle_step(nledl_ctx *nledl, nle_obs *obs)
     return nledl;
 }
 
-/* TODO: For a standard reset, we don't need the full close in nle.c.
- * E.g., we could re-use the stack buffer and the nledl_ctx. */
+/* Reset WITHOUT the stock dlclose/dlopen cycle. Stock NLE needed a fresh
+ * library image per episode because game state lived in .data/.bss; after
+ * the ctx migration an episode is fully torn down by nle_end and rebuilt
+ * by nle_start in the same image (gated: replay_multi runs 34 full
+ * episodes interleaved/thread-shuffled in one image). Reusing the handle
+ * is also REQUIRED on macOS, where __thread data pins a dylib in memory:
+ * dlclose never unloads it, so re-dlopening the same path used to trip
+ * nledl_init's already-loaded guard and exit(1) at first episode end. */
 void
 nle_reset(nledl_ctx *nledl, nle_obs *obs, FILE *ttyrec,
           nle_settings *settings)
 {
-    nledl_close(nledl);
+    void (*end)(void *);
+    void *(*start)(nle_obs *, FILE *, nle_settings *);
+
+    end = dlsym(nledl->dlhandle, "nle_end");
+    end(nledl->nle_ctx);
+
     /* Reset file only if not-NULL. */
     if (ttyrec)
         nledl->ttyrec = ttyrec;
 
-    // TODO: Consider refactoring nledl.h such that we expose this init
-    // function but drop reset.
-    nledl_init(nledl, obs, settings);
+    start = dlsym(nledl->dlhandle, "nle_start");
+    nledl->nle_ctx = start(obs, nledl->ttyrec, settings);
+
+    char *error = dlerror();
+    if (error != NULL) {
+        fprintf(stderr, "%s\n", error);
+        exit(EXIT_FAILURE);
+    }
 }
 
 void

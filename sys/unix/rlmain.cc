@@ -105,8 +105,11 @@ main(int argc, char **argv)
     long blstats[NLE_BLSTATS_SIZE];
     obs.blstats = &blstats[0];
 
-    int program_state[NLE_PROGRAM_STATE_SIZE];
-    obs.program_state = &program_state[0];
+    /* NLE: obs member renamed program_state -> prog_state (nletypes.h);
+       the local dodges the ctx accessor macro of the same name that
+       hack.h drags in via nh_ctx_gen.h. */
+    int prog_state[NLE_PROGRAM_STATE_SIZE];
+    obs.prog_state = &prog_state[0];
 
     int internal[NLE_INTERNAL_SIZE];
     obs.internal = &internal[0];

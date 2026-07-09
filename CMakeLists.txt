@@ -215,8 +215,19 @@ pybind11_add_module(
   src/decl.c
   src/drawing.c
   src/objects.c
+  # nh_cur + ctx alloc: decl.c/drawing.c reference migrated globals through
+  # the ctx accessor macros, so the extension needs the TLS pointer and its
+  # init (was: undefined symbol _nh_cur at import).
+  src/nh_ctx_gen.c
+  src/nh_ctx_fixup.c
   $<TARGET_OBJECTS:tile>)
 target_link_libraries(_pynethack PUBLIC nethackdl)
+# Build-tool mode: the tile objects above are compiled with
+# NLE_OBJECTS_GLOBAL (writable objects[]/obj_descr[] globals); the
+# extension's copies of objects.c/decl.c must match or their symbols
+# stay undefined. The extension is per-process metadata only — the
+# no-globals oracle gates libnethack.so, not this module.
+target_compile_definitions(_pynethack PRIVATE NLE_OBJECTS_GLOBAL)
 set_target_properties(_pynethack PROPERTIES CXX_STANDARD 14)
 target_include_directories(_pynethack PUBLIC ${NLE_INC_GEN} ${NLE_WIN}/share)
 # add_dependencies(_pynethack util tile) # For pm.h.
