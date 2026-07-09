@@ -1016,7 +1016,9 @@ get_unpacked_coord(loc, defhumidity)
 long loc;
 int defhumidity;
 {
-    static unpacked_coord c;
+    unpacked_coord c; /* NLE: was static — shared scratch raced
+                          * across envs generating levels concurrently;
+                          * returned by value, so plain auto is identical */
 
     if (loc & SP_COORD_IS_RANDOM) {
         c.x = c.y = -1;

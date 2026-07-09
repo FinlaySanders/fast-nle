@@ -5,12 +5,19 @@ windowprocs_init_state	# atomic once-only guard for the process-global windowpro
 nle_sysopt_once	# pthread_once guard for the one-time sysopt init (sys.c sys_early_init; sysopt itself is whitelisted below)
 mon_trace_enabled.cached	# process-level getenv("NLE_TRACE_MON") cache; debug tracing only, no game state
 rest_mon_trace_enabled.cached	# same, restore-path trace cache
+# gcc spellings of the local statics above/below: clang emits func.var,
+# gcc emits var.N (N = per-TU counter). Same objects, different names.
+cached.0	# = {mon,rest_mon}_trace_enabled.cached on gcc (one per TU, names collide harmlessly)
+once_only.0	# = render_status.once_only on gcc
+buf.0	# = get_login_name.buf on gcc
+pw.1	# = get_unix_pw.pw on gcc
 # --- NLE-layer per-env-via-dlopen-copy; migrate with the single-lib multi-env milestone ---
 # --- process-level, write-once or identical across envs ---
 windowprocs	# window-proc function-pointer table; set once per process (guarded by windowprocs_init_state)
 winchoices	# window-system registry; ini_routine pointers written once at process init
 hup_procs	# HANGUP window-proc stub table (never used in NLE embedding)
 sysopt	# sysconf options; process-wide config, set once before any env
+dlb_procs	# active dlb backend vtable pointer (dlb.c); set once at first dlb_init, always to &lib_dlb_procs
 configfile	# config file path string; process-level
 default_configfile	# ditto
 # --- real-terminal / process-identity state (unused in the NLE embedding) ---

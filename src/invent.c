@@ -70,7 +70,7 @@ STATIC_DCL char FDECL(obj_to_let, (struct obj *));
  * confused:  'WIZARD' used to be a compile-time conditional so this was
  * guarded by #ifdef WIZARD/.../#endif.]
  */
-static char venom_inv[] = { VENOM_CLASS, 0 }; /* (constant) */
+static const char venom_inv[] = { VENOM_CLASS, 0 }; /* (constant) */
 
 /* sortloot() classification; called at most once [per sort] for each object */
 STATIC_OVL void
@@ -2586,7 +2586,7 @@ long *out_cnt;
     static const char not_carrying_anything[] = "Not carrying anything";
     struct obj *otmp, wizid_fakeobj;
     char ilet, ret;
-    char *invlet = flags.inv_order;
+    const char *invlet = flags.inv_order;
     int n, classcount;
     winid win;                        /* windows being used */
     anything any;

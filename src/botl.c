@@ -2098,9 +2098,9 @@ boolean from_configfile;
     enum statusfields fld = BL_FLUSH;
     struct hilite_s hilite;
     char tmpbuf[BUFSZ];
-    static const char *aligntxt[] = { "chaotic", "neutral", "lawful" };
+    static const char *const aligntxt[] = { "chaotic", "neutral", "lawful" };
     /* hu_stat[] from eat.c has trailing spaces which foul up comparisons */
-    static const char *hutxt[] = { "Satiated", "", "Hungry", "Weak",
+    static const char *const hutxt[] = { "Satiated", "", "Hungry", "Weak",
                                    "Fainting", "Fainted", "Starved" };
 
     /* Examples:
@@ -3427,7 +3427,7 @@ choose_value:
             hilite.rel = TXT_VALUE;
             Strcpy(hilite.textmatch, enc_stat[rv]);
         } else if (fld == BL_ALIGN) {
-            static const char *aligntxt[] = { "chaotic", "neutral", "lawful" };
+            static const char *const aligntxt[] = { "chaotic", "neutral", "lawful" };
             int rv = query_arrayvalue(qry_buf,
                                       aligntxt, 0, 2 + 1);
 

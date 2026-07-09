@@ -45,7 +45,7 @@ struct Jitem {
              && typ != SAPPHIRE && typ != BLACK_OPAL && typ != EMERALD \
              && typ != OPAL)))
 
-STATIC_OVL struct Jitem Japanese_items[] = { { SHORT_SWORD, "wakizashi" },
+STATIC_OVL const struct Jitem Japanese_items[] = { { SHORT_SWORD, "wakizashi" },
                                              { BROADSWORD, "ninja-to" },
                                              { FLAIL, "nunchaku" },
                                              { GLAIVE, "naginata" },
@@ -3578,7 +3578,7 @@ struct obj *no_wish;
     typ = 0;
 
     if (actualn) {
-        struct Jitem *j = Japanese_items;
+        const struct Jitem *j = Japanese_items;
 
         while (j->item) {
             if (actualn && !strcmpi(actualn, j->name)) {
@@ -4158,7 +4158,7 @@ STATIC_OVL const char *
 Japanese_item_name(i)
 int i;
 {
-    struct Jitem *j = Japanese_items;
+    const struct Jitem *j = Japanese_items;
 
     while (j->item) {
         if (i == j->item)

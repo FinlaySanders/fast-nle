@@ -1016,10 +1016,11 @@ unsigned long *colormasks UNUSED;
     long cond, *condptr = (long *) ptr;
     register int i;
     unsigned pass, lndelta;
-    enum statusfields idx1, idx2, *fieldlist;
+    enum statusfields idx1, idx2;
+    const enum statusfields *fieldlist;
     char *nb, *text = (char *) ptr;
 
-    static enum statusfields fieldorder[][15] = {
+    static const enum statusfields fieldorder[][15] = {
         /* line one */
         { BL_TITLE, BL_STR, BL_DX, BL_CO, BL_IN, BL_WI, BL_CH, BL_ALIGN,
           BL_SCORE, BL_FLUSH, BL_FLUSH, BL_FLUSH, BL_FLUSH, BL_FLUSH,
