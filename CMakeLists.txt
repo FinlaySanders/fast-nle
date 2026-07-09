@@ -150,8 +150,22 @@ target_include_directories(bz2_static PUBLIC ${bzip2_SOURCE_DIR})
 add_library(tmt STATIC "third_party/libtmt/tmt.c")
 set_target_properties(tmt PROPERTIES C_STANDARD 11)
 
+# initial-exec TLS for the per-env pointers (nh_cur, current_nle_ctx).
+# REQUIRED for thread pools that step an env from different threads: the
+# default global-dynamic model materializes the TLS slot address via
+# __tls_get_addr and the compiler caches it across calls — including
+# jump_fcontext suspension points, so a coroutine resumed on another
+# thread writes through the OLD thread's current-env slot (cross-env
+# corruption). initial-exec re-reads %fs:offset at every access. Costs
+# 16 bytes of static TLS surplus per loaded copy under dlopen.
+option(NLE_TLS_INITIAL_EXEC
+       "initial-exec TLS for per-env pointers (migration-safe)" ON)
+
 # libnethack library
 add_library(nethack SHARED ${NETHACK_SRC})
+if(NLE_TLS_INITIAL_EXEC)
+  target_compile_definitions(nethack PRIVATE NH_TLS_INITIAL_EXEC)
+endif()
 add_dependencies(nethack util dat)
 set_target_properties(nethack PROPERTIES CXX_STANDARD 14 SUFFIX ".so")
 target_compile_options(
@@ -168,6 +182,11 @@ target_include_directories(
 # target_compile_definitions(nethack PUBLIC "$<$<CONFIG:DEBUG>:MONITOR_HEAP>")
 
 target_link_libraries(nethack PUBLIC m fcontext bz2_static tmt)
+# Bind intra-library function references locally: NetHack exports generic
+# symbol names (alloc, panic, ...) that collide with embedder symbols, and
+# without this the library's own calls resolve through the PLT to whatever
+# the host binary defines (e.g. a two-arg alloc -> instant SIGSEGV).
+target_link_options(nethack PRIVATE -Wl,-Bsymbolic-functions)
 
 # dlopen wrapper library
 add_library(nethackdl STATIC "sys/unix/nledl.c")

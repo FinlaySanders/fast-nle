@@ -67,8 +67,12 @@ int FDECL((*fn), (int));
                  (int) sizeof seed);
 }
 
-/* msan-hunt: trace each seeded draw when NLE_RNG_TRACE is set — used to
-   pinpoint call sites whose evaluation order differs across builds. */
+/* msan-hunt: trace each seeded draw — compile in with -DNLE_RNG_TRACE_HOOK
+   and set NLE_RNG_TRACE at runtime; used to pinpoint call sites whose
+   evaluation order differs across builds. Compile-time gated: RND is the
+   hottest function in the engine, and an unconditional getenv here (linear
+   scan of environ per draw) measured 45% of ALL engine instructions. */
+#ifdef NLE_RNG_TRACE_HOOK
 #include <stdlib.h>
 #include <stdio.h>
 static int
@@ -78,6 +82,9 @@ nle_rng_trace(const char *fn, int x, int r)
         fprintf(stderr, "RNGTRACE %s(%d)=%d\n", fn, x, r);
     return r;
 }
+#else
+#define nle_rng_trace(fn, x, r) (r)
+#endif
 
 static int
 RND(int x)

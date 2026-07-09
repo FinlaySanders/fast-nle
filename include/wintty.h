@@ -65,6 +65,9 @@ struct DisplayDesc {
     int intr;          /* non-zero if inread was interrupted */
     winid lastwin;     /* last window used for I/O */
     char dismiss_more; /* extra character accepted at --More-- */
+    char nle_emit;     /* NLE: 0 = drop escape bytes (no tty obs/ttyrec).
+                          Cursor/window STATE updates must still run —
+                          topline wrap drives --More-- pacing. */
 };
 
 #endif /* WINDOW_STRUCTS */

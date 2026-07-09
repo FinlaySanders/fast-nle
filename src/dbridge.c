@@ -43,80 +43,8 @@ STATIC_DCL boolean FDECL(e_missed, (struct entity *, BOOLEAN_P));
 STATIC_DCL boolean FDECL(e_jumps, (struct entity *));
 STATIC_DCL void FDECL(do_entity, (struct entity *));
 
-boolean
-is_pool(x, y)
-int x, y;
-{
-    schar ltyp;
-
-    if (!isok(x, y))
-        return FALSE;
-    ltyp = levl[x][y].typ;
-    /* The ltyp == MOAT is not redundant with is_moat, because the
-     * Juiblex level does not have moats, although it has MOATs. There
-     * is probably a better way to express this. */
-    if (ltyp == POOL || ltyp == MOAT || ltyp == WATER || is_moat(x, y))
-        return TRUE;
-    return FALSE;
-}
-
-boolean
-is_lava(x, y)
-int x, y;
-{
-    schar ltyp;
-
-    if (!isok(x, y))
-        return FALSE;
-    ltyp = levl[x][y].typ;
-    if (ltyp == LAVAPOOL
-        || (ltyp == DRAWBRIDGE_UP
-            && (levl[x][y].drawbridgemask & DB_UNDER) == DB_LAVA))
-        return TRUE;
-    return FALSE;
-}
-
-boolean
-is_pool_or_lava(x, y)
-int x, y;
-{
-    if (is_pool(x, y) || is_lava(x, y))
-        return TRUE;
-    else
-        return FALSE;
-}
-
-boolean
-is_ice(x, y)
-int x, y;
-{
-    schar ltyp;
-
-    if (!isok(x, y))
-        return FALSE;
-    ltyp = levl[x][y].typ;
-    if (ltyp == ICE || (ltyp == DRAWBRIDGE_UP
-                        && (levl[x][y].drawbridgemask & DB_UNDER) == DB_ICE))
-        return TRUE;
-    return FALSE;
-}
-
-boolean
-is_moat(x, y)
-int x, y;
-{
-    schar ltyp;
-
-    if (!isok(x, y))
-        return FALSE;
-    ltyp = levl[x][y].typ;
-    if (!Is_juiblex_level(&u.uz)
-        && (ltyp == MOAT
-            || (ltyp == DRAWBRIDGE_UP
-                && (levl[x][y].drawbridgemask & DB_UNDER) == DB_MOAT)))
-        return TRUE;
-    return FALSE;
-}
+/* is_pool/is_lava/is_pool_or_lava/is_ice/is_moat: moved to hack.h as
+   static inline (NLE perf). */
 
 schar
 db_under_typ(mask)

@@ -161,6 +161,12 @@ typedef struct nle_globals {
     void *rl_instance;
     char rl_in_yn_function;
     char rl_in_getlin;
+
+    /* Precomputed at nle_start: 1 if tty escape bytes must be produced
+     * (a tty_* observation is bound, or a ttyrec is being recorded).
+     * Gates byte emission only — tty window STATE updates (curx/cury,
+     * topline wrap driving --More-- pacing) always run. */
+    char tty_emit;
 } nle_ctx_t;
 
 /* (nle_settings moved above nle_ctx_t — it is a member now) */

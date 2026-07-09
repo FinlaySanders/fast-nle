@@ -17,8 +17,29 @@
 
 struct sysopt sysopt;
 
+#ifndef NLE_OBJECTS_GLOBAL
+/* fast-nle: sysopt is process-level config shared by every env, but
+ * unixmain() runs once per nle_start, so this used to reinitialize (and
+ * nh_terminate used to release) the shared strings once per game —
+ * concurrent envs double-freed them. Initialize exactly once per process
+ * (pthread_once blocks late arrivals until the winner finishes) and
+ * retain for process lifetime (see sysopt_release below). */
+#include <pthread.h>
+static pthread_once_t nle_sysopt_once = PTHREAD_ONCE_INIT;
+static void sys_early_init_body(void);
+
 void
 sys_early_init()
+{
+    pthread_once(&nle_sysopt_once, sys_early_init_body);
+}
+
+static void
+sys_early_init_body()
+#else
+void
+sys_early_init()
+#endif
 {
     sysopt.support = (char *) 0;
     sysopt.recover = (char *) 0;
@@ -90,6 +111,14 @@ sys_early_init()
 void
 sysopt_release()
 {
+#ifndef NLE_OBJECTS_GLOBAL
+    /* fast-nle: sysopt strings live for the process (see sys_early_init).
+     * nh_terminate calls this at every game end; freeing here while other
+     * envs read the same struct (panic feedback, option checks) — or a
+     * second env's nh_terminate freeing again — corrupted the heap. */
+    if (1)
+        return;
+#endif
     if (sysopt.support)
         free((genericptr_t) sysopt.support), sysopt.support = (char *) 0;
     if (sysopt.recover)

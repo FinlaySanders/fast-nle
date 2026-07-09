@@ -462,6 +462,10 @@ char **argv UNUSED;
 
     /* Set up tty descriptor */
     ttyDisplay = (struct DisplayDesc *) alloc(sizeof (struct DisplayDesc));
+    {
+        extern int nle_wants_tty_output(void);
+        ttyDisplay->nle_emit = (char) nle_wants_tty_output();
+    }
     ttyDisplay->toplin = 0;
     ttyDisplay->rows = hgt;
     ttyDisplay->cols = wid;

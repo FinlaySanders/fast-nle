@@ -206,6 +206,14 @@ class NetHackRL
     std::array<uint8_t, (COLNO - 1) * ROWNO> colors_;
     std::array<uint8_t, (COLNO - 1) * ROWNO> specials_;
 
+    /* Rows of the four display arrays changed since the last fill_obs;
+       fill_obs copies only these into the obs buffers (obs rows not
+       re-copied are unchanged from the previous fill, so the obs buffer
+       must be stable per env — a pointer change forces a full copy).
+       All-dirty on construction, map clears, and not-in-game fills. */
+    uint32_t dirty_rows_ = ~0u;
+    const nle_obs *last_obs_ = nullptr;
+
     std::array<char, (COLNO - 1) * ROWNO * NLE_SCREEN_DESCRIPTION_LENGTH>
         screen_descriptions_;
 
@@ -215,6 +223,7 @@ class NetHackRL
     void store_screen_description(XCHAR_P x, XCHAR_P y, int glyph);
 
     void fill_obs(nle_obs *);
+    void update_blstats_direct();
     int getch_method();
 
     std::array<std::string, MAXBLSTATS> status_;
@@ -263,6 +272,61 @@ NetHackRL::player_selection_method()
     windows_[BASE_WINDOW]->strings.clear();
 }
 
+/* Direct blstats refresh for the !status_updates (RL perf) mode: bot()
+ * never runs then, so nothing pumps the blstats_ cache — and bot() drags
+ * recalc_mapseen plus the status sprintf machinery behind it (~25% of
+ * engine instructions at 16 envs) for a status line nothing reads.
+ * Delegates to the pipeline's update_blstats() for the field list, then
+ * reapplies the descend-staircase hack (see fill_obs) and computes the
+ * condition mask that BL_CONDITION delivery would otherwise carry. */
+void
+NetHackRL::update_blstats_direct()
+{
+    long px = blstats_[NLE_BL_X];
+    long py = blstats_[NLE_BL_Y];
+    long pt = blstats_[NLE_BL_TIME];
+    update_blstats();
+    if (u.dz) {
+        /* On "You descend the stairs.--More--" we are technically on the
+           next floor, but the map obs isn't — keep the previous values,
+           exactly like the cached path's !u.dz guard. */
+        blstats_[NLE_BL_X] = px;
+        blstats_[NLE_BL_Y] = py;
+        blstats_[NLE_BL_TIME] = pt;
+    }
+
+    /* Condition mask, mirroring botl.c's BL_CONDITION assembly. */
+    long cond = 0L;
+    if (Stoned)
+        cond |= BL_MASK_STONE;
+    if (Slimed)
+        cond |= BL_MASK_SLIME;
+    if (Strangled)
+        cond |= BL_MASK_STRNGL;
+    if (Sick && (u.usick_type & SICK_VOMITABLE) != 0)
+        cond |= BL_MASK_FOODPOIS;
+    if (Sick && (u.usick_type & SICK_NONVOMITABLE) != 0)
+        cond |= BL_MASK_TERMILL;
+    if (Blind)
+        cond |= BL_MASK_BLIND;
+    if (Deaf)
+        cond |= BL_MASK_DEAF;
+    if (Stunned)
+        cond |= BL_MASK_STUN;
+    if (Confusion)
+        cond |= BL_MASK_CONF;
+    if (Hallucination)
+        cond |= BL_MASK_HALLU;
+    if (Levitation)
+        cond |= BL_MASK_LEV;
+    if (Flying)
+        cond |= BL_MASK_FLY;
+    if (u.usteed)
+        cond |= BL_MASK_RIDE;
+    condition_bits_ = cond;
+    blstats_[NLE_BL_CONDITION] = cond;
+}
+
 void
 NetHackRL::fill_obs(nle_obs *obs)
 {
@@ -287,7 +351,7 @@ NetHackRL::fill_obs(nle_obs *obs)
         obs->internal[2] = in_getlin;
         obs->internal[3] = xwaitingforspace;
         obs->internal[4] = stairs_down;
-        obs->internal[5] = 0; /* used to be core seed */
+        obs->internal[5] = u.ublesscnt; /* prayer cooldown (was core seed) */
         obs->internal[6] = 0; /* used to be disp seed */
         obs->internal[7] = u.uhunger;
         obs->internal[8] =
@@ -322,22 +386,30 @@ NetHackRL::fill_obs(nle_obs *obs)
         if (obs->screen_descriptions)
             std::memset(obs->screen_descriptions, 0,
                         screen_descriptions_.size());
+        dirty_rows_ = ~0u; /* obs no longer mirrors the display arrays */
         return;
     }
     obs->in_normal_game = true;
 
-    if (obs->glyphs) {
-        std::memcpy(obs->glyphs, glyphs_.data(),
-                    sizeof(int16_t) * glyphs_.size());
-    }
-    if (obs->chars) {
-        std::memcpy(obs->chars, chars_.data(), chars_.size());
-    }
-    if (obs->colors) {
-        std::memcpy(obs->colors, colors_.data(), colors_.size());
-    }
-    if (obs->specials) {
-        std::memcpy(obs->specials, specials_.data(), specials_.size());
+    uint32_t dirty = (obs == last_obs_) ? dirty_rows_ : ~0u;
+    last_obs_ = obs;
+    if (dirty) {
+        constexpr size_t W = COLNO - 1;
+        for (size_t j = 0; j < ROWNO; ++j) {
+            if (!(dirty & (1u << j)))
+                continue;
+            size_t off = j * W;
+            if (obs->glyphs)
+                std::memcpy(obs->glyphs + off, glyphs_.data() + off,
+                            sizeof(int16_t) * W);
+            if (obs->chars)
+                std::memcpy(obs->chars + off, chars_.data() + off, W);
+            if (obs->colors)
+                std::memcpy(obs->colors + off, colors_.data() + off, W);
+            if (obs->specials)
+                std::memcpy(obs->specials + off, specials_.data() + off, W);
+        }
+        dirty_rows_ = 0;
     }
     if (obs->message) {
         // TODO: This doesn't show anything in situations where there's too
@@ -370,7 +442,11 @@ NetHackRL::fill_obs(nle_obs *obs)
         }
     }
     if (obs->blstats) {
-        if (!u.dz) {
+        if (!iflags.status_updates) {
+            /* RL perf mode: bot() is disabled, so the cache is never
+               pumped by the status pipeline — compute directly. */
+            update_blstats_direct();
+        } else if (!u.dz) {
             /* Tricky hack: On "You descend the stairs.--More--" we are
                technically on the next floor, but we don't see it yet.
                But x, y needs to be updated at every step (not just when
@@ -469,11 +545,27 @@ NetHackRL::update_inventory_method()
     struct obj *otmp;
     inventory_.clear();
 
+    /* When no inv_* observation is bound, keep the obj_to_glyph calls
+       (hallucination draws from the display RNG — the stream must stay
+       byte-identical) but skip the item list entirely. The doname/
+       let_to_name string formatting (which drags the whole singplur/
+       strncmpi naming chain behind it) is only paid when inv_strs itself
+       is bound; glyphs/letters/oclasses come straight off the obj chain. */
+    const nle_obs *o = nle_get_obs();
+    const bool want_items = !o || o->inv_glyphs || o->inv_strs
+                        || o->inv_letters || o->inv_oclasses;
+    const bool want_strs = !o || o->inv_strs;
+
     for (otmp = invent; otmp; otmp = otmp->nobj) {
+        auto glyph = shuffled_glyph(obj_to_glyph(otmp, rn2_on_display_rng));
+        if (!want_items)
+            continue;
         inventory_.emplace_back(rl_inventory_item{
-            shuffled_glyph(obj_to_glyph(otmp, rn2_on_display_rng)),
-            doname(otmp), otmp->invlet, otmp->oclass,
-            let_to_name(otmp->oclass, false, false) });
+            glyph,
+            want_strs ? std::string(doname(otmp)) : std::string(),
+            otmp->invlet, otmp->oclass,
+            want_strs ? std::string(let_to_name(otmp->oclass, false, false))
+                      : std::string() });
     }
 }
 
@@ -487,6 +579,7 @@ NetHackRL::store_glyph(XCHAR_P x, XCHAR_P y, int glyph)
 
     // TODO: Glyphs might be taken from gbuf[y][x].glyph.
     glyphs_[offset] = shuffled_glyph(glyph);
+    dirty_rows_ |= 1u << j;
 }
 
 void
@@ -501,6 +594,7 @@ NetHackRL::store_mapped_glyph(int ch, int color, int special, XCHAR_P x,
     chars_[offset] = ch;
     colors_[offset] = color;
     specials_[offset] = special;
+    dirty_rows_ |= 1u << j;
 }
 
 void
@@ -664,6 +758,7 @@ NetHackRL::clear_nhwindow_method(winid wid)
         chars_.fill(' ');
         colors_.fill(0);
         specials_.fill(0);
+        dirty_rows_ = ~0u;
         if (nle_get_obs()->screen_descriptions) {
             screen_descriptions_.fill(0);
         }

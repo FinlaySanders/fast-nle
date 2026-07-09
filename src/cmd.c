@@ -5381,13 +5381,7 @@ int dir;
     return dirnames[dir];
 }
 
-int
-isok(x, y)
-register int x, y;
-{
-    /* x corresponds to curx, so x==1 is the first column. Ach. %% */
-    return x >= 1 && x <= COLNO - 1 && y >= 0 && y <= ROWNO - 1;
-}
+/* isok: moved to extern.h as static inline (NLE perf). */
 
 /* #herecmdmenu command */
 STATIC_PTR int

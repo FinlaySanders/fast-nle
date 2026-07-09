@@ -241,7 +241,14 @@ E int NDECL(dxdy_moveok);
 E int FDECL(getdir, (const char *));
 E void NDECL(confdir);
 E const char *FDECL(directionname, (int));
-E int FDECL(isok, (int, int));
+/* NLE: hot leaf (4% of env CPU), K&R def defeated LTO inlining — moved
+   here as static inline. Old def removed from cmd.c. */
+static inline int
+isok(int x, int y)
+{
+    /* x corresponds to curx, so x==1 is the first column. Ach. %% */
+    return x >= 1 && x <= COLNO - 1 && y >= 0 && y <= ROWNO - 1;
+}
 E int FDECL(get_adjacent_loc,
             (const char *, const char *, XCHAR_P, XCHAR_P, coord *));
 E const char *FDECL(click_to_cmd, (int, int, int));
@@ -258,11 +265,9 @@ E boolean FDECL(paranoid_query, (BOOLEAN_P, const char *));
 
 /* ### dbridge.c ### */
 
-E boolean FDECL(is_pool, (int, int));
-E boolean FDECL(is_lava, (int, int));
-E boolean FDECL(is_pool_or_lava, (int, int));
-E boolean FDECL(is_ice, (int, int));
-E boolean FDECL(is_moat, (int, int));
+/* NLE: is_pool/is_lava/is_pool_or_lava/is_ice/is_moat are hot leaves,
+   now static inline at the bottom of hack.h (need levl/u/dungeon macros
+   not yet visible here). Old defs removed from dbridge.c. */
 E schar FDECL(db_under_typ, (int));
 E int FDECL(is_drawbridge_wall, (int, int));
 E boolean FDECL(is_db_wall, (int, int));
@@ -943,7 +948,13 @@ E const char *FDECL(ordin, (int));
 E char *FDECL(sitoa, (int));
 E int FDECL(sgn, (int));
 E int FDECL(rounddiv, (long, int));
-E int FDECL(dist2, (int, int, int, int));
+/* NLE: hot leaf, inlined like isok above. Old def removed from hacklib.c. */
+static inline int
+dist2(int x0, int y0, int x1, int y1)
+{
+    int dx = x0 - x1, dy = y0 - y1;
+    return dx * dx + dy * dy;
+}
 E int FDECL(isqrt, (int));
 E int FDECL(distmin, (int, int, int, int));
 E boolean FDECL(online2, (int, int, int, int));

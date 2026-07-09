@@ -622,15 +622,7 @@ int x0, y0, x1, y1;
     return (dx < dy) ? dy : dx;
 }
 
-/* square of euclidean distance between pair of pts */
-int
-dist2(x0, y0, x1, y1)
-int x0, y0, x1, y1;
-{
-    register int dx = x0 - x1, dy = y0 - y1;
-
-    return dx * dx + dy * dy;
-}
+/* dist2: moved to extern.h as static inline (NLE perf). */
 
 /* integer square root function without using floating point */
 int

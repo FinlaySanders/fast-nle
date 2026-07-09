@@ -184,6 +184,8 @@ init_nle(FILE *ttyrec, nle_obs *obs)
 #endif
 
     nle->observation = obs;
+    nle->tty_emit = (ttyrec != NULL)
+        || (obs && (obs->tty_chars || obs->tty_colors || obs->tty_cursor));
 
     TMT *vterminal = tmt_open(LI, CO, nle_vt_callback, nle, NULL, true);
     assert(vterminal);
@@ -327,6 +329,12 @@ int
 nle_putchar(int c)
 {
     nle_ctx_t *nle = current_nle_ctx;
+    /* No tty obs bound and no ttyrec: the bytes would be dropped at
+     * nle_fflush anyway — skip the buffer write path entirely. Most
+     * emitters are gated upstream at xputc/xputs via ttyDisplay->nle_emit;
+     * this is the backstop for direct putchar overrides. */
+    if (!nle->tty_emit)
+        return c;
     if (nle->outbuf_write_ptr >= nle->outbuf_write_end) {
         nle_fflush(stdout);
     }
@@ -347,9 +355,21 @@ nle_xputs(const char *str)
     if (!p || !*p)
         return;
 
+    nle_ctx_t *nle = current_nle_ctx;
+    if (nle && !nle->tty_emit)
+        return;
+
     while ((c = *p++) != '\0') {
         nle_putchar(c);
     }
+}
+
+/* For win/tty to cache on ttyDisplay: whether escape bytes are consumed. */
+int
+nle_wants_tty_output(void)
+{
+    nle_ctx_t *nle = current_nle_ctx;
+    return nle ? nle->tty_emit : 1;
 }
 
 /*
@@ -378,16 +398,21 @@ void *
 nle_yield(void *notdone)
 {
     nle_fflush(stdout);
-    fcontext_transfer_t t =
-        jump_fcontext(current_nle_ctx->returncontext, notdone);
+    /* Capture the ctx VALUE before suspending: the env resumed after the
+     * jump is by definition this same env, but the thread may differ —
+     * re-reading current_nle_ctx after the jump through a TLS address the
+     * compiler cached pre-jump would hit the OLD thread's slot (whatever
+     * env it moved on to). The value is stable; the slot is not. */
+    nle_ctx_t *nle = current_nle_ctx;
+    fcontext_transfer_t t = jump_fcontext(nle->returncontext, notdone);
 #if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
-    fcontext_stack_t *stack = &current_nle_ctx->stack;
+    fcontext_stack_t *stack = &nle->stack;
     ASAN_UNPOISON_MEMORY_REGION((char *) stack->sptr - stack->ssize,
                                 stack->ssize);
 #endif
 
     if (notdone)
-        current_nle_ctx->returncontext = t.ctx;
+        nle->returncontext = t.ctx;
 
     return t.data;
 }
@@ -527,6 +552,15 @@ nle_step(nle_ctx_t *nle, nle_obs *obs)
 void
 nle_end(nle_ctx_t *nle)
 {
+    /* Anchor this env before teardown: freedynamicdata, dlb_cleanup and
+     * nle_fflush all reach state through the thread-locals, and nle_end
+     * may run on a thread whose last nle_* call was for a DIFFERENT env
+     * (vec close from a main thread, or a truncation reset right after
+     * stepping a neighbor). Without this, teardown frees the wrong env's
+     * live game state. */
+    current_nle_ctx = nle;
+    nh_cur = (struct nh_ctx *) nle->nh;
+
     if (!nle->done) {
         /* Reset without closing nethack. Need free memory, etc.
          * this is what nh_terminate in end.c does. I hope it's enough. */
@@ -548,8 +582,8 @@ nle_end(nle_ctx_t *nle)
     tmt_close(nle->vterminal);
 
     destroy_fcontext_stack(&nle->stack);
-    if (nh_cur == nle->nh)
-        nh_cur = (struct nh_ctx *) 0;
+    nh_cur = (struct nh_ctx *) 0;
+    current_nle_ctx = (nle_ctx_t *) 0;
     nh_ctx_free((struct nh_ctx *) nle->nh);
     free(nle);
 }

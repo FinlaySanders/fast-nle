@@ -545,4 +545,88 @@ enum bodypart_types {
 #include "isaac64.h"
 #include "nh_ctx_gen.h"
 
+/* NLE: hot terrain predicates from dbridge.c, inlined so callers testing
+   several of them on the same cell (mfndpos etc.) can share the levl
+   load. Bodies unchanged. The levl/u macros need the per-env ctx, so TUs
+   that include hack.h without the ctx accessors visible get extern
+   prototypes instead — none of them call these; a new caller there would
+   fail at link, loudly. */
+#ifndef NH_CTX_GEN_H
+extern boolean is_pool(int, int);
+extern boolean is_lava(int, int);
+extern boolean is_pool_or_lava(int, int);
+extern boolean is_ice(int, int);
+extern boolean is_moat(int, int);
+#else
+static inline boolean
+is_moat(int x, int y)
+{
+    schar ltyp;
+
+    if (!isok(x, y))
+        return FALSE;
+    ltyp = levl[x][y].typ;
+    if (!Is_juiblex_level(&u.uz)
+        && (ltyp == MOAT
+            || (ltyp == DRAWBRIDGE_UP
+                && (levl[x][y].drawbridgemask & DB_UNDER) == DB_MOAT)))
+        return TRUE;
+    return FALSE;
+}
+
+static inline boolean
+is_pool(int x, int y)
+{
+    schar ltyp;
+
+    if (!isok(x, y))
+        return FALSE;
+    ltyp = levl[x][y].typ;
+    /* The ltyp == MOAT is not redundant with is_moat, because the
+     * Juiblex level does not have moats, although it has MOATs. There
+     * is probably a better way to express this. */
+    if (ltyp == POOL || ltyp == MOAT || ltyp == WATER || is_moat(x, y))
+        return TRUE;
+    return FALSE;
+}
+
+static inline boolean
+is_lava(int x, int y)
+{
+    schar ltyp;
+
+    if (!isok(x, y))
+        return FALSE;
+    ltyp = levl[x][y].typ;
+    if (ltyp == LAVAPOOL
+        || (ltyp == DRAWBRIDGE_UP
+            && (levl[x][y].drawbridgemask & DB_UNDER) == DB_LAVA))
+        return TRUE;
+    return FALSE;
+}
+
+static inline boolean
+is_pool_or_lava(int x, int y)
+{
+    if (is_pool(x, y) || is_lava(x, y))
+        return TRUE;
+    else
+        return FALSE;
+}
+
+static inline boolean
+is_ice(int x, int y)
+{
+    schar ltyp;
+
+    if (!isok(x, y))
+        return FALSE;
+    ltyp = levl[x][y].typ;
+    if (ltyp == ICE || (ltyp == DRAWBRIDGE_UP
+                        && (levl[x][y].drawbridgemask & DB_UNDER) == DB_ICE))
+        return TRUE;
+    return FALSE;
+}
+#endif /* NH_CTX_GEN_H */
+
 #endif /* HACK_H */

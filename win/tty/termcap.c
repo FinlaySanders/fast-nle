@@ -633,6 +633,8 @@ int c; /* Actually char, but explicitly specify its widened type */
      * Matching putchar()'s declaration and using explicit casts where
      * warranted is more robust, so we're just a jacket around that.
      */
+    if (ttyDisplay && !ttyDisplay->nle_emit)
+        return c;
     return putchar(c);
 }
 
@@ -640,6 +642,8 @@ void
 xputs(s)
 const char *s;
 {
+    if (ttyDisplay && !ttyDisplay->nle_emit)
+        return;
 #ifdef RL_GRAPHICS
     nle_xputs(s);
 #else /* RL_GRAPHICS */

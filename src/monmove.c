@@ -171,13 +171,18 @@ struct monst *mtmp;
      * Elbereth doesn't work in Gehennom, the Elemental Planes, or the
      * Astral Plane; the influence of the Valar only reaches so far.
      */
-    return (sengr_at("Elbereth", x, y, TRUE)
-            && ((u.ux == x && u.uy == y)
-                || (Displaced && mtmp->mux == x && mtmp->muy == y))
+    /* NLE: all three clauses are pure predicates; test the cheap position
+     * and monster-type exclusions before sengr_at, whose engraving-chain
+     * walk + fuzzymatch dominated this function (mfndpos calls onscary for
+     * every candidate cell of every monster; the position clause fails for
+     * all but the hero's own square). Same result, no side effects. */
+    return (((u.ux == x && u.uy == y)
+             || (Displaced && mtmp->mux == x && mtmp->muy == y))
             && !(mtmp->isshk || mtmp->isgd || !mtmp->mcansee
                  || mtmp->mpeaceful || mtmp->data->mlet == S_HUMAN
                  || mtmp->data == &mons[PM_MINOTAUR]
-                 || Inhell || In_endgame(&u.uz)));
+                 || Inhell || In_endgame(&u.uz))
+            && sengr_at("Elbereth", x, y, TRUE));
 }
 
 

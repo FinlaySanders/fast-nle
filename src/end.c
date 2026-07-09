@@ -654,17 +654,11 @@ VA_DECL(const char *, str)
                        maybe_rebuild);
     }
 #endif /* ?NOTIFY_NETHACK_BUGS */
-    /* XXX can we move this above the prints?  Then we'd be able to
-     * suppress "it may be possible to rebuild" based on dosave0()
-     * or say it's NOT possible to rebuild. */
-    if (program_state.something_worth_saving && !iflags.debug_fuzzer) {
-        set_error_savefile();
-        if (dosave0()) {
-            /* os/win port specific recover instructions */
-            if (sysopt.recover)
-                raw_printf("%s", sysopt.recover);
-        }
-    }
+    /* NLE: no error savefile. dosave0() walks game state that a panic has
+     * often left half-built (e.g. mid-getlev monster chains) and can
+     * SIGSEGV, turning a survivable panic (-> really_done -> nle episode
+     * end) into process death. NLE can't restore savefiles anyway, so the
+     * emergency save bought nothing. */
 #endif /* !MICRO */
     {
         char buf[BUFSZ];
