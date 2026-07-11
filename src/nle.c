@@ -432,6 +432,17 @@ void
 nle_done(int how)
 {
     nle_ctx_t *nle = current_nle_ctx;
+    if (how == DIED && !strncmp(killer.name, "the wrath of ", 13))
+        how = NLE_HOW_WRATH;
+    if (nle->observation->internal) {
+        /* killer identity for death logging; slots 9,10 are never touched
+           by fill_obs. name_to_mon on the killer string: monster deaths
+           store their article-free name (KILLED_BY_AN), everything else
+           parses to NON_PM. */
+        int mnum = (how == DIED) ? name_to_mon(killer.name) : NON_PM;
+        nle->observation->internal[9] = mnum + 1;   /* 0 = not a monster */
+        nle->observation->internal[10] = mnum >= 0 ? mons[mnum].mlevel : 0;
+    }
     nle->observation->how_done = how;
 }
 
@@ -445,6 +456,12 @@ int
 nle_spawn_monsters()
 {
     return settings.spawn_monsters;
+}
+
+int
+nle_underfoot_glyphs()
+{
+    return settings.underfoot_glyphs;
 }
 
 char *

@@ -277,7 +277,12 @@ E int FDECL(nle_puts, (const char *) );
 E int FDECL(nle_xputs, (const char *) );
 E int FDECL(nle_fflush, (FILE *) );
 
-#define putchar nle_putchar
+/* Gate the per-byte emitters inline: with no tty obs bound and no ttyrec,
+ * nle_putchar drops every byte anyway — skip the call (2.9M calls per 50K
+ * env steps from putsyms/g_putch/menu loops). nle_emit mirrors
+ * nle_wants_tty_output() (see wintty.c). */
+#define putchar(c) \
+    ((ttyDisplay && !ttyDisplay->nle_emit) ? (int) (c) : nle_putchar(c))
 #define puts nle_puts
 #define fflush nle_fflush
 #endif /*RL_GRAPHICS*/

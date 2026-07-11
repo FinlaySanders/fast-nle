@@ -1462,16 +1462,18 @@ int on_or_off;
         /*-- ON --*/
         if (iflags.opt_booldup)
             impossible("iflags.opt_booldup already on (memory leak)");
-        iflags.opt_booldup = (int *) alloc(SIZE(boolopt) * sizeof (int));
+        /* boolopt/compopt are per-env pointers post-migration: SIZE() on
+         * them is sizeof(ptr)/sizeof(elem) = 0, so use the baseline counts */
+        iflags.opt_booldup = (int *) alloc(BOOLOPT_COUNT * sizeof (int));
         optptr = iflags.opt_booldup;
-        for (k = 0; k < SIZE(boolopt); ++k)
+        for (k = 0; k < (int) BOOLOPT_COUNT; ++k)
             *optptr++ = 0;
 
         if (iflags.opt_compdup)
             impossible("iflags.opt_compdup already on (memory leak)");
-        iflags.opt_compdup = (int *) alloc(SIZE(compopt) * sizeof (int));
+        iflags.opt_compdup = (int *) alloc(COMPOPT_COUNT * sizeof (int));
         optptr = iflags.opt_compdup;
-        for (k = 0; k < SIZE(compopt); ++k)
+        for (k = 0; k < (int) COMPOPT_COUNT; ++k)
             *optptr++ = 0;
     } else {
         /*-- OFF --*/

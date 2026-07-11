@@ -9,7 +9,7 @@
 #define NLE_MESSAGE_SIZE 256
 #define NLE_BLSTATS_SIZE 27
 #define NLE_PROGRAM_STATE_SIZE 6
-#define NLE_INTERNAL_SIZE 9
+#define NLE_INTERNAL_SIZE 11 /* 9,10: killer mnum+1 / mlevel, written at death only */
 #define NLE_MISC_SIZE 3
 #define NLE_INVENTORY_SIZE 55
 #define NLE_INVENTORY_STR_LENGTH 80
@@ -56,6 +56,9 @@ So we'll do the same to avoid having to include all of NetHack's types
 typedef signed char boolean;
 
 typedef struct TMT TMT;
+
+/* how_done for DIED via god's wrath (fry_by_god); out-of-band vs game_end_types */
+#define NLE_HOW_WRATH 100
 
 typedef struct nle_observation {
     int action;
@@ -108,6 +111,13 @@ typedef struct nle_settings {
      * https://nethackwiki.com/wiki/Monster_creation#Random_generation
      */
     int spawn_monsters;
+    /*
+     * Bool (0 by def): the hero's map tile shows the top object (else the
+     * terrain) underneath instead of the hero glyph. The hero position is
+     * in blstats; the display glyph occludes exactly the items an agent
+     * stands on. Affects obs->glyphs only.
+     */
+    int underfoot_glyphs;
     /*
      * Filename for nle's ttyrec*.bz2.
      */

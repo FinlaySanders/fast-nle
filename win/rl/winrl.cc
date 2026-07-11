@@ -73,6 +73,7 @@ extern "C" {
 extern "C" {
 extern void *nle_yield(boolean);
 extern nle_obs *nle_get_obs();
+extern int nle_underfoot_glyphs();
 }
 
 /* Initial value of glyph_ buffer. Cf. display.c. */
@@ -215,6 +216,7 @@ class NetHackRL
        copy). All-dirty on construction, map clears, not-in-game fills. */
     uint32_t dirty_rows_ = ~0u;
     const int16_t *last_glyphs_buf_ = nullptr;
+    bool inv_synced_ = false;
     const uint8_t *last_chars_buf_ = nullptr;
     const uint8_t *last_colors_buf_ = nullptr;
     const uint8_t *last_specials_buf_ = nullptr;
@@ -415,6 +417,17 @@ NetHackRL::fill_obs(nle_obs *obs)
         }
         dirty_rows_ = 0;
     }
+    if (obs->glyphs && nle_underfoot_glyphs() && u.ux >= 1 && u.ux < COLNO
+        && u.uy >= 0 && u.uy < ROWNO) {
+        // Hero tile shows what the hero stands on (top object, else terrain)
+        // instead of the hero glyph. Patched into obs->glyphs only, after the
+        // dirty-row copy so it always wins; recomputed every fill.
+        struct obj *under = vobj_at(u.ux, u.uy);
+        int g = under ? obj_to_glyph(under, rn2_on_display_rng)
+                      : back_to_glyph(u.ux, u.uy);
+        obs->glyphs[(size_t) u.uy * (COLNO - 1) + (u.ux - 1)] =
+            shuffled_glyph(g);
+    }
     if (obs->message) {
         // TODO: This doesn't show anything in situations where there's too
         // many items at one tile, which will get displayed in a new window.
@@ -466,6 +479,14 @@ NetHackRL::fill_obs(nle_obs *obs)
         std::memcpy(obs->blstats, &blstats_[0], sizeof(blstats_));
     }
     if (obs->inv_glyphs) {
+        /* The update_inventory callback only fires on inventory CHANGES;
+           the starting inventory predates the moveloop, so sync once here.
+           Gated on the inv obs being bound: unbound consumers (goldens)
+           keep the exact display-RNG stream. */
+        if (!inv_synced_) {
+            update_inventory_method();
+            inv_synced_ = true;
+        }
         /* This iterates over the inventory_ vector list once per inv
            observation instead of only once. I guess that's fine. */
         int i = 0;
