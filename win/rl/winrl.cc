@@ -531,6 +531,62 @@ NetHackRL::fill_obs(nle_obs *obs)
             obs->inv_oclasses[i] = MAXOCLASSES;
         }
     }
+    if (obs->inv_state) {
+        /* Identification-gated per-slot state: exactly what doname would
+           print (objnam.c) — BUC only if bknown (never for gold), spe or
+           charges only if known on classes that display them, erosion,
+           poison, grease and worn markers always visible, fooproof only if
+           rknown, typeknown when the appearance's identity is discovered.
+           Read live off the invent chain (same walk order as inventory_);
+           flag reads consume no RNG, so goldens (which leave this obs
+           unbound) see an identical stream. */
+        int i = 0;
+        struct obj *otmp;
+        for (otmp = invent; otmp && i < NLE_INVENTORY_SIZE;
+             otmp = otmp->nobj, ++i) {
+            signed char *st = obs->inv_state + i * NLE_INV_STATE_FIELDS;
+            st[0] = (otmp->bknown && otmp->oclass != COIN_CLASS)
+                        ? (otmp->cursed ? 1 : (otmp->blessed ? 3 : 2))
+                        : 0;
+            boolean shows_spe = otmp->oclass == WEAPON_CLASS
+                                || otmp->oclass == ARMOR_CLASS
+                                || otmp->oclass == RING_CLASS
+                                || otmp->oclass == WAND_CLASS
+                                || is_weptool(otmp)
+                                || objects[otmp->otyp].oc_charged;
+            st[1] = (otmp->known && shows_spe) ? otmp->spe
+                                               : (signed char) -128;
+            st[2] = otmp->quan > 127 ? 127 : (signed char) otmp->quan;
+            /* erosion bits are overloaded storage on other classes
+               (orotten food, odiluted potions, norevive corpses) and doname
+               only calls add_erosion_words from its weapon/armor/weptool
+               and ball/chain branches — exporting the bits outside those
+               classes would leak hidden state (e.g. rotten food). */
+            boolean erodible = otmp->oclass == WEAPON_CLASS
+                               || otmp->oclass == ARMOR_CLASS
+                               || is_weptool(otmp)
+                               || otmp->oclass == BALL_CLASS
+                               || otmp->oclass == CHAIN_CLASS;
+            st[3] = erodible ? (signed char) otmp->oeroded : 0;
+            st[4] = erodible ? (signed char) otmp->oeroded2 : 0;
+            st[5] = (signed char) (((otmp->owornmask
+                                     & (W_ARMOR | W_ACCESSORY | W_SADDLE))
+                                        ? 1 : 0)
+                                   | ((otmp->owornmask & W_WEP) ? 2 : 0)
+                                   | ((otmp->owornmask & W_SWAPWEP) ? 4 : 0)
+                                   | ((otmp->owornmask & W_QUIVER) ? 8 : 0)
+                                   | (otmp->opoisoned ? 16 : 0)
+                                   | (otmp->greased ? 32 : 0)
+                                   | ((erodible && otmp->rknown
+                                       && otmp->oerodeproof)
+                                          ? 64 : 0));
+            st[6] = (otmp->dknown && objects[otmp->otyp].oc_name_known) ? 1
+                                                                        : 0;
+            st[7] = 0;
+        }
+        std::memset(obs->inv_state + i * NLE_INV_STATE_FIELDS, 0,
+                    (NLE_INVENTORY_SIZE - i) * NLE_INV_STATE_FIELDS);
+    }
     if (obs->screen_descriptions) {
         memcpy(obs->screen_descriptions, &screen_descriptions_,
                screen_descriptions_.size());

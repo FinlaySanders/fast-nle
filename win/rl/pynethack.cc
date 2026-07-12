@@ -533,7 +533,7 @@ class Nethack
     }
 
     std::string dlpath_;
-    nle_obs obs_;
+    nle_obs obs_{};
     std::vector<py::object> py_buffers_;
     nledl_ctx *nle_ = nullptr;
     std::FILE *ttyrec_ = nullptr;

@@ -12,6 +12,7 @@
 #define NLE_INTERNAL_SIZE 11 /* 9,10: killer mnum+1 / mlevel, written at death only */
 #define NLE_MISC_SIZE 3
 #define NLE_INVENTORY_SIZE 55
+#define NLE_INV_STATE_FIELDS 8
 #define NLE_INVENTORY_STR_LENGTH 80
 #define NLE_SCREEN_DESCRIPTION_LENGTH 80
 #define NLE_TERM_CO 80
@@ -87,6 +88,10 @@ typedef struct nle_observation {
     signed char *tty_colors;            /* Size NLE_TERM_LI * NLE_TERM_CO */
     unsigned char *tty_cursor;          /* Size 2 */
     int *misc;                          /* Size NLE_MISC_SIZE */
+    /* Per-slot identification-gated item state, mirroring what doname
+       displays: [buc, spe, quan, eroded, eroded2, flags, typeknown, rsvd].
+       Size NLE_INVENTORY_SIZE * NLE_INV_STATE_FIELDS. */
+    signed char *inv_state;
 } nle_obs;
 
 typedef struct {
