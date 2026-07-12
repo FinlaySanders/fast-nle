@@ -1209,7 +1209,16 @@ int after; /* this is extra fast monster movement */
 
         /* insert a worm_move() if worms ever begin to eat things */
         wasseen = canseemon(mtmp);
-        remove_monster(omx, omy);
+        /* omx,omy is the pet's position captured at dog_move entry; if it was
+           relocated since (e.g. displaced toward the hero), its real cell is
+           mtmp->mx,my.  Removing the stale omx,omy would strand a live grid
+           pointer at the pet's actual cell -> wild read of a phantom monster
+           in newsym()/attack_checks() later.  Remove wherever the pet really
+           is; identical to the stock path when it hasn't moved. */
+        if (level.monsters[omx][omy] == mtmp)
+            remove_monster(omx, omy);
+        else
+            remove_monster(mtmp->mx, mtmp->my);
         place_monster(mtmp, nix, niy);
         if (cursemsg[chi] && (wasseen || canseemon(mtmp))) {
             /* describe top item of pile, not necessarily cursed item itself;
