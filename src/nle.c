@@ -440,7 +440,7 @@ nle_done(int how)
            store their article-free name (KILLED_BY_AN), everything else
            parses to NON_PM. */
         int mnum = (how == DIED) ? name_to_mon(killer.name) : NON_PM;
-        nle->observation->internal[9] = mnum + 1;   /* 0 = not a monster */
+        nle->observation->internal[9] = mnum + 1; /* 0 = not a monster */
         nle->observation->internal[10] = mnum >= 0 ? mons[mnum].mlevel : 0;
     }
     nle->observation->how_done = how;
@@ -522,6 +522,24 @@ nle_start(nle_obs *obs, FILE *ttyrec, nle_settings *settings_p)
         }
     }
 
+    return nle;
+}
+
+/* Out-of-band full observation export: runs the standard fill against the
+ * current game state without stepping. Pairs with nle_obs.partial — a
+ * wrapper that sends several keys per logical step keeps partial set (cheap
+ * misc/message fills on intermediate keys) and pulls one full observation
+ * here at the step boundary. */
+nle_ctx_t *
+nle_obs_refresh(nle_ctx_t *nle, nle_obs *obs)
+{
+    extern void nle_rl_fill_obs(nle_obs *);
+    char p = obs->partial;
+    current_nle_ctx = nle;
+    nh_cur = (struct nh_ctx *) nle->nh;
+    obs->partial = 0;
+    nle_rl_fill_obs(obs);
+    obs->partial = p;
     return nle;
 }
 

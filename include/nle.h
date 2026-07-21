@@ -27,6 +27,7 @@ extern NH_THREAD_LOCAL nle_ctx_t *current_nle_ctx; /* defined in nle.c;
 
 nle_ctx_t *nle_start(nle_obs *, FILE *, nle_settings *);
 nle_ctx_t *nle_step(nle_ctx_t *, nle_obs *);
+nle_ctx_t *nle_obs_refresh(nle_ctx_t *, nle_obs *);
 void nle_end(nle_ctx_t *);
 
 #endif /* NLE_H */

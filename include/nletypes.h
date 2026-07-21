@@ -9,7 +9,8 @@
 #define NLE_MESSAGE_SIZE 256
 #define NLE_BLSTATS_SIZE 27
 #define NLE_PROGRAM_STATE_SIZE 6
-#define NLE_INTERNAL_SIZE 11 /* 9,10: killer mnum+1 / mlevel, written at death only */
+#define NLE_INTERNAL_SIZE \
+    11 /* 9,10: killer mnum+1 / mlevel, written at death only */
 #define NLE_MISC_SIZE 3
 #define NLE_INVENTORY_SIZE 55
 #define NLE_INV_STATE_FIELDS 8
@@ -58,7 +59,8 @@ typedef signed char boolean;
 
 typedef struct TMT TMT;
 
-/* how_done for DIED via god's wrath (fry_by_god); out-of-band vs game_end_types */
+/* how_done for DIED via god's wrath (fry_by_god); out-of-band vs
+ * game_end_types */
 #define NLE_HOW_WRATH 100
 
 typedef struct nle_observation {
@@ -92,6 +94,12 @@ typedef struct nle_observation {
        displays: [buc, spe, quan, eroded, eroded2, flags, typeknown, rsvd].
        Size NLE_INVENTORY_SIZE * NLE_INV_STATE_FIELDS. */
     signed char *inv_state;
+    /* Opt-in cheap fills: when set, in-game fills export only prog_state,
+       misc and message (what a multi-key wrapper reads between keystrokes);
+       glyphs/blstats/internal/inv_* wait for the next full fill — either a
+       fill with this clear or an explicit nle_obs_refresh() at the step
+       boundary. Boot and gameover fills ignore it (always full/zeroed). */
+    char partial;
 } nle_obs;
 
 typedef struct {

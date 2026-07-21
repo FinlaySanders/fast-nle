@@ -170,6 +170,7 @@ class NetHackRL
        nle_rl_bot_direct / nle_rl_timebot_direct below). */
     static void rl_bot_direct();
     static void rl_timebot_direct();
+    static void rl_fill_obs_direct(nle_obs *);
 
   private:
     struct rl_menu_item {
@@ -339,7 +340,14 @@ NetHackRL::fill_obs(nle_obs *obs)
         // TODO: Consider adding something_worth_saving.
         // Also consider adding ttyDisplay->inmore ...
     }
-    if (obs->internal) {
+    /* Opt-in cheap fill for the intermediate keystrokes of a multi-key
+       wrapper step: only prog_state/misc/message are exported. Honored
+       only for healthy in-game fills so boot and gameover fills (and any
+       consumer that never sets obs->partial, e.g. golden replays) are
+       byte-identical to stock. */
+    const boolean nle_partial =
+        obs->partial && program_state.in_moveloop && !program_state.gameover;
+    if (obs->internal && !nle_partial) {
         // From do.c. sstairs is a potential "special" staircase.
         boolean stairs_down =
             ((u.ux == xdnstair && u.uy == ydnstair)
@@ -390,32 +398,38 @@ NetHackRL::fill_obs(nle_obs *obs)
     }
     obs->in_normal_game = true;
 
-    bool same_bufs = obs->glyphs == last_glyphs_buf_
-                     && obs->chars == last_chars_buf_
-                     && obs->colors == last_colors_buf_
-                     && obs->specials == last_specials_buf_;
-    uint32_t dirty = same_bufs ? dirty_rows_ : ~0u;
-    last_glyphs_buf_ = obs->glyphs;
-    last_chars_buf_ = obs->chars;
-    last_colors_buf_ = obs->colors;
-    last_specials_buf_ = obs->specials;
-    if (dirty) {
-        constexpr size_t W = COLNO - 1;
-        for (size_t j = 0; j < ROWNO; ++j) {
-            if (!(dirty & (1u << j)))
-                continue;
-            size_t off = j * W;
-            if (obs->glyphs)
-                std::memcpy(obs->glyphs + off, glyphs_.data() + off,
-                            sizeof(int16_t) * W);
-            if (obs->chars)
-                std::memcpy(obs->chars + off, chars_.data() + off, W);
-            if (obs->colors)
-                std::memcpy(obs->colors + off, colors_.data() + off, W);
-            if (obs->specials)
-                std::memcpy(obs->specials + off, specials_.data() + off, W);
+    if (nle_partial)
+        goto fill_message; /* dirty_rows_/last_*_buf_ keep accumulating */
+
+    {
+        bool same_bufs = obs->glyphs == last_glyphs_buf_
+                         && obs->chars == last_chars_buf_
+                         && obs->colors == last_colors_buf_
+                         && obs->specials == last_specials_buf_;
+        uint32_t dirty = same_bufs ? dirty_rows_ : ~0u;
+        last_glyphs_buf_ = obs->glyphs;
+        last_chars_buf_ = obs->chars;
+        last_colors_buf_ = obs->colors;
+        last_specials_buf_ = obs->specials;
+        if (dirty) {
+            constexpr size_t W = COLNO - 1;
+            for (size_t j = 0; j < ROWNO; ++j) {
+                if (!(dirty & (1u << j)))
+                    continue;
+                size_t off = j * W;
+                if (obs->glyphs)
+                    std::memcpy(obs->glyphs + off, glyphs_.data() + off,
+                                sizeof(int16_t) * W);
+                if (obs->chars)
+                    std::memcpy(obs->chars + off, chars_.data() + off, W);
+                if (obs->colors)
+                    std::memcpy(obs->colors + off, colors_.data() + off, W);
+                if (obs->specials)
+                    std::memcpy(obs->specials + off, specials_.data() + off,
+                                W);
+            }
+            dirty_rows_ = 0;
         }
-        dirty_rows_ = 0;
     }
     if (obs->glyphs && nle_underfoot_glyphs() && u.ux >= 1 && u.ux < COLNO
         && u.uy >= 0 && u.uy < ROWNO) {
@@ -428,6 +442,7 @@ NetHackRL::fill_obs(nle_obs *obs)
         obs->glyphs[(size_t) u.uy * (COLNO - 1) + (u.ux - 1)] =
             shuffled_glyph(g);
     }
+fill_message:
     if (obs->message) {
         // TODO: This doesn't show anything in situations where there's too
         // many items at one tile, which will get displayed in a new window.
@@ -458,7 +473,7 @@ NetHackRL::fill_obs(nle_obs *obs)
             std::memset(obs->message, 0, NLE_MESSAGE_SIZE);
         }
     }
-    if (obs->blstats) {
+    if (obs->blstats && !nle_partial) {
         /* Both modes read the blstats_ cache here; it is pumped at bot()/
            timebot() time — by the status pipeline when status_updates is
            on, by nle_rl_bot_direct (botl.c) when it is off — so staleness
@@ -478,7 +493,7 @@ NetHackRL::fill_obs(nle_obs *obs)
         }
         std::memcpy(obs->blstats, &blstats_[0], sizeof(blstats_));
     }
-    if (obs->inv_glyphs) {
+    if (obs->inv_glyphs && !nle_partial) {
         /* The update_inventory callback only fires on inventory CHANGES;
            the starting inventory predates the moveloop, so sync once here.
            Gated on the inv obs being bound: unbound consumers (goldens)
@@ -497,7 +512,7 @@ NetHackRL::fill_obs(nle_obs *obs)
             obs->inv_glyphs[i] = NO_GLYPH;
         }
     }
-    if (obs->inv_strs) {
+    if (obs->inv_strs && !nle_partial) {
         int i = 0;
         for (const rl_inventory_item &item : inventory_) {
             int j = 0;
@@ -513,7 +528,7 @@ NetHackRL::fill_obs(nle_obs *obs)
             obs->inv_strs[i] = 0;
         }
     }
-    if (obs->inv_letters) {
+    if (obs->inv_letters && !nle_partial) {
         int i = 0;
         for (const rl_inventory_item &item : inventory_) {
             obs->inv_letters[i++] = item.letter;
@@ -522,7 +537,7 @@ NetHackRL::fill_obs(nle_obs *obs)
             obs->inv_letters[i] = 0;
         }
     }
-    if (obs->inv_oclasses) {
+    if (obs->inv_oclasses && !nle_partial) {
         int i = 0;
         for (const rl_inventory_item &item : inventory_) {
             obs->inv_oclasses[i++] = item.object_class;
@@ -531,7 +546,7 @@ NetHackRL::fill_obs(nle_obs *obs)
             obs->inv_oclasses[i] = MAXOCLASSES;
         }
     }
-    if (obs->inv_state) {
+    if (obs->inv_state && !nle_partial) {
         /* Identification-gated per-slot state: exactly what doname would
            print (objnam.c) — BUC only if bknown (never for gold), spe or
            charges only if known on classes that display them, erosion,
@@ -548,30 +563,28 @@ NetHackRL::fill_obs(nle_obs *obs)
             st[0] = (otmp->bknown && otmp->oclass != COIN_CLASS)
                         ? (otmp->cursed ? 1 : (otmp->blessed ? 3 : 2))
                         : 0;
-            boolean shows_spe = otmp->oclass == WEAPON_CLASS
-                                || otmp->oclass == ARMOR_CLASS
-                                || otmp->oclass == RING_CLASS
-                                || otmp->oclass == WAND_CLASS
-                                || is_weptool(otmp)
-                                || objects[otmp->otyp].oc_charged;
-            st[1] = (otmp->known && shows_spe) ? otmp->spe
-                                               : (signed char) -128;
+            boolean shows_spe =
+                otmp->oclass == WEAPON_CLASS || otmp->oclass == ARMOR_CLASS
+                || otmp->oclass == RING_CLASS || otmp->oclass == WAND_CLASS
+                || is_weptool(otmp) || objects[otmp->otyp].oc_charged;
+            st[1] =
+                (otmp->known && shows_spe) ? otmp->spe : (signed char) -128;
             st[2] = otmp->quan > 127 ? 127 : (signed char) otmp->quan;
             /* erosion bits are overloaded storage on other classes
                (orotten food, odiluted potions, norevive corpses) and doname
                only calls add_erosion_words from its weapon/armor/weptool
                and ball/chain branches — exporting the bits outside those
                classes would leak hidden state (e.g. rotten food). */
-            boolean erodible = otmp->oclass == WEAPON_CLASS
-                               || otmp->oclass == ARMOR_CLASS
-                               || is_weptool(otmp)
-                               || otmp->oclass == BALL_CLASS
-                               || otmp->oclass == CHAIN_CLASS;
+            boolean erodible =
+                otmp->oclass == WEAPON_CLASS || otmp->oclass == ARMOR_CLASS
+                || is_weptool(otmp) || otmp->oclass == BALL_CLASS
+                || otmp->oclass == CHAIN_CLASS;
             st[3] = erodible ? (signed char) otmp->oeroded : 0;
             st[4] = erodible ? (signed char) otmp->oeroded2 : 0;
             st[5] = (signed char) (((otmp->owornmask
                                      & (W_ARMOR | W_ACCESSORY | W_SADDLE))
-                                        ? 1 : 0)
+                                        ? 1
+                                        : 0)
                                    | ((otmp->owornmask & W_WEP) ? 2 : 0)
                                    | ((otmp->owornmask & W_SWAPWEP) ? 4 : 0)
                                    | ((otmp->owornmask & W_QUIVER) ? 8 : 0)
@@ -579,15 +592,16 @@ NetHackRL::fill_obs(nle_obs *obs)
                                    | (otmp->greased ? 32 : 0)
                                    | ((erodible && otmp->rknown
                                        && otmp->oerodeproof)
-                                          ? 64 : 0));
-            st[6] = (otmp->dknown && objects[otmp->otyp].oc_name_known) ? 1
-                                                                        : 0;
+                                          ? 64
+                                          : 0));
+            st[6] =
+                (otmp->dknown && objects[otmp->otyp].oc_name_known) ? 1 : 0;
             st[7] = 0;
         }
         std::memset(obs->inv_state + i * NLE_INV_STATE_FIELDS, 0,
                     (NLE_INVENTORY_SIZE - i) * NLE_INV_STATE_FIELDS);
     }
-    if (obs->screen_descriptions) {
+    if (obs->screen_descriptions && !nle_partial) {
         memcpy(obs->screen_descriptions, &screen_descriptions_,
                screen_descriptions_.size());
     }
@@ -1313,6 +1327,15 @@ NetHackRL::rl_timebot_direct()
         instance->update_blstats();
 }
 
+/* Out-of-band observation export for nle_obs_refresh (nle.c): the same
+   fill the next getch would run, without stepping the game. */
+void
+NetHackRL::rl_fill_obs_direct(nle_obs *obs)
+{
+    if (current_nle_ctx && current_nle_ctx->rl_instance)
+        instance->fill_obs(obs);
+}
+
 } // namespace nethack_rl
 
 /* botl.c hooks for the !status_updates (RL perf) mode: pump the blstats_
@@ -1328,6 +1351,12 @@ extern "C" void
 nle_rl_timebot_direct(void)
 {
     nethack_rl::NetHackRL::rl_timebot_direct();
+}
+
+extern "C" void
+nle_rl_fill_obs(nle_obs *obs)
+{
+    nethack_rl::NetHackRL::rl_fill_obs_direct(obs);
 }
 
 extern const struct window_procs
