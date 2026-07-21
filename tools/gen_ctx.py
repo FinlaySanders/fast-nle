@@ -139,6 +139,8 @@ def gen_file_headers(entries):
 
 def gen_impl(entries):
     out = [HEADER]
+    out.append('#include <sys/mman.h> /* before hack.h: ctx accessor')
+    out.append(' * macros (flags, ...) must not expand in libc headers */\n')
     out.append('#include "hack.h"\n')
     out.append("NH_THREAD_LOCAL struct nh_ctx *nh_cur;\n")
     inits = [e for e in entries if e["init"]]
@@ -150,8 +152,16 @@ def gen_impl(entries):
     out.append("struct nh_ctx *")
     out.append("nh_ctx_new(void)")
     out.append("{")
-    out.append("    struct nh_ctx *nh = (struct nh_ctx *) calloc(1, sizeof(struct nh_ctx));")
-    out.append("    if (!nh)")
+    out.append("    /* mmap, not calloc: fresh kernel zero-pages every episode. A heap")
+    out.append("     * chunk this size is reused dirty after nh_ctx_free, so calloc's")
+    out.append("     * memset rewrites the whole struct through the cache each reset")
+    out.append("     * (60% of all LL write misses at 341 envs); never-touched pages")
+    out.append("     * also stay free under mmap. */")
+    out.append("    size_t nh_sz = (sizeof(struct nh_ctx) + 4095) & ~(size_t) 4095;")
+    out.append("    struct nh_ctx *nh = (struct nh_ctx *) mmap(")
+    out.append("        NULL, nh_sz, PROT_READ | PROT_WRITE,")
+    out.append("        MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);")
+    out.append("    if (nh == MAP_FAILED)")
     out.append("        return (struct nh_ctx *) 0;")
     if inits:
         out.append("    /* restore non-zero initializers (.data templates) */")
@@ -170,7 +180,7 @@ def gen_impl(entries):
     out.append("        return;")
     out.append("    for (i = 0; i < NH_LAZY_SLOTS; i++)")
     out.append("        free(nh->nh_lazy[i]);")
-    out.append("    free(nh);")
+    out.append("    munmap(nh, (sizeof(struct nh_ctx) + 4095) & ~(size_t) 4095);")
     out.append("}")
     return "\n".join(out) + "\n"
 

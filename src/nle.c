@@ -188,9 +188,16 @@ init_nle(FILE *ttyrec, nle_obs *obs)
         (ttyrec != NULL)
         || (obs && (obs->tty_chars || obs->tty_colors || obs->tty_cursor));
 
-    TMT *vterminal = tmt_open(LI, CO, nle_vt_callback, nle, NULL, true);
-    assert(vterminal);
-    nle->vterminal = vterminal;
+    /* The vterminal only consumes bytes when a tty_* obs is bound or a
+     * ttyrec is recorded (see nle_write's gate); its 24x80 attributed
+     * screen was ~22% of all LL write misses per episode at 341 envs.
+     * Create it lazily on first use instead. */
+    nle->vterminal = NULL;
+    if (nle->tty_emit) {
+        TMT *vterminal = tmt_open(LI, CO, nle_vt_callback, nle, NULL, true);
+        assert(vterminal);
+        nle->vterminal = vterminal;
+    }
 
     nle->outbuf_write_ptr = nle->outbuf;
     nle->outbuf_write_end = nle->outbuf + sizeof(nle->outbuf);
@@ -311,6 +318,11 @@ nle_fflush(FILE *stream)
 
     nle_obs *obs = nle->observation;
     if (obs->tty_chars || obs->tty_colors || obs->tty_cursor) {
+        if (!nle->vterminal) { /* tty obs bound mid-game: create on demand */
+            nle->vterminal =
+                tmt_open(LI, CO, nle_vt_callback, nle, NULL, true);
+            assert(nle->vterminal);
+        }
         tmt_write(nle->vterminal, nle->outbuf, length);
     }
     nle->outbuf_write_ptr = nle->outbuf;
@@ -629,7 +641,8 @@ nle_end(nle_ctx_t *nle)
     }
 #endif
 
-    tmt_close(nle->vterminal);
+    if (nle->vterminal)
+        tmt_close(nle->vterminal);
 
     destroy_fcontext_stack(&nle->stack);
     nh_cur = (struct nh_ctx *) 0;
