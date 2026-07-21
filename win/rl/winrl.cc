@@ -1134,7 +1134,11 @@ NetHackRL::rl_print_glyph(winid wid, XCHAR_P x, XCHAR_P y, int glyph,
                                   << std::endl);
     }
 
-    tty_print_glyph(wid, x, y, glyph, bkglyph);
+    /* The tty map mirror (cursor walk + attr churn per cell) matters only
+       when tty bytes are consumed (tty_* obs bound or ttyrec). The NLE
+       obs above come from the store_* arrays either way. */
+    if (!ttyDisplay || ttyDisplay->nle_emit)
+        tty_print_glyph(wid, x, y, glyph, bkglyph);
 }
 void
 NetHackRL::rl_raw_print(const char *str)
