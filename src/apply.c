@@ -1636,7 +1636,7 @@ get_valid_jump_position(x,y)
 int x,y;
 {
     return (isok(x, y)
-            && (ACCESSIBLE(levl[x][y].typ) || Passes_walls)
+            && (ACCESSIBLE(TYP_AT(x, y)) || Passes_walls)
             && is_valid_jump_pos(x, y, jumping_is_magic, FALSE));
 }
 
@@ -2233,11 +2233,11 @@ boolean quietly;
             You("cannot put the figurine there.");
         return FALSE;
     }
-    if (IS_ROCK(levl[x][y].typ)
+    if (IS_ROCK(TYP_AT(x, y))
         && !(passes_walls(&mons[obj->corpsenm]) && may_passwall(x, y))) {
         if (!quietly)
             You("cannot place a figurine in %s!",
-                IS_TREE(levl[x][y].typ) ? "a tree" : "solid rock");
+                IS_TREE(TYP_AT(x, y)) ? "a tree" : "solid rock");
         return FALSE;
     }
     if (sobj_at(BOULDER, x, y) && !passes_walls(&mons[obj->corpsenm])
@@ -2518,7 +2518,7 @@ struct obj *otmp;
     int ttyp, tmp;
     const char *what = (char *) 0;
     char buf[BUFSZ];
-    int levtyp = levl[u.ux][u.uy].typ;
+    int levtyp = TYP_AT(u.ux, u.uy);
     const char *occutext = "setting the trap";
 
     if (nohands(youmonst.data))
@@ -2778,7 +2778,7 @@ struct obj *obj;
             }
         }
         if (!wrapped_what) {
-            if (IS_FURNITURE(levl[rx][ry].typ))
+            if (IS_FURNITURE(TYP_AT(rx, ry)))
                 wrapped_what = something;
             else if (sobj_at(BOULDER, rx, ry))
                 wrapped_what = "a boulder";
@@ -2977,7 +2977,7 @@ STATIC_OVL boolean
 get_valid_polearm_position(x, y)
 int x, y;
 {
-    return (isok(x, y) && ACCESSIBLE(levl[x][y].typ)
+    return (isok(x, y) && ACCESSIBLE(TYP_AT(x, y))
             && distu(x, y) >= polearm_range_min
             && distu(x, y) <= polearm_range_max);
 }
@@ -3286,7 +3286,7 @@ struct obj *obj;
         }
     /*FALLTHRU*/
     case 3: /* Surface */
-        if (IS_AIR(levl[cc.x][cc.y].typ) || is_pool(cc.x, cc.y))
+        if (IS_AIR(TYP_AT(cc.x, cc.y)) || is_pool(cc.x, cc.y))
             pline_The("hook slices through the %s.", surface(cc.x, cc.y));
         else {
             You("are yanked toward the %s!", surface(cc.x, cc.y));
@@ -3436,7 +3436,7 @@ struct obj *obj;
             schar typ;
 
             if (dig_check(BY_OBJECT, FALSE, x, y)) {
-                if (IS_WALL(levl[x][y].typ) || IS_DOOR(levl[x][y].typ)) {
+                if (IS_WALL(TYP_AT(x, y)) || IS_DOOR(TYP_AT(x, y))) {
                     /* normally, pits and holes don't anger guards, but they
                      * do if it's a wall or door that's being dug */
                     watch_dig((struct monst *) 0, x, y, TRUE);

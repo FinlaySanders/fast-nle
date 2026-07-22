@@ -588,7 +588,7 @@ xchar x, y;
         range = 1;
 
     /* see if the object has a place to move into */
-    if (!ZAP_POS(levl[x + u.dx][y + u.dy].typ)
+    if (!ZAP_POS(TYP_AT(x + u.dx, y + u.dy))
         || closed_door(x + u.dx, y + u.dy))
         range = 1;
 
@@ -596,9 +596,9 @@ xchar x, y;
               && (shkp = shop_keeper(*in_rooms(x, y, SHOPBASE))) != 0
               && costly_spot(x, y));
 
-    if (IS_ROCK(levl[x][y].typ) || closed_door(x, y)) {
+    if (IS_ROCK(TYP_AT(x, y)) || closed_door(x, y)) {
         if ((!martial() && rn2(20) > ACURR(A_DEX))
-            || IS_ROCK(levl[u.ux][u.uy].typ) || closed_door(u.ux, u.uy)) {
+            || IS_ROCK(TYP_AT(u.ux, u.uy)) || closed_door(u.ux, u.uy)) {
             if (Blind)
                 pline("It doesn't come loose.");
             else
@@ -898,8 +898,8 @@ dokick()
          * reachable for bracing purposes
          * Possible extension: allow bracing against stuff on the side?
          */
-        if (isok(xx, yy) && !IS_ROCK(levl[xx][yy].typ)
-            && !IS_DOOR(levl[xx][yy].typ)
+        if (isok(xx, yy) && !IS_ROCK(TYP_AT(xx, yy))
+            && !IS_DOOR(TYP_AT(xx, yy))
             && (!Is_airlevel(&u.uz) || !OBJ_AT(xx, yy))) {
             You("have nothing to brace yourself against.");
             return 0;
@@ -1685,7 +1685,7 @@ boolean near_hero;
         }
         if (nx > 0) {
             place_object(otmp, nx, ny);
-            if (!nobreak && !IS_SOFT(levl[nx][ny].typ)) {
+            if (!nobreak && !IS_SOFT(TYP_AT(nx, ny))) {
                 if (where == MIGR_WITH_HERO) {
                     if (breaks(otmp, nx, ny))
                         continue;

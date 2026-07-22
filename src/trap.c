@@ -1990,7 +1990,7 @@ int style;
                 const char *bmsg = " as one boulder sets another in motion";
 
                 if (!isok(bhitpos.x + dx, bhitpos.y + dy) || !dist
-                    || IS_ROCK(levl[bhitpos.x + dx][bhitpos.y + dy].typ))
+                    || IS_ROCK(TYP_AT(bhitpos.x + dx, bhitpos.y + dy)))
                     bmsg = " as one boulder hits another";
 
                 You_hear("a loud crash%s!",
@@ -2015,7 +2015,7 @@ int style;
 
         /* if about to hit iron bars, do so now */
         if (dist > 0 && isok(bhitpos.x + dx, bhitpos.y + dy)
-            && levl[bhitpos.x + dx][bhitpos.y + dy].typ == IRONBARS) {
+            && TYP_AT(bhitpos.x + dx, bhitpos.y + dy) == IRONBARS) {
             x2 = bhitpos.x, y2 = bhitpos.y; /* object stops here */
             if (hits_bars(&singleobj,
                           x2, y2, x2+dx, y2+dy,
@@ -2144,7 +2144,7 @@ schar dx, dy;
     while (distance-- > 0) {
         x += dx;
         y += dy;
-        typ = levl[x][y].typ;
+        typ = TYP_AT(x, y);
         if (!isok(x, y) || !ZAP_POS(typ) || closed_door(x, y))
             return FALSE;
     }
@@ -2887,7 +2887,7 @@ float_up()
                above that floor but not from enhancing carrying capacity */
             You("feel lighter, but your %s is still chained to the %s.",
                 body_part(LEG),
-                IS_ROOM(levl[cc.x][cc.y].typ) ? "floor" : "ground");
+                IS_ROOM(TYP_AT(cc.x, cc.y)) ? "floor" : "ground");
         } else if (u.utraptype == WEB) {
             You("float up slightly, but you are still stuck in the web.");
         } else { /* bear trap */
@@ -4595,7 +4595,7 @@ boolean force;
     } /* deal_with_floor_trap */
     /* doors can be manipulated even while levitating/unskilled riding */
 
-    if (!IS_DOOR(levl[x][y].typ)) {
+    if (!IS_DOOR(TYP_AT(x, y))) {
         if (!trap_skipped)
             You("know of no traps there.");
         return 0;

@@ -430,11 +430,11 @@ hitfloor(obj, verbosely)
 struct obj *obj;
 boolean verbosely; /* usually True; False if caller has given drop message */
 {
-    if (IS_SOFT(levl[u.ux][u.uy].typ) || u.uinwater || u.uswallow) {
+    if (IS_SOFT(TYP_AT(u.ux, u.uy)) || u.uinwater || u.uswallow) {
         dropy(obj);
         return;
     }
-    if (IS_ALTAR(levl[u.ux][u.uy].typ))
+    if (IS_ALTAR(TYP_AT(u.ux, u.uy)))
         doaltarobj(obj);
     else if (verbosely)
         pline("%s %s the %s.", Doname2(obj), otense(obj, "hit"),
@@ -595,19 +595,19 @@ int x, y;
     stopping_short = (via_jumping && *range < 2);
 
     if (!Passes_walls || !(may_pass = may_passwall(x, y))) {
-        boolean odoor_diag = (IS_DOOR(levl[x][y].typ)
+        boolean odoor_diag = (IS_DOOR(TYP_AT(x, y))
                               && (levl[x][y].doormask & D_ISOPEN)
                               && (u.ux - x) && (u.uy - y));
 
-        if (IS_ROCK(levl[x][y].typ) || closed_door(x, y) || odoor_diag) {
+        if (IS_ROCK(TYP_AT(x, y)) || closed_door(x, y) || odoor_diag) {
             const char *s;
 
             if (odoor_diag)
                 You("hit the door edge!");
             pline("Ouch!");
-            if (IS_TREE(levl[x][y].typ))
+            if (IS_TREE(TYP_AT(x, y)))
                 s = "bumping into a tree";
-            else if (IS_ROCK(levl[x][y].typ))
+            else if (IS_ROCK(TYP_AT(x, y)))
                 s = "bumping into a wall";
             else
                 s = "bumping into a door";
@@ -616,7 +616,7 @@ int x, y;
             wake_nearto(x,y, 10);
             return FALSE;
         }
-        if (levl[x][y].typ == IRONBARS) {
+        if (TYP_AT(x, y) == IRONBARS) {
             You("crash into some iron bars.  Ouch!");
             dmg = rnd(2 + *range);
             losehp(Maybe_Half_Phys(dmg), "crashing into iron bars",
@@ -718,11 +718,11 @@ int x, y;
     /* if terrain type changes, levitation or flying might become blocked
        or unblocked; might issue message, so do this after map+vision has
        been updated for new location instead of right after u_on_newpos() */
-    if (levl[u.ux][u.uy].typ != levl[ox][oy].typ)
+    if (TYP_AT(u.ux, u.uy) != TYP_AT(ox, oy))
         switch_terrain();
 
     if (is_pool(x, y) && !u.uinwater) {
-        if ((Is_waterlevel(&u.uz) && levl[x][y].typ == WATER)
+        if ((Is_waterlevel(&u.uz) && TYP_AT(x, y) == WATER)
             || !(Levitation || Flying || Wwalking)) {
             multi = 0; /* can move, so drown() allows crawling out of water */
             (void) drown();
@@ -1386,7 +1386,7 @@ boolean twoweap; /* used to restore twoweapon mode if wielded weapon returns */
             }
         }
 
-        if ((!IS_SOFT(levl[bhitpos.x][bhitpos.y].typ) && breaktest(obj))
+        if ((!IS_SOFT(TYP_AT(bhitpos.x, bhitpos.y)) && breaktest(obj))
             /* venom [via #monster to spit while poly'd] fails breaktest()
                but we want to force breakage even when location IS_SOFT() */
             || obj->oclass == VENOM_CLASS) {
@@ -1423,7 +1423,7 @@ boolean twoweap; /* used to restore twoweapon mode if wielded weapon returns */
         /* container contents might break;
            do so before turning ownership of thrownobj over to shk
            (container_impact_dmg handles item already owned by shop) */
-        if (!IS_SOFT(levl[bhitpos.x][bhitpos.y].typ))
+        if (!IS_SOFT(TYP_AT(bhitpos.x, bhitpos.y)))
             /* <x,y> is spot where you initiated throw, not bhitpos */
             container_impact_dmg(obj, u.ux, u.uy);
         /* charge for items thrown out of shop;
@@ -2157,7 +2157,7 @@ struct obj *obj;
         /* see if the gold has a place to move into */
         odx = u.ux + u.dx;
         ody = u.uy + u.dy;
-        if (!ZAP_POS(levl[odx][ody].typ) || closed_door(odx, ody)) {
+        if (!ZAP_POS(TYP_AT(odx, ody)) || closed_door(odx, ody)) {
             bhitpos.x = u.ux;
             bhitpos.y = u.uy;
         } else {

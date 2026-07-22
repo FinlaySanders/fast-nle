@@ -383,7 +383,7 @@ boolean allow_drag;
     /* if terrain type changes, levitation or flying might become blocked
        or unblocked; might issue message, so do this after map+vision has
        been updated for new location instead of right after u_on_newpos() */
-    if (levl[u.ux][u.uy].typ != levl[u.ux0][u.uy0].typ)
+    if (TYP_AT(u.ux, u.uy) != TYP_AT(u.ux0, u.uy0))
         switch_terrain();
     if (telescroll) {
         /* when teleporting by scroll, we need to handle discovery

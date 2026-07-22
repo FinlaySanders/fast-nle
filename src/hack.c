@@ -158,9 +158,9 @@ moverock()
             pline("You're too small to push that %s.", xname(otmp));
             goto cannot_push;
         }
-        if (isok(rx, ry) && !IS_ROCK(levl[rx][ry].typ)
-            && levl[rx][ry].typ != IRONBARS
-            && (!IS_DOOR(levl[rx][ry].typ) || !(u.dx && u.dy)
+        if (isok(rx, ry) && !IS_ROCK(TYP_AT(rx, ry))
+            && TYP_AT(rx, ry) != IRONBARS
+            && (!IS_DOOR(TYP_AT(rx, ry)) || !(u.dx && u.dy)
                 || doorless_door(rx, ry)) && !sobj_at(BOULDER, rx, ry)) {
             ttmp = t_at(rx, ry);
             mtmp = m_at(rx, ry);
@@ -388,8 +388,8 @@ moverock()
 
             if (!u.usteed
                 && (((!invent || inv_weight() <= -850)
-                     && (!u.dx || !u.dy || (IS_ROCK(levl[u.ux][sy].typ)
-                                            && IS_ROCK(levl[sx][u.uy].typ))))
+                     && (!u.dx || !u.dy || (IS_ROCK(TYP_AT(u.ux, sy))
+                                            && IS_ROCK(TYP_AT(sx, u.uy)))))
                     || verysmall(youmonst.data))) {
                 pline(
                    "However, you can squeeze yourself into a small opening.");
@@ -673,7 +673,7 @@ boolean
 may_passwall(x, y)
 register xchar x, y;
 {
-    return (boolean) !(IS_STWALL(levl[x][y].typ)
+    return (boolean) !(IS_STWALL(TYP_AT(x, y))
                        && (levl[x][y].wall_info & W_NONPASSWALL));
 }
 
@@ -683,7 +683,7 @@ struct permonst *mdat;
 register xchar x, y;
 {
     return (boolean) ((Sokoban && sobj_at(BOULDER, x, y))
-                      || (IS_ROCK(levl[x][y].typ)
+                      || (IS_ROCK(TYP_AT(x, y))
                           && (!tunnels(mdat) || needspick(mdat)
                               || !may_dig(x, y))
                           && !(passes_walls(mdat) && may_passwall(x, y))));
@@ -1652,7 +1652,7 @@ domove_core()
         }
     }
 
-    if (context.forcefight && levl[x][y].typ == IRONBARS && uwep) {
+    if (context.forcefight && TYP_AT(x, y) == IRONBARS && uwep) {
         struct obj *obj = uwep;
 
         if (breaktest(obj)) {
@@ -1711,7 +1711,7 @@ domove_core()
                because you don't see remembered terrain while underwater;
                although the hero can attack an adjacent monster this way,
                assume he can't reach out far enough to distinguish terrain */
-            Sprintf(buf, (Is_waterlevel(&u.uz) && levl[x][y].typ == AIR)
+            Sprintf(buf, (Is_waterlevel(&u.uz) && TYP_AT(x, y) == AIR)
                              ? "an air bubble"
                              : "nothing");
         } else if (solid) {
@@ -1719,7 +1719,7 @@ domove_core()
                unlike searching, this won't reveal what that terrain is
                (except for solid rock, where the glyph would otherwise
                yield ludicrous "dark part of a room") */
-            Strcpy(buf, (levl[x][y].typ == STONE) ? "solid rock"
+            Strcpy(buf, (TYP_AT(x, y) == STONE) ? "solid rock"
                          : glyph_is_cmap(glyph)
                             ? the(defsyms[glyph_to_cmap(glyph)].explanation)
                             : (const char *) "an unknown obstacle");
@@ -2185,24 +2185,24 @@ boolean pick;
        damage that triggers rehumanize() which calls spoteffects()...] */
     if (inspoteffects && u.ux == spotloc_x && u.uy == spotloc_y
         /* except when reason is transformed terrain (ice -> water) */
-        && spotterrain == levl[u.ux][u.uy].typ
+        && spotterrain == TYP_AT(u.ux, u.uy)
         /* or transformed trap (land mine -> pit) */
         && (!spottrap || !trap || trap->ttyp == spottraptyp))
         return;
 
     ++inspoteffects;
-    spotterrain = levl[u.ux][u.uy].typ;
+    spotterrain = TYP_AT(u.ux, u.uy);
     spotloc_x = u.ux, spotloc_y = u.uy;
 
     /* moving onto different terrain might cause Lev or Fly to toggle */
-    if (spotterrain != levl[u.ux0][u.uy0].typ || !on_level(&u.uz, &u.uz0))
+    if (spotterrain != TYP_AT(u.ux0, u.uy0) || !on_level(&u.uz, &u.uz0))
         switch_terrain();
 
     if (pooleffects(TRUE))
         goto spotdone;
 
     check_special_room(FALSE);
-    if (IS_SINK(levl[u.ux][u.uy].typ) && Levitation)
+    if (IS_SINK(TYP_AT(u.ux, u.uy)) && Levitation)
         dosinkfall();
     if (!in_steed_dismounting) { /* if dismounting, we'll check again later */
         boolean pit;
@@ -2741,13 +2741,13 @@ lookaround()
                 }
             }
 
-            if (levl[x][y].typ == STONE)
+            if (TYP_AT(x, y) == STONE)
                 continue;
             if (x == u.ux - u.dx && y == u.uy - u.dy)
                 continue;
 
-            if (IS_ROCK(levl[x][y].typ) || levl[x][y].typ == ROOM
-                || IS_AIR(levl[x][y].typ)) {
+            if (IS_ROCK(TYP_AT(x, y)) || TYP_AT(x, y) == ROOM
+                || IS_AIR(TYP_AT(x, y))) {
                 continue;
             } else if (closed_door(x, y) || (mtmp && is_door_mappear(mtmp))) {
                 if (x != u.ux && y != u.uy)
@@ -2758,9 +2758,9 @@ lookaround()
                     goto stop;
                 }
                 goto bcorr;
-            } else if (levl[x][y].typ == CORR) {
+            } else if (TYP_AT(x, y) == CORR) {
  bcorr:
-                if (levl[u.ux][u.uy].typ != ROOM) {
+                if (TYP_AT(u.ux, u.uy) != ROOM) {
                     if (context.run == 1 || context.run == 3
                         || context.run == 8) {
                         i = dist2(x, y, u.ux + u.dx, u.uy + u.dy);
@@ -2893,7 +2893,7 @@ int x, y;
     if (Passes_walls)
         return TRUE; /* or a xorn... */
     /* pool could be next to a door, conceivably even inside a shop */
-    if (IS_DOOR(levl[x][y].typ) && (!doorless_door(x, y) || block_door(x, y)))
+    if (IS_DOOR(TYP_AT(x, y)) && (!doorless_door(x, y) || block_door(x, y)))
         return FALSE;
     /* finally, are we trying to squeeze through a too-narrow gap? */
     return !(bad_rock(youmonst.data, u.ux, y)

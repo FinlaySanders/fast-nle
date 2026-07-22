@@ -784,7 +784,7 @@ boolean by_hero;
             x = xy.x, y = xy.y;
     }
 
-    if ((mons[montype].mlet == S_EEL && !IS_POOL(levl[x][y].typ))
+    if ((mons[montype].mlet == S_EEL && !IS_POOL(TYP_AT(x, y)))
         || (mons[montype].mlet == S_TROLL
             && uwep && uwep->oartifact == ART_TROLLSBANE)) {
         if (by_hero && cansee(x, y))
@@ -2865,7 +2865,7 @@ struct obj *obj; /* wand or spell */
     case WAN_LOCKING:
     case SPE_WIZARD_LOCK:
         /* down at open bridge or up or down at open portcullis */
-        if (((levl[x][y].typ == DRAWBRIDGE_DOWN)
+        if (((TYP_AT(x, y) == DRAWBRIDGE_DOWN)
                  ? (u.dz > 0)
                  : (is_drawbridge_wall(x, y) >= 0 && !is_db_wall(x, y)))
             && find_drawbridge(&xx, &yy)) {
@@ -3277,7 +3277,7 @@ struct obj **pobj; /* object tossed/used, set to NULL
             goto bhit_done;
         }
 
-        typ = levl[bhitpos.x][bhitpos.y].typ;
+        typ = TYP_AT(bhitpos.x, bhitpos.y);
 
         /* iron bars will block anything big enough and break some things */
         if (weapon == THROWN_WEAPON || weapon == KICKED_WEAPON) {
@@ -3309,7 +3309,7 @@ struct obj **pobj; /* object tossed/used, set to NULL
             case WAN_LOCKING:
             case SPE_WIZARD_LOCK:
                 if ((cansee(x, y) || cansee(bhitpos.x, bhitpos.y))
-                    && levl[x][y].typ == DRAWBRIDGE_DOWN)
+                    && TYP_AT(x, y) == DRAWBRIDGE_DOWN)
                     learn_it = TRUE;
                 close_drawbridge(x, y);
                 break;
@@ -3562,7 +3562,7 @@ int dx, dy;
             tmp_at(DISP_END, 0);
             return mtmp;
         }
-        if (!ZAP_POS(levl[bhitpos.x][bhitpos.y].typ)
+        if (!ZAP_POS(TYP_AT(bhitpos.x, bhitpos.y))
             || closed_door(bhitpos.x, bhitpos.y)) {
             bhitpos.x -= dx;
             bhitpos.y -= dy;
@@ -3583,7 +3583,7 @@ int dx, dy;
         }
         tmp_at(bhitpos.x, bhitpos.y);
         delay_output();
-        if (IS_SINK(levl[bhitpos.x][bhitpos.y].typ)) {
+        if (IS_SINK(TYP_AT(bhitpos.x, bhitpos.y))) {
             if (!Deaf)
                 pline("Klonk!");
             break; /* boomerang falls on sink */
@@ -4092,7 +4092,7 @@ boolean say; /* Announce out of sight hit/miss events if true */
         sx += dx;
         lsy = sy;
         sy += dy;
-        if (!isok(sx, sy) || levl[sx][sy].typ == STONE)
+        if (!isok(sx, sy) || TYP_AT(sx, sy) == STONE)
             goto make_bounce;
 
         mon = m_at(sx, sy);
@@ -4102,7 +4102,7 @@ boolean say; /* Announce out of sight hit/miss events if true */
                 map_invisible(sx, sy);
             else if (!mon)
                 (void) unmap_invisible(sx, sy);
-            if (ZAP_POS(levl[sx][sy].typ)
+            if (ZAP_POS(TYP_AT(sx, sy))
                 || (isok(lsx, lsy) && cansee(lsx, lsy)))
                 tmp_at(sx, sy);
             delay_output(); /* wait a little */
@@ -4237,15 +4237,15 @@ boolean say; /* Announce out of sight hit/miss events if true */
             nomul(0);
         }
 
-        if (!ZAP_POS(levl[sx][sy].typ)
+        if (!ZAP_POS(TYP_AT(sx, sy))
             || (closed_door(sx, sy) && range >= 0)) {
             int bounce, bchance;
             uchar rmn;
             boolean fireball;
 
  make_bounce:
-            bchance = (levl[sx][sy].typ == STONE) ? 10
-                : (In_mines(&u.uz) && IS_WALL(levl[sx][sy].typ)) ? 20
+            bchance = (TYP_AT(sx, sy) == STONE) ? 10
+                : (In_mines(&u.uz) && IS_WALL(TYP_AT(sx, sy))) ? 20
                 : 75;
             bounce = 0;
             fireball = (type == ZT_SPELL(ZT_FIRE));
@@ -4267,15 +4267,15 @@ boolean say; /* Announce out of sight hit/miss events if true */
                 dx = -dx;
                 dy = -dy;
             } else {
-                if (isok(sx, lsy) && ZAP_POS(rmn = levl[sx][lsy].typ)
+                if (isok(sx, lsy) && ZAP_POS(rmn = TYP_AT(sx, lsy))
                     && !closed_door(sx, lsy)
                     && (IS_ROOM(rmn) || (isok(sx + dx, lsy)
-                                         && ZAP_POS(levl[sx + dx][lsy].typ))))
+                                         && ZAP_POS(TYP_AT(sx + dx, lsy)))))
                     bounce = 1;
-                if (isok(lsx, sy) && ZAP_POS(rmn = levl[lsx][sy].typ)
+                if (isok(lsx, sy) && ZAP_POS(rmn = TYP_AT(lsx, sy))
                     && !closed_door(lsx, sy)
                     && (IS_ROOM(rmn) || (isok(lsx, sy + dy)
-                                         && ZAP_POS(levl[lsx][sy + dy].typ))))
+                                         && ZAP_POS(TYP_AT(lsx, sy + dy)))))
                     if (!bounce || rn2(2))
                         bounce = 2;
 
@@ -4608,7 +4608,7 @@ short exploding_wand_typ;
     }
 
     /* secret door gets revealed, converted into regular door */
-    if (levl[x][y].typ == SDOOR) {
+    if (TYP_AT(x, y) == SDOOR) {
         cvt_sdoor_to_door(&levl[x][y]); /* .typ = DOOR */
         /* target spot will now pass closed_door() test below
            (except on rogue level) */
@@ -5339,8 +5339,8 @@ makewish()
             *oops_msg = (u.uswallow
                          ? "Oops!  %s out of your reach!"
                          : (Is_airlevel(&u.uz) || Is_waterlevel(&u.uz)
-                            || levl[u.ux][u.uy].typ < IRONBARS
-                            || levl[u.ux][u.uy].typ >= ICE)
+                            || TYP_AT(u.ux, u.uy) < IRONBARS
+                            || TYP_AT(u.ux, u.uy) >= ICE)
                             ? "Oops!  %s away from you!"
                             : "Oops!  %s to the floor!");
 

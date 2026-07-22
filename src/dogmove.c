@@ -569,7 +569,7 @@ int after, udist, whappr;
             return -2;
         appr = (udist >= 9) ? 1 : (mtmp->mflee) ? -1 : 0;
         if (udist > 1) {
-            if (!IS_ROOM(levl[u.ux][u.uy].typ) || !rn2(4) || whappr
+            if (!IS_ROOM(TYP_AT(u.ux, u.uy)) || !rn2(4) || whappr
                 || (dog_has_minvent && rn2(edog->apport)))
                 appr = 1;
         }
@@ -1331,10 +1331,10 @@ char *seen; /* [COLNO*ROWNO], 1 = already explored from */
                 continue;
             if (seen[i * ROWNO + j])
                 continue;
-            if (IS_ROCK(levl[i][j].typ) && !passes_walls(mon->data)
+            if (IS_ROCK(TYP_AT(i, j)) && !passes_walls(mon->data)
                 && (!may_dig(i, j) || !tunnels(mon->data)))
                 continue;
-            if (IS_DOOR(levl[i][j].typ)
+            if (IS_DOOR(TYP_AT(i, j))
                 && (levl[i][j].doormask & (D_CLOSED | D_LOCKED)))
                 continue;
             if (!could_reach_item(mon, i, j))

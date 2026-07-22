@@ -503,7 +503,7 @@ int minliquid(mtmp) register struct monst *mtmp;
                   || Is_waterlevel(&u.uz)));
     inlava = (is_lava(mtmp->mx, mtmp->my)
               && !(is_flyer(mtmp->data) || is_floater(mtmp->data)));
-    infountain = IS_FOUNTAIN(levl[mtmp->mx][mtmp->my].typ);
+    infountain = IS_FOUNTAIN(TYP_AT(mtmp->mx, mtmp->my));
 
     /* Flying and levitation keeps our steed out of the liquid
        (but not water-walking or swimming; note: if hero is in a
@@ -3143,7 +3143,7 @@ STATIC_OVL boolean restrap(mtmp) register struct monst *mtmp;
     if (mtmp->data->mlet == S_MIMIC) {
         set_mimic_sym(mtmp);
         return TRUE;
-    } else if (levl[mtmp->mx][mtmp->my].typ == ROOM) {
+    } else if (TYP_AT(mtmp->mx, mtmp->my) == ROOM) {
         mtmp->mundetected = 1;
         return TRUE;
     }

@@ -198,11 +198,11 @@ register int x, y;
         return hliquid("lava");
     else if (lev->typ == DRAWBRIDGE_DOWN)
         return "bridge";
-    else if (IS_ALTAR(levl[x][y].typ))
+    else if (IS_ALTAR(TYP_AT(x, y)))
         return "altar";
-    else if (IS_GRAVE(levl[x][y].typ))
+    else if (IS_GRAVE(TYP_AT(x, y)))
         return "headstone";
-    else if (IS_FOUNTAIN(levl[x][y].typ))
+    else if (IS_FOUNTAIN(TYP_AT(x, y)))
         return "fountain";
     else if ((IS_ROOM(lev->typ) && !Is_earthlevel(&u.uz))
              || IS_WALL(lev->typ) || IS_DOOR(lev->typ) || lev->typ == SDOOR)
@@ -523,7 +523,7 @@ doengrave()
     } else if (is_lava(u.ux, u.uy)) {
         You_cant("write on the %s!", surface(u.ux, u.uy));
         return 0;
-    } else if (is_pool(u.ux, u.uy) || IS_FOUNTAIN(levl[u.ux][u.uy].typ)) {
+    } else if (is_pool(u.ux, u.uy) || IS_FOUNTAIN(TYP_AT(u.ux, u.uy))) {
         You_cant("write on the %s!", surface(u.ux, u.uy));
         return 0;
     }
@@ -573,12 +573,12 @@ doengrave()
         cant_reach_floor(u.ux, u.uy, FALSE, TRUE);
         return 0;
     }
-    if (IS_ALTAR(levl[u.ux][u.uy].typ)) {
+    if (IS_ALTAR(TYP_AT(u.ux, u.uy))) {
         You("make a motion towards the altar with %s.", writer);
         altar_wrath(u.ux, u.uy);
         return 0;
     }
-    if (IS_GRAVE(levl[u.ux][u.uy].typ)) {
+    if (IS_GRAVE(TYP_AT(u.ux, u.uy))) {
         if (otmp == &zeroobj) { /* using only finger */
             You("would only make a small smudge on the %s.",
                 surface(u.ux, u.uy));
@@ -761,7 +761,7 @@ doengrave()
                           ? "You hear drilling!"    /* Deaf-aware */
                           : Blind
                              ? "You feel tremors."
-                             : IS_GRAVE(levl[u.ux][u.uy].typ)
+                             : IS_GRAVE(TYP_AT(u.ux, u.uy))
                                  ? "Chips fly out from the headstone."
                                  : is_ice(u.ux, u.uy)
                                     ? "Ice chips fly up from the ice surface!"
@@ -877,7 +877,7 @@ doengrave()
         break;
     }
 
-    if (IS_GRAVE(levl[u.ux][u.uy].typ)) {
+    if (IS_GRAVE(TYP_AT(u.ux, u.uy))) {
         if (type == ENGRAVE || type == 0) {
             type = HEADSTONE;
         } else {
@@ -917,7 +917,7 @@ doengrave()
     if (zapwand && (otmp->spe < 0)) {
         pline("%s %sturns to dust.", The(xname(otmp)),
               Blind ? "" : "glows violently, then ");
-        if (!IS_GRAVE(levl[u.ux][u.uy].typ))
+        if (!IS_GRAVE(TYP_AT(u.ux, u.uy)))
             You(
     "are not going to get anywhere trying to write in the %s with your dust.",
                 is_ice(u.ux, u.uy) ? "frost" : "dust");
@@ -1295,7 +1295,7 @@ const char *str;
     char buf[BUFSZ];
 
     /* Can we put a grave here? */
-    if ((levl[x][y].typ != ROOM && levl[x][y].typ != GRAVE) || t_at(x, y))
+    if ((TYP_AT(x, y) != ROOM && TYP_AT(x, y) != GRAVE) || t_at(x, y))
         return;
     /* Make the grave */
     SET_TYP_XY(x, y, GRAVE);

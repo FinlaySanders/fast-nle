@@ -433,7 +433,7 @@ struct monst *mtmp;
 
     if (stuck || immobile) {
         ; /* fleeing by stairs or traps is not possible */
-    } else if (levl[x][y].typ == STAIRS) {
+    } else if (TYP_AT(x, y) == STAIRS) {
         if (x == xdnstair && y == ydnstair) {
             if (!is_floater(mtmp->data))
                 m.has_defense = MUSE_DOWNSTAIRS;
@@ -443,7 +443,7 @@ struct monst *mtmp;
             if (sstairs.up || !is_floater(mtmp->data))
                 m.has_defense = MUSE_SSTAIRS;
         }
-    } else if (levl[x][y].typ == LADDER) {
+    } else if (TYP_AT(x, y) == LADDER) {
         if (x == xupladder && y == yupladder) {
             m.has_defense = MUSE_UP_LADDER;
         } else if (x == xdnladder && y == ydnladder) {
@@ -769,8 +769,8 @@ struct monst *mtmp;
         mzapwand(mtmp, otmp, FALSE);
         if (oseen)
             makeknown(WAN_DIGGING);
-        if (IS_FURNITURE(levl[mtmp->mx][mtmp->my].typ)
-            || IS_DRAWBRIDGE(levl[mtmp->mx][mtmp->my].typ)
+        if (IS_FURNITURE(TYP_AT(mtmp->mx, mtmp->my))
+            || IS_DRAWBRIDGE(TYP_AT(mtmp->mx, mtmp->my))
             || (is_drawbridge_wall(mtmp->mx, mtmp->my) >= 0)
             || (sstairs.sx && sstairs.sx == mtmp->mx
                 && sstairs.sy == mtmp->my)) {
@@ -870,7 +870,7 @@ struct monst *mtmp;
             pline("%s %s into a %s!", Mnam,
                   vtense(fakename[0], locomotion(mtmp->data, "jump")),
                   (t->ttyp == TRAPDOOR) ? "trap door" : "hole");
-            if (levl[trapx][trapy].typ == SCORR) {
+            if (TYP_AT(trapx, trapy) == SCORR) {
                 SET_TYP_XY(trapx, trapy, CORR);
                 unblock_point(trapx, trapy);
             }
@@ -1391,7 +1391,7 @@ struct obj *obj;                     /* 2nd arg to fhitm/fhito */
             if (hitanything)
                 range--;
         }
-        typ = levl[bhitpos.x][bhitpos.y].typ;
+        typ = TYP_AT(bhitpos.x, bhitpos.y);
         if (IS_DOOR(typ) || typ == SDOOR) {
             switch (obj->otyp) {
             /* note: monsters don't use opening or locking magic
@@ -1499,7 +1499,7 @@ struct monst *mtmp;
             for (y = mmy - 1; y <= mmy + 1; y++) {
                 /* Is this a suitable spot? */
                 if (isok(x, y) && !closed_door(x, y)
-                    && !IS_ROCK(levl[x][y].typ) && !IS_AIR(levl[x][y].typ)
+                    && !IS_ROCK(TYP_AT(x, y)) && !IS_AIR(TYP_AT(x, y))
                     && (((x == mmx) && (y == mmy)) ? !otmp->blessed
                                                    : !otmp->cursed)
                     && (x != u.ux || y != u.uy)) {

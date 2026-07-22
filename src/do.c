@@ -60,7 +60,7 @@ boolean pushing;
     } else if (!Is_waterlevel(&u.uz) && is_pool_or_lava(rx, ry)) {
         boolean lava = is_lava(rx, ry), fills_up;
         const char *what = waterbody_name(rx, ry);
-        schar ltyp = levl[rx][ry].typ;
+        schar ltyp = TYP_AT(rx, ry);
         int chance = rn2(10); /* water: 90%; lava: 10% */
         fills_up = lava ? chance == 0 : chance != 0;
 
@@ -316,7 +316,7 @@ polymorph_sink()
     boolean sinklooted;
     int algn;
 
-    if (levl[u.ux][u.uy].typ != SINK)
+    if (TYP_AT(u.ux, u.uy) != SINK)
         return;
 
     sinklooted = levl[u.ux][u.uy].looted != 0;
@@ -351,13 +351,13 @@ polymorph_sink()
         sym = S_room;
         SET_TYP_XY(u.ux, u.uy, ROOM);
         make_grave(u.ux, u.uy, (char *) 0);
-        if (levl[u.ux][u.uy].typ == GRAVE)
+        if (TYP_AT(u.ux, u.uy) == GRAVE)
             sym = S_grave;
         break;
     }
     /* give message even if blind; we know we're not levitating,
        so can feel the outcome even if we can't directly see it */
-    if (levl[u.ux][u.uy].typ != ROOM)
+    if (TYP_AT(u.ux, u.uy) != ROOM)
         pline_The("sink transforms into %s!", an(defsyms[sym].explanation));
     else
         pline_The("sink vanishes.");
@@ -379,10 +379,10 @@ teleport_sink()
         cy = rn2(ROWNO);
         trp = t_at(cx, cy);
         eng = engr_at(cx, cy);
-    } while ((levl[cx][cy].typ != ROOM || trp || eng || cansee(cx, cy))
+    } while ((TYP_AT(cx, cy) != ROOM || trp || eng || cansee(cx, cy))
              && cnt++ < 200);
 
-    if (levl[cx][cy].typ == ROOM && !trp && !eng) {
+    if (TYP_AT(cx, cy) == ROOM && !trp && !eng) {
         /* create sink at new position */
         SET_TYP_XY(cx, cy, SINK);
         levl[cx][cy].looted = levl[u.ux][u.uy].looted;
@@ -486,7 +486,7 @@ register struct obj *obj;
         polymorph_sink();
         nosink = TRUE;
         /* for S_room case, same message as for teleportation is given */
-        ideed = (levl[u.ux][u.uy].typ != ROOM);
+        ideed = (TYP_AT(u.ux, u.uy) != ROOM);
         break;
     default:
         ideed = FALSE;
@@ -636,7 +636,7 @@ register struct obj *obj;
         }
     } else {
         if ((obj->oclass == RING_CLASS || obj->otyp == MEAT_RING)
-            && IS_SINK(levl[u.ux][u.uy].typ)) {
+            && IS_SINK(TYP_AT(u.ux, u.uy))) {
             dosinkring(obj);
             return 1;
         }
@@ -659,7 +659,7 @@ register struct obj *obj;
                 float_down(I_SPECIAL | TIMEOUT, W_ARTI | W_ART);
             return 1;
         }
-        if (!IS_ALTAR(levl[u.ux][u.uy].typ) && flags.verbose)
+        if (!IS_ALTAR(TYP_AT(u.ux, u.uy)) && flags.verbose)
             You("drop %s.", doname(obj));
     }
     dropx(obj);
@@ -680,7 +680,7 @@ register struct obj *obj;
     if (!u.uswallow) {
         if (ship_object(obj, u.ux, u.uy, FALSE))
             return;
-        if (IS_ALTAR(levl[u.ux][u.uy].typ))
+        if (IS_ALTAR(TYP_AT(u.ux, u.uy)))
             doaltarobj(obj); /* set bknown */
     }
     dropy(obj);
@@ -1090,7 +1090,7 @@ dodown()
     if (trap && Is_stronghold(&u.uz)) {
         goto_hell(FALSE, TRUE);
     } else {
-        at_ladder = (boolean) (levl[u.ux][u.uy].typ == LADDER);
+        at_ladder = (boolean) (TYP_AT(u.ux, u.uy) == LADDER);
         next_level(!trap);
         at_ladder = FALSE;
     }
@@ -1130,7 +1130,7 @@ doup()
     if (near_capacity() > SLT_ENCUMBER) {
         /* No levitation check; inv_weight() already allows for it */
         Your("load is too heavy to climb the %s.",
-             levl[u.ux][u.uy].typ == STAIRS ? "stairs" : "ladder");
+             TYP_AT(u.ux, u.uy) == STAIRS ? "stairs" : "ladder");
         return 1;
     }
     if (ledger_no(&u.uz) == 1) {
@@ -1143,7 +1143,7 @@ doup()
         You("are held back by your pet!");
         return 0;
     }
-    at_ladder = (boolean) (levl[u.ux][u.uy].typ == LADDER);
+    at_ladder = (boolean) (TYP_AT(u.ux, u.uy) == LADDER);
     prev_level(TRUE);
     at_ladder = FALSE;
     return 1;
@@ -1214,9 +1214,9 @@ static boolean
 badspot(x, y)
 register xchar x, y;
 {
-    return (boolean) ((levl[x][y].typ != ROOM
-                       && levl[x][y].typ != AIR
-                       && levl[x][y].typ != CORR)
+    return (boolean) ((TYP_AT(x, y) != ROOM
+                       && TYP_AT(x, y) != AIR
+                       && TYP_AT(x, y) != CORR)
                       || MON_AT(x, y));
 }
 */

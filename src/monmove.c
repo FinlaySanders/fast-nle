@@ -85,7 +85,7 @@ register struct monst *mtmp;
 
     if (mtmp->mpeaceful && in_town(u.ux + u.dx, u.uy + u.dy)
         && mtmp->mcansee && m_canseeu(mtmp) && !rn2(3)) {
-        if (picking_lock(&x, &y) && IS_DOOR(levl[x][y].typ)
+        if (picking_lock(&x, &y) && IS_DOOR(TYP_AT(x, y))
             && (levl[x][y].doormask & D_LOCKED)) {
             if (couldsee(mtmp->mx, mtmp->my)) {
                 if (levl[x][y].looted & D_WARNED) {
@@ -150,7 +150,7 @@ struct monst *mtmp;
         return TRUE;
 
     /* should this still be true for defiled/molochian altars? */
-    if (IS_ALTAR(levl[x][y].typ)
+    if (IS_ALTAR(TYP_AT(x, y))
         && (mtmp->data->mlet == S_VAMPIRE || is_vampshifter(mtmp)))
         return TRUE;
 
@@ -749,10 +749,10 @@ xchar nix,niy;
                 || !is_pick(mw_tmp)
                 || !is_axe(mw_tmp))
                 mtmp->weapon_check = NEED_PICK_OR_AXE;
-        } else if (IS_TREE(levl[nix][niy].typ)) {
+        } else if (IS_TREE(TYP_AT(nix, niy))) {
             if (!(mw_tmp = MON_WEP(mtmp)) || !is_axe(mw_tmp))
                 mtmp->weapon_check = NEED_AXE;
-        } else if (IS_STWALL(levl[nix][niy].typ)) {
+        } else if (IS_STWALL(TYP_AT(nix, niy))) {
             if (!(mw_tmp = MON_WEP(mtmp)) || !is_pick(mw_tmp))
                 mtmp->weapon_check = NEED_PICK_AXE;
         }
@@ -1279,7 +1279,7 @@ register int after;
                [if we did the shift above, before moving the monster,
                we would need to duplicate it in dog_move()...] */
             if (is_vampshifter(mtmp) && !amorphous(mtmp->data)
-                && IS_DOOR(levl[nix][niy].typ)
+                && IS_DOOR(TYP_AT(nix, niy))
                 && ((levl[nix][niy].doormask & (D_LOCKED | D_CLOSED)) != 0)
                 && can_fog(mtmp)) {
                 if (sawmon) {
@@ -1306,7 +1306,7 @@ register int after;
             ptr = mtmp->data; /* in case mintrap() caused polymorph */
 
             /* open a door, or crash through it, if 'mtmp' can */
-            if (IS_DOOR(levl[mtmp->mx][mtmp->my].typ)
+            if (IS_DOOR(TYP_AT(mtmp->mx, mtmp->my))
                 && !passes_walls(ptr) /* doesn't need to open doors */
                 && !can_tunnel) {     /* taken care of below */
                 struct rm *here = &levl[mtmp->mx][mtmp->my];
@@ -1399,7 +1399,7 @@ register int after;
                     if (*in_rooms(mtmp->mx, mtmp->my, SHOPBASE))
                         add_damage(mtmp->mx, mtmp->my, 0L);
                 }
-            } else if (levl[mtmp->mx][mtmp->my].typ == IRONBARS) {
+            } else if (TYP_AT(mtmp->mx, mtmp->my) == IRONBARS) {
                 /* As of 3.6.2: was using may_dig() but it doesn't handle bars */
                 if (!(levl[mtmp->mx][mtmp->my].wall_info & W_NONDIGGABLE)
                     && (dmgtype(ptr, AD_RUST) || dmgtype(ptr, AD_CORR))) {
@@ -1515,7 +1515,7 @@ boolean
 closed_door(x, y)
 register int x, y;
 {
-    return (boolean) (IS_DOOR(levl[x][y].typ)
+    return (boolean) (IS_DOOR(TYP_AT(x, y))
                       && (levl[x][y].doormask & (D_LOCKED | D_CLOSED)));
 }
 
@@ -1523,7 +1523,7 @@ boolean
 accessible(x, y)
 register int x, y;
 {
-    int levtyp = levl[x][y].typ;
+    int levtyp = TYP_AT(x, y);
 
     /* use underlying terrain in front of closed drawbridge */
     if (levtyp == DRAWBRIDGE_UP)

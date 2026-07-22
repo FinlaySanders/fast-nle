@@ -32,7 +32,7 @@ rm_waslit()
 {
     register xchar x, y;
 
-    if (levl[u.ux][u.uy].typ == ROOM && levl[u.ux][u.uy].waslit)
+    if (TYP_AT(u.ux, u.uy) == ROOM && levl[u.ux][u.uy].waslit)
         return TRUE;
     for (x = u.ux - 2; x < u.ux + 3; x++)
         for (y = u.uy - 1; y < u.uy + 2; y++)
@@ -102,7 +102,7 @@ register boolean rockit;
         pline("Crash!  The ceiling collapses around you!");
     else
         pline("A mysterious force %s cave around you!",
-              (levl[u.ux][u.uy].typ == CORR) ? "creates a" : "extends the");
+              (TYP_AT(u.ux, u.uy) == CORR) ? "creates a" : "extends the");
     display_nhwindow(WIN_MESSAGE, TRUE);
 
     for (dist = 1; dist <= 2; dist++) {
@@ -129,7 +129,7 @@ register boolean rockit;
         delay_output();
     }
 
-    if (!rockit && levl[u.ux][u.uy].typ == CORR) {
+    if (!rockit && TYP_AT(u.ux, u.uy) == CORR) {
         SET_TYP_XY(u.ux, u.uy, ROOM); /* flags for CORR already 0 */
         if (waslit)
             levl[u.ux][u.uy].waslit = TRUE;
@@ -159,11 +159,11 @@ xchar x, y;
                   ? DIGTYP_BOULDER
                   : closed_door(x, y)
                      ? DIGTYP_DOOR
-                     : IS_TREE(levl[x][y].typ)
+                     : IS_TREE(TYP_AT(x, y))
                         ? (ispick ? DIGTYP_UNDIGGABLE : DIGTYP_TREE)
-                        : (ispick && IS_ROCK(levl[x][y].typ)
+                        : (ispick && IS_ROCK(TYP_AT(x, y))
                            && (!level.lflags.arboreal
-                               || IS_WALL(levl[x][y].typ)))
+                               || IS_WALL(TYP_AT(x, y))))
                            ? DIGTYP_ROCK
                            : DIGTYP_UNDIGGABLE);
 }
@@ -197,11 +197,11 @@ int x, y;
         } else if (verbose)
             pline_The("stairs are too hard to %s.", verb);
         return FALSE;
-    } else if (IS_THRONE(levl[x][y].typ) && madeby != BY_OBJECT) {
+    } else if (IS_THRONE(TYP_AT(x, y)) && madeby != BY_OBJECT) {
         if (verbose)
             pline_The("throne is too hard to break apart.");
         return FALSE;
-    } else if (IS_ALTAR(levl[x][y].typ)
+    } else if (IS_ALTAR(TYP_AT(x, y))
                && (madeby != BY_OBJECT || Is_astralevel(&u.uz)
                    || Is_sanctum(&u.uz))) {
         if (verbose)
@@ -215,7 +215,7 @@ int x, y;
         if (verbose)
             pline_The("%s splashes and subsides.", hliquid("water"));
         return FALSE;
-    } else if ((IS_ROCK(levl[x][y].typ) && levl[x][y].typ != SDOOR
+    } else if ((IS_ROCK(TYP_AT(x, y)) && TYP_AT(x, y) != SDOOR
                 && (levl[x][y].wall_info & W_NONDIGGABLE) != 0)
                || (ttmp
                    && (ttmp->ttyp == MAGIC_PORTAL

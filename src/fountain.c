@@ -126,7 +126,7 @@ genericptr_t poolcnt;
     register struct trap *ttmp;
 
     if (((x + y) % 2) || (x == u.ux && y == u.uy)
-        || (rn2(1 + distmin(u.ux, u.uy, x, y))) || (levl[x][y].typ != ROOM)
+        || (rn2(1 + distmin(u.ux, u.uy, x, y))) || (TYP_AT(x, y) != ROOM)
         || (sobj_at(BOULDER, x, y)) || nexttodoor(x, y))
         return;
 
@@ -168,7 +168,7 @@ dryup(x, y, isyou)
 xchar x, y;
 boolean isyou;
 {
-    if (IS_FOUNTAIN(levl[x][y].typ)
+    if (IS_FOUNTAIN(TYP_AT(x, y))
         && (!rn2(3) || FOUNTAIN_IS_WARNED(x, y))) {
         if (isyou && in_town(x, y) && !FOUNTAIN_IS_WARNED(x, y)) {
             struct monst *mtmp;
