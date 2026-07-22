@@ -1154,12 +1154,14 @@ boolean rlecomp;
             j = 0;
             i += 1;
         }
+        nh_typ_sync();
         return;
     }
 #else /* !RLECOMP */
     nhUse(rlecomp);
 #endif /* ?RLECOMP */
     mread(fd, (genericptr_t) levl, sizeof levl);
+    nh_typ_sync();
 }
 
 void

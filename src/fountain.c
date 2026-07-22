@@ -137,7 +137,7 @@ genericptr_t poolcnt;
         pline("Water gushes forth from the overflowing fountain!");
 
     /* Put a pool at x, y */
-    SET_TYP_XY(x, y, POOL, levl[x][y].rmflags = 0);
+    { SET_TYP_XY(x, y, POOL); levl[x][y].rmflags = 0; }
     /* No kelp! */
     del_engr_at(x, y);
     water_damage_chain(level.objs[x][y], TRUE);
@@ -205,7 +205,7 @@ boolean isyou;
                 return;
         }
         /* replace the fountain with ordinary floor */
-        SET_TYP_XY(x, y, ROOM, levl[x][y].rmflags = 0);
+        { SET_TYP_XY(x, y, ROOM); levl[x][y].rmflags = 0; }
         levl[x][y].blessedftn = 0;
         if (cansee(x, y))
             pline_The("fountain dries up!");
@@ -396,7 +396,7 @@ register struct obj *obj;
             exercise(A_WIS, TRUE);
         }
         update_inventory();
-        SET_TYP_XY(u.ux, u.uy, ROOM, levl[u.ux][u.uy].rmflags = 0);
+        { SET_TYP_XY(u.ux, u.uy, ROOM); levl[u.ux][u.uy].rmflags = 0; }
         newsym(u.ux, u.uy);
         level.lflags.nfountains--;
         if (in_town(u.ux, u.uy))
@@ -509,7 +509,7 @@ int x, y;
     if (cansee(x, y) || (x == u.ux && y == u.uy))
         pline_The("pipes break!  Water spurts out!");
     level.lflags.nsinks--;
-    SET_TYP_XY(x, y, FOUNTAIN, levl[x][y].looted = 0);
+    { SET_TYP_XY(x, y, FOUNTAIN); levl[x][y].looted = 0; }
     levl[x][y].blessedftn = 0;
     SET_FOUNTAIN_LOOTED(x, y);
     level.lflags.nfountains++;

@@ -45,4 +45,4 @@ DW.ref.__gxx_personality_v0	# ELF C++ EH personality reference (toolchain artifa
 __TMC_END__	# ELF transactional-memory section marker (toolchain artifact)
 __dso_handle	# ELF per-DSO handle for atexit (toolchain artifact)
 linux_flag_console	# sys/share Linux console detection flag (real-terminal only; unused in NLE embedding)
-_ZZN10nethack_rl9NetHackRL8fill_obsEP15nle_observationE6verify # NLE_TYP_VERIFY getenv cache: write-once process flag, same value for all envs by construction
+_ZZN10nethack_rl9NetHackRL8fill_obsEP15nle_observationE6verify # NLE_TYP_VERIFY cache

@@ -586,18 +586,15 @@ is_moat(int x, int y)
     return FALSE;
 }
 
-/* levl[][].typ byte-plane mirror (see globals.def nh_typ_plane).
-   SET_TYP_P bounds-checks the pointer against the CURRENT level's array,
-   so writes through foreign rm pointers (or same-named fields of other
-   structs) update only the real field — the plane stays coherent. */
 #define TYP_AT(x, y) (nh_typ_plane[x][y])
 #define SET_TYP_XY(x, y, ...) \
     do { schar set_typ_v_ = (__VA_ARGS__); levl[x][y].typ = set_typ_v_; \
          nh_typ_plane[x][y] = set_typ_v_; } while (0)
 #define SET_TYP_P(p, ...) \
-    do { schar set_typ_v_ = (__VA_ARGS__); struct rm *set_typ_p_ = (p); \
-         long set_typ_i_ = (long)(set_typ_p_ - &levl[0][0]); \
-         set_typ_p_->typ = set_typ_v_; \
+    do { schar set_typ_v_ = (__VA_ARGS__); \
+         (p)->typ = set_typ_v_; /* through the CALLER pointer type */ \
+         long set_typ_i_ = \
+             (long)((struct rm *) (genericptr_t) (p) - &levl[0][0]); \
          if (set_typ_i_ >= 0 && set_typ_i_ < COLNO * ROWNO) \
              (&nh_typ_plane[0][0])[set_typ_i_] = set_typ_v_; } while (0)
 extern void NDECL(nh_typ_sync);

@@ -46,8 +46,6 @@ track.c | cold | coord | utrack | [50] | 0
 global | hot | long | moves | | 1
 global | hot | long | monstermoves | | 1
 global | hot | int | multi | | 0
-# dense mirror of levl[][].typ (front-1 byte-diet): L1-resident terrain
-# plane for hot readers; write-through via SET_TYP_* + rebuilt in vision_reset
 global | hot | schar | nh_typ_plane | [COLNO][ROWNO] | 0
 global | hot | boolean | vision_full_recalc | | 0
 global | hot | char ** | viz_array | | 0

@@ -193,8 +193,10 @@ boolean is_room;
             }
         for (x = lowx; x <= hix; x++) {
             lev = &levl[x][lowy];
-            for (y = lowy; y <= hiy; y++)
-                lev++->typ = ROOM;
+            for (y = lowy; y <= hiy; y++) {
+                SET_TYP_P(lev, ROOM);
+                lev++;
+            }
         }
         if (is_room) {
             SET_TYP_XY(lowx - 1, lowy - 1, TLCORNER);
@@ -685,6 +687,7 @@ clear_level_structures()
     dnstairs_room = upstairs_room = sstairs_room = (struct mkroom *) 0;
     made_branch = FALSE;
     clear_regions();
+    nh_typ_sync();
 }
 
 /* Added for NLE. */

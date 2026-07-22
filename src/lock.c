@@ -970,7 +970,7 @@ int x, y;
                 return FALSE;
             }
             block_point(x, y);
-            SET_TYP_P(door, SDOOR, door->doormask = D_NODOOR);
+            { SET_TYP_P(door, SDOOR); door->doormask = D_NODOOR; }
             if (vis)
                 pline_The("doorway vanishes!");
             newsym(x, y);

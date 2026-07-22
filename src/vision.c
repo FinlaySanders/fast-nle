@@ -207,7 +207,7 @@ register struct rm *lev;
 void
 vision_reset()
 {
-    nh_typ_sync(); /* level (re)entered or rebuilt: refresh typ plane */
+    nh_typ_sync();
     int y;
     register int x, i, dig_left, block;
     register struct rm *lev;
@@ -2925,9 +2925,6 @@ struct monst *mon;
 
 /*vision.c*/
 
-
-/* Rebuild the dense typ mirror from the live level (cheap: 1.7KB once per
-   level entry). Verify mode (NLE_TYP_VERIFY=1): hard-compare every call. */
 void
 nh_typ_sync()
 {
@@ -2945,6 +2942,6 @@ const char *where;
     for (x = 0; x < COLNO; x++)
         for (y = 0; y < ROWNO; y++)
             if (nh_typ_plane[x][y] != levl[x][y].typ)
-                panic("typ plane desync at (%d,%d): plane=%d real=%d [%s]",
+                panic("typ plane desync (%d,%d): plane=%d real=%d [%s]",
                       x, y, nh_typ_plane[x][y], levl[x][y].typ, where);
 }
