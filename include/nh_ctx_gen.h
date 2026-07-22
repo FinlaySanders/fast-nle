@@ -11,6 +11,7 @@ struct nh_ctx {
     long g_moves; /* global: moves */
     long g_monstermoves; /* global: monstermoves */
     int g_multi; /* global: multi */
+    schar g_nh_typ_plane[COLNO][ROWNO]; /* global: nh_typ_plane */
     boolean g_vision_full_recalc; /* global: vision_full_recalc */
     char ** g_viz_array; /* global: viz_array */
     struct sinfo g_program_state; /* global: program_state */
@@ -507,6 +508,7 @@ void nh_ctx_fixup(struct nh_ctx *);
 #define moves (nh_cur->g_moves)
 #define monstermoves (nh_cur->g_monstermoves)
 #define multi (nh_cur->g_multi)
+#define nh_typ_plane (nh_cur->g_nh_typ_plane)
 #define vision_full_recalc (nh_cur->g_vision_full_recalc)
 #define viz_array (nh_cur->g_viz_array)
 #define program_state (nh_cur->g_program_state)

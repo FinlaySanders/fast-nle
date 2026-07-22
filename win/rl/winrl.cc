@@ -330,6 +330,12 @@ NetHackRL::update_blstats_direct()
 void
 NetHackRL::fill_obs(nle_obs *obs)
 {
+    {
+        static int verify = -1;
+        if (verify < 0) verify = getenv("NLE_TYP_VERIFY") ? 1 : 0;
+        if (verify && program_state.in_moveloop && !program_state.gameover)
+            nh_typ_verify("fill_obs");
+    }
     if (obs->prog_state) {
         obs->prog_state[0] = program_state.gameover;
         obs->prog_state[1] = program_state.panicking;
@@ -359,7 +365,15 @@ NetHackRL::fill_obs(nle_obs *obs)
         obs->internal[3] = xwaitingforspace;
         obs->internal[4] = stairs_down;
         obs->internal[5] = u.ublesscnt; /* prayer cooldown (was core seed) */
-        obs->internal[6] = 0;           /* used to be disp seed */
+        /* Underfoot engraving state (was disp seed, then 0): 0 none,
+           1 engraving present, 2 active legible Elbereth (the exact
+           strict fuzzymatch monsters respect in onscary, incl. the
+           engr_time drying gate). Readable in-game via ':' — fair. */
+        {
+            struct engr *uep = engr_at(u.ux, u.uy);
+            obs->internal[6] =
+                uep ? (sengr_at("Elbereth", u.ux, u.uy, TRUE) ? 2 : 1) : 0;
+        }
         obs->internal[7] = u.uhunger;
         obs->internal[8] =
             u.urexp; /* score (careful! check botl_score() and end.c) */

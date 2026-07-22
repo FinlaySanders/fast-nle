@@ -186,7 +186,7 @@ int x1, y1, x2, y2;
                     && is_solid(x - 1, y + 1) && is_solid(x, y - 1)
                     && is_solid(x, y + 1) && is_solid(x + 1, y - 1)
                     && is_solid(x + 1, y) && is_solid(x + 1, y + 1))
-                    lev->typ = STONE;
+                    SET_TYP_P(lev, STONE);
             }
         }
 }
@@ -250,7 +250,7 @@ int x1, y1, x2, y2;
 
             /* don't change typ if wall is free-standing */
             if (bits)
-                lev->typ = spine_array[bits];
+                SET_TYP_P(lev, spine_array[bits]);
         }
 }
 
@@ -448,7 +448,7 @@ baalz_fixup()
     for (x = bughack.inarea.x1; x <= bughack.inarea.x2; ++x)
         for (y = bughack.inarea.y1; y <= bughack.inarea.y2; ++y)
             if (levl[x][y].typ == POOL) {
-                levl[x][y].typ = HWALL;
+                SET_TYP_XY(x, y, HWALL);
                 if (bughack.delarea.x1 == COLNO)
                     bughack.delarea.x1 = x, bughack.delarea.y1 = y;
                 else
@@ -471,16 +471,16 @@ baalz_fixup()
     x = bughack.delarea.x1, y = bughack.delarea.y1;
     if (isok(x, y) && levl[x][y].typ == TLWALL
         && isok(x, y + 1) && levl[x][y + 1].typ == TUWALL) {
-        levl[x][y].typ = BRCORNER;
-        levl[x][y + 1].typ = HWALL;
+        SET_TYP_XY(x, y, BRCORNER);
+        SET_TYP_XY(x, y + 1, HWALL);
         if ((mtmp = m_at(x, y)) != 0) /* something at temporary pool... */
             (void) rloc(mtmp, FALSE);
     }
     x = bughack.delarea.x2, y = bughack.delarea.y2;
     if (isok(x, y) && levl[x][y].typ == TLWALL
         && isok(x, y - 1) && levl[x][y - 1].typ == TDWALL) {
-        levl[x][y].typ = TRCORNER;
-        levl[x][y - 1].typ = HWALL;
+        SET_TYP_XY(x, y, TRCORNER);
+        SET_TYP_XY(x, y - 1, HWALL);
         if ((mtmp = m_at(x, y)) != 0) /* something at temporary pool... */
             (void) rloc(mtmp, FALSE);
     }
@@ -895,7 +895,7 @@ xchar typ;
                     dy = y;
                     dir = dirok[rn2(idx)];
                     mz_move(dx, dy, dir);
-                    levl[dx][dy].typ = typ;
+                    SET_TYP_XY(dx, dy, typ);
                 }
             }
 }
@@ -933,11 +933,11 @@ int wallthick;
     if (level.lflags.corrmaze)
         for (x = 2; x < (rdx * 2); x++)
             for (y = 2; y < (rdy * 2); y++)
-                levl[x][y].typ = STONE;
+                SET_TYP_XY(x, y, STONE);
     else
         for (x = 2; x <= (rdx * 2); x++)
             for (y = 2; y <= (rdy * 2); y++)
-                levl[x][y].typ = ((x % 2) && (y % 2)) ? STONE : HWALL;
+                SET_TYP_XY(x, y, ((x % 2) && (y % 2)) ? STONE : HWALL);
 
     /* set upper bounds for maze0xy and walkfrom */
     x_maze_max = (rdx * 2);
@@ -982,7 +982,7 @@ int wallthick;
                         if (rx+dx >= x_maze_max
                             || ry+dy >= y_maze_max)
                             break;
-                        levl[rx + dx][ry + dy].typ = tmpmap[x][y];
+                        SET_TYP_XY(rx + dx, ry + dy, tmpmap[x][y]);
                     }
                 ry += my;
                 y++;
@@ -1182,7 +1182,7 @@ schar typ;
         y = (int) mazey[pos];
         if (!IS_DOOR(levl[x][y].typ)) {
             /* might still be on edge of MAP, so don't overwrite */
-            levl[x][y].typ = typ;
+            SET_TYP_XY(x, y, typ);
             levl[x][y].flags = 0;
         }
         q = 0;
@@ -1194,7 +1194,7 @@ schar typ;
         else {
             dir = dirs[rn2(q)];
             mz_move(x, y, dir);
-            levl[x][y].typ = typ;
+            SET_TYP_XY(x, y, typ);
             mz_move(x, y, dir);
             pos++;
             if (pos > CELLS)
@@ -1223,7 +1223,7 @@ schar typ;
 
     if (!IS_DOOR(levl[x][y].typ)) {
         /* might still be on edge of MAP, so don't overwrite */
-        levl[x][y].typ = typ;
+        SET_TYP_XY(x, y, typ);
         levl[x][y].rmflags = 0;
     }
 
@@ -1236,7 +1236,7 @@ schar typ;
             return;
         dir = dirs[rn2(q)];
         mz_move(x, y, dir);
-        levl[x][y].typ = typ;
+        SET_TYP_XY(x, y, typ);
         mz_move(x, y, dir);
         walkfrom(x, y, typ);
     }
@@ -1564,7 +1564,7 @@ movebubbles()
                 yedge = (boolean) (y < bymin || y > bymax);
                 if (xedge || yedge) {
                     if (!rn2(xedge ? 3 : 5)) {
-                        levl[x][y].typ = CLOUD;
+                        SET_TYP_XY(x, y, CLOUD);
                         block_point(x, y);
                     }
                 }
@@ -1762,7 +1762,7 @@ setup_waterlevel()
         for (y = 0; y <= ROWNO - 1; y++) {
             levl[x][y].glyph = glyph;
             if (levl[x][y].typ == STONE)
-                levl[x][y].typ = typ;
+                SET_TYP_XY(x, y, typ);
         }
 
     /* make bubbles */
@@ -1925,11 +1925,11 @@ boolean ini;
         for (j = 0, y = b->y; j < (int) b->bm[1]; j++, y++)
             if (b->bm[j + 2] & (1 << i)) {
                 if (Is_waterlevel(&u.uz)) {
-                    levl[x][y].typ = AIR;
+                    SET_TYP_XY(x, y, AIR);
                     levl[x][y].lit = 1;
                     unblock_point(x, y);
                 } else if (Is_airlevel(&u.uz)) {
-                    levl[x][y].typ = CLOUD;
+                    SET_TYP_XY(x, y, CLOUD);
                     levl[x][y].lit = 1;
                     block_point(x, y);
                 }

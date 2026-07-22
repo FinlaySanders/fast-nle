@@ -422,17 +422,17 @@ int x, y, typ;
                            : 0L);
         lev->doormask = 0;     /* subsumes altarmask, icedpool... */
         if (IS_ROOM(lev->typ)) /* && !IS_AIR(lev->typ) */
-            lev->typ = ROOM;
+            SET_TYP_P(lev, ROOM);
         /*
          * some cases which can happen when digging
          * down while phazing thru solid areas
          */
         else if (lev->typ == STONE || lev->typ == SCORR)
-            lev->typ = CORR;
+            SET_TYP_P(lev, CORR);
         else if (IS_WALL(lev->typ) || lev->typ == SDOOR)
-            lev->typ = level.lflags.is_maze_lev
+            SET_TYP_P(lev, level.lflags.is_maze_lev
                            ? ROOM
-                           : level.lflags.is_cavernous_lev ? CORR : DOOR;
+                           : level.lflags.is_cavernous_lev ? CORR : DOOR);
 
         unearth_objs(x, y);
         break;

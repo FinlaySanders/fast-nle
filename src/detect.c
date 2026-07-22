@@ -1269,7 +1269,7 @@ register int x, y;
 
     /* Secret corridors are found, but not secret doors. */
     if (lev->typ == SCORR) {
-        lev->typ = CORR;
+        SET_TYP_P(lev, CORR);
         unblock_point(x, y);
     }
 
@@ -1464,7 +1464,7 @@ struct rm *lev;
         if (!(newmask & D_LOCKED))
         newmask |= D_CLOSED;
 
-    lev->typ = DOOR;
+    SET_TYP_P(lev, DOOR);
     lev->doormask = newmask;
 }
 
@@ -1491,7 +1491,7 @@ genericptr_t num;
         newsym(zx, zy);
         (*(int *) num)++;
     } else if (levl[zx][zy].typ == SCORR) {
-        levl[zx][zy].typ = CORR;
+        SET_TYP_XY(zx, zy, CORR);
         unblock_point(zx, zy);
         magic_map_background(zx, zy, 0);
         newsym(zx, zy);
@@ -1564,7 +1564,7 @@ genericptr_t num;
         newsym(zx, zy);
         (*num_p)++;
     } else if (levl[zx][zy].typ == SCORR) {
-        levl[zx][zy].typ = CORR;
+        SET_TYP_XY(zx, zy, CORR);
         unblock_point(zx, zy);
         newsym(zx, zy);
         (*num_p)++;
@@ -1759,7 +1759,7 @@ register int aflag; /* intrinsic autosearch vs explicit searching */
                 } else if (levl[x][y].typ == SCORR) {
                     if (rnl(7 - fund))
                         continue;
-                    levl[x][y].typ = CORR;
+                    SET_TYP_XY(x, y, CORR);
                     unblock_point(x, y); /* vision */
                     exercise(A_WIS, TRUE);
                     nomul(0);
@@ -1917,9 +1917,9 @@ int default_glyph, which_subset;
                        but we've got no other choice) */
                     schar save_typ = levl[x][y].typ;
 
-                    levl[x][y].typ = lastseentyp[x][y];
+                    SET_TYP_XY(x, y, lastseentyp[x][y]);
                     glyph = back_to_glyph(x, y);
-                    levl[x][y].typ = save_typ;
+                    SET_TYP_XY(x, y, save_typ);
                 }
             }
         }

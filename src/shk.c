@@ -3534,7 +3534,7 @@ long cost;
     tmp_dam->place.x = x;
     tmp_dam->place.y = y;
     tmp_dam->cost = cost;
-    tmp_dam->typ = levl[x][y].typ;
+    SET_TYP_P(tmp_dam, levl[x][y].typ);
     tmp_dam->next = level.damagelist;
     level.damagelist = tmp_dam;
     /* If player saw damage, display as a wall forever */
@@ -3757,7 +3757,7 @@ boolean catchup; /* restoring a level */
 
     /* door or wall repair; trap, if any, is now gone;
        restore original terrain type and move any items away */
-    levl[x][y].typ = tmp_dam->typ;
+    SET_TYP_XY(x, y, tmp_dam->typ);
     if (IS_DOOR(tmp_dam->typ))
         levl[x][y].doormask = D_CLOSED; /* arbitrary */
 

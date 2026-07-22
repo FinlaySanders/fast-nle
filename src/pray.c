@@ -1407,7 +1407,7 @@ dosacrifice()
                     pline(
                     "The blood floods the altar, which vanishes in %s cloud!",
                           an(hcolor(NH_BLACK)));
-                    levl[u.ux][u.uy].typ = ROOM;
+                    SET_TYP_XY(u.ux, u.uy, ROOM);
                     levl[u.ux][u.uy].altarmask = 0;
                     newsym(u.ux, u.uy);
                     angry_priest();

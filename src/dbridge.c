@@ -203,12 +203,12 @@ boolean flag;
     if (!IS_WALL(levl[x2][y2].typ))
         return FALSE;
     if (flag) { /* We want the bridge open */
-        levl[x][y].typ = DRAWBRIDGE_DOWN;
-        levl[x2][y2].typ = DOOR;
+        SET_TYP_XY(x, y, DRAWBRIDGE_DOWN);
+        SET_TYP_XY(x2, y2, DOOR);
         levl[x2][y2].doormask = D_NODOOR;
     } else {
-        levl[x][y].typ = DRAWBRIDGE_UP;
-        levl[x2][y2].typ = DBWALL;
+        SET_TYP_XY(x, y, DRAWBRIDGE_UP);
+        SET_TYP_XY(x2, y2, DBWALL);
         /* Drawbridges are non-diggable. */
         levl[x2][y2].wall_info = W_NONDIGGABLE;
     }
@@ -733,9 +733,9 @@ int x, y;
                     : "going");
     else /* "5 gears turn" for castle drawbridge tune */
         You_hear("chains rattling and gears turning.");
-    lev1->typ = DRAWBRIDGE_UP;
+    SET_TYP_P(lev1, DRAWBRIDGE_UP);
     lev2 = &levl[x2][y2];
-    lev2->typ = DBWALL;
+    SET_TYP_P(lev2, DBWALL);
     switch (lev1->drawbridgemask & DB_DIR) {
     case DB_NORTH:
     case DB_SOUTH:
@@ -792,9 +792,9 @@ int x, y;
                 (distu(x2, y2) < distu(x, y)) ? "going" : "coming");
     else /* "5 gears turn" for castle drawbridge tune */
         You_hear("gears turning and chains rattling.");
-    lev1->typ = DRAWBRIDGE_DOWN;
+    SET_TYP_P(lev1, DRAWBRIDGE_DOWN);
     lev2 = &levl[x2][y2];
-    lev2->typ = DOOR;
+    SET_TYP_P(lev2, DOOR);
     lev2->doormask = D_NODOOR;
     set_entity(x, y, &(occupants[0]));
     set_entity(x2, y2, &(occupants[1]));
@@ -856,7 +856,7 @@ int x, y;
             else if (!Deaf)
                 You_hear("a loud *SPLASH*!");
         }
-        lev1->typ = lava ? LAVAPOOL : MOAT;
+        SET_TYP_P(lev1, lava ? LAVAPOOL : MOAT);
         lev1->drawbridgemask = 0;
         if ((otmp2 = sobj_at(BOULDER, x, y)) != 0) {
             obj_extract_self(otmp2);
@@ -867,11 +867,11 @@ int x, y;
             pline_The("drawbridge disintegrates!");
         else
             You_hear("a loud *CRASH*!");
-        lev1->typ = ((lev1->drawbridgemask & DB_ICE) ? ICE : ROOM);
+        SET_TYP_P(lev1, ((lev1->drawbridgemask & DB_ICE) ? ICE : ROOM));
         lev1->icedpool = ((lev1->drawbridgemask & DB_ICE) ? ICED_MOAT : 0);
     }
     wake_nearto(x, y, 500);
-    lev2->typ = DOOR;
+    SET_TYP_P(lev2, DOOR);
     lev2->doormask = D_NODOOR;
     if ((t = t_at(x, y)) != 0)
         deltrap(t);

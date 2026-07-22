@@ -71,7 +71,7 @@ boolean pushing;
                 levl[rx][ry].drawbridgemask &= ~DB_UNDER; /* clear lava */
                 levl[rx][ry].drawbridgemask |= DB_FLOOR;
             } else
-                levl[rx][ry].typ = ROOM, levl[rx][ry].rmflags = 0;
+                SET_TYP_XY(rx, ry, ROOM, levl[rx][ry].rmflags = 0);
 
             if (ttmp)
                 (void) delfloortrap(ttmp);
@@ -326,7 +326,7 @@ polymorph_sink()
     default:
     case 0:
         sym = S_fountain;
-        levl[u.ux][u.uy].typ = FOUNTAIN;
+        SET_TYP_XY(u.ux, u.uy, FOUNTAIN);
         levl[u.ux][u.uy].blessedftn = 0;
         if (sinklooted)
             SET_FOUNTAIN_LOOTED(u.ux, u.uy);
@@ -334,13 +334,13 @@ polymorph_sink()
         break;
     case 1:
         sym = S_throne;
-        levl[u.ux][u.uy].typ = THRONE;
+        SET_TYP_XY(u.ux, u.uy, THRONE);
         if (sinklooted)
             levl[u.ux][u.uy].looted = T_LOOTED;
         break;
     case 2:
         sym = S_altar;
-        levl[u.ux][u.uy].typ = ALTAR;
+        SET_TYP_XY(u.ux, u.uy, ALTAR);
         /* 3.6.3: this used to pass 'rn2(A_LAWFUL + 2) - 1' to
            Align2amask() but that evaluates its argument more than once */
         algn = rn2(3) - 1; /* -1 (A_Cha) or 0 (A_Neu) or +1 (A_Law) */
@@ -349,7 +349,7 @@ polymorph_sink()
         break;
     case 3:
         sym = S_room;
-        levl[u.ux][u.uy].typ = ROOM;
+        SET_TYP_XY(u.ux, u.uy, ROOM);
         make_grave(u.ux, u.uy, (char *) 0);
         if (levl[u.ux][u.uy].typ == GRAVE)
             sym = S_grave;
@@ -384,11 +384,11 @@ teleport_sink()
 
     if (levl[cx][cy].typ == ROOM && !trp && !eng) {
         /* create sink at new position */
-        levl[cx][cy].typ = SINK;
+        SET_TYP_XY(cx, cy, SINK);
         levl[cx][cy].looted = levl[u.ux][u.uy].looted;
         newsym(cx, cy);
         /* remove old sink */
-        levl[u.ux][u.uy].typ = ROOM;
+        SET_TYP_XY(u.ux, u.uy, ROOM);
         levl[u.ux][u.uy].looted = 0;
         newsym(u.ux, u.uy);
         return TRUE;

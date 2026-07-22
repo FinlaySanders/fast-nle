@@ -1318,7 +1318,7 @@ boolean ghostly;
             mazexy(&cc);
             xdnstair = cc.x;
             ydnstair = cc.y;
-            levl[cc.x][cc.y].typ = STAIRS;
+            SET_TYP_XY(cc.x, cc.y, STAIRS);
         }
 
         br = Is_branchlev(&u.uz);

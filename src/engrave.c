@@ -1298,7 +1298,7 @@ const char *str;
     if ((levl[x][y].typ != ROOM && levl[x][y].typ != GRAVE) || t_at(x, y))
         return;
     /* Make the grave */
-    levl[x][y].typ = GRAVE;
+    SET_TYP_XY(x, y, GRAVE);
     /* Engrave the headstone */
     del_engr_at(x, y);
     if (!str)

@@ -183,12 +183,12 @@ boolean is_room;
     if (!special) {
         for (x = lowx - 1; x <= hix + 1; x++)
             for (y = lowy - 1; y <= hiy + 1; y += (hiy - lowy + 2)) {
-                levl[x][y].typ = HWALL;
+                SET_TYP_XY(x, y, HWALL);
                 levl[x][y].horizontal = 1; /* For open/secret doors. */
             }
         for (x = lowx - 1; x <= hix + 1; x += (hix - lowx + 2))
             for (y = lowy; y <= hiy; y++) {
-                levl[x][y].typ = VWALL;
+                SET_TYP_XY(x, y, VWALL);
                 levl[x][y].horizontal = 0; /* For open/secret doors. */
             }
         for (x = lowx; x <= hix; x++) {
@@ -197,10 +197,10 @@ boolean is_room;
                 lev++->typ = ROOM;
         }
         if (is_room) {
-            levl[lowx - 1][lowy - 1].typ = TLCORNER;
-            levl[hix + 1][lowy - 1].typ = TRCORNER;
-            levl[lowx - 1][hiy + 1].typ = BLCORNER;
-            levl[hix + 1][hiy + 1].typ = BRCORNER;
+            SET_TYP_XY(lowx - 1, lowy - 1, TLCORNER);
+            SET_TYP_XY(hix + 1, lowy - 1, TRCORNER);
+            SET_TYP_XY(lowx - 1, hiy + 1, BLCORNER);
+            SET_TYP_XY(hix + 1, hiy + 1, BRCORNER);
         } else { /* a subroom */
             wallification(lowx - 1, lowy - 1, hix + 1, hiy + 1);
         }
@@ -423,7 +423,7 @@ int type;
 
     if (!IS_WALL(levl[x][y].typ)) /* avoid SDOORs on already made doors */
         type = DOOR;
-    levl[x][y].typ = type;
+    SET_TYP_XY(x, y, type);
     if (type == DOOR) {
         if (!rn2(3)) { /* is it a locked door, closed, or a doorway? */
             /* locked_door knob: scale the 1-in-6 lock chance (1.0 =
@@ -543,7 +543,7 @@ int trap_type;
 
             rm = &levl[xx][yy + dy];
             if (trap_type || !rn2(4)) {
-                rm->typ = SCORR;
+                SET_TYP_P(rm, SCORR);
                 if (trap_type) {
                     if (is_hole(trap_type) && !Can_fall_thru(&u.uz))
                         trap_type = ROCKTRAP;
@@ -562,13 +562,13 @@ int trap_type;
                 }
                 dosdoor(xx, yy, aroom, SDOOR);
             } else {
-                rm->typ = CORR;
+                SET_TYP_P(rm, CORR);
                 if (rn2(7))
                     dosdoor(xx, yy, aroom, rn2(5) ? SDOOR : DOOR);
                 else {
                     /* inaccessible niches occasionally have iron bars */
                     if (!rn2(5) && IS_WALL(levl[xx][yy].typ)) {
-                        levl[xx][yy].typ = IRONBARS;
+                        SET_TYP_XY(xx, yy, IRONBARS);
                         if (rn2(3))
                             (void) mkcorpstat(CORPSE, (struct monst *) 0,
                                               mkclass(S_HUMAN, 0), xx,
@@ -1297,7 +1297,7 @@ xchar x, y; /* location */
         sstairs_room = br_room;
 
         levl[x][y].ladder = sstairs.up ? LA_UP : LA_DOWN;
-        levl[x][y].typ = STAIRS;
+        SET_TYP_XY(x, y, STAIRS);
     }
     /*
      * Set made_branch to TRUE even if we didn't make a stairwell (i.e.
@@ -1665,7 +1665,7 @@ struct mkroom *croom;
         dnstairs_room = croom;
     }
 
-    levl[x][y].typ = STAIRS;
+    SET_TYP_XY(x, y, STAIRS);
     levl[x][y].ladder = up ? LA_UP : LA_DOWN;
 }
 
@@ -1687,7 +1687,7 @@ struct mkroom *croom;
     } while (occupied(m.x, m.y) || bydoor(m.x, m.y));
 
     /* Put a fountain at m.x, m.y */
-    levl[m.x][m.y].typ = FOUNTAIN;
+    SET_TYP_XY(m.x, m.y, FOUNTAIN);
     /* Is it a "blessed" fountain? (affects drinking from fountain) */
     if (!rn2(7))
         levl[m.x][m.y].blessedftn = 1;
@@ -1710,7 +1710,7 @@ struct mkroom *croom;
     } while (occupied(m.x, m.y) || bydoor(m.x, m.y));
 
     /* Put a sink at m.x, m.y */
-    levl[m.x][m.y].typ = SINK;
+    SET_TYP_XY(m.x, m.y, SINK);
 
     level.lflags.nsinks++;
 }
@@ -1734,7 +1734,7 @@ struct mkroom *croom;
     } while (occupied(m.x, m.y) || bydoor(m.x, m.y));
 
     /* Put an altar at m.x, m.y */
-    levl[m.x][m.y].typ = ALTAR;
+    SET_TYP_XY(m.x, m.y, ALTAR);
 
     /* -1 - A_CHAOTIC, 0 - A_NEUTRAL, 1 - A_LAWFUL */
     al = rn2((int) A_LAWFUL + 2) - 1;
@@ -1916,7 +1916,7 @@ int dist;
     case 1: /* fire traps */
         if (is_pool(x, y))
             break;
-        lev->typ = ROOM;
+        SET_TYP_P(lev, ROOM);
         ttmp = maketrap(x, y, FIRE_TRAP);
         if (ttmp)
             ttmp->tseen = TRUE;
@@ -1925,11 +1925,11 @@ int dist;
     case 2:
     case 3:
     case 6: /* unlit room locations */
-        lev->typ = ROOM;
+        SET_TYP_P(lev, ROOM);
         break;
     case 4: /* pools (aka a wide moat) */
     case 5:
-        lev->typ = MOAT;
+        SET_TYP_P(lev, MOAT);
         /* No kelp! */
         break;
     default:

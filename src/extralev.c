@@ -305,9 +305,9 @@ corr(x, y)
 int x, y;
 {
     if (rn2(50)) {
-        levl[x][y].typ = CORR;
+        SET_TYP_XY(x, y, CORR);
     } else {
-        levl[x][y].typ = SCORR;
+        SET_TYP_XY(x, y, SCORR);
     }
 }
 

@@ -4328,11 +4328,11 @@ const char *msg;
     } else { /* lev->typ == ICE */
 #ifdef STUPID
         if (lev->icedpool == ICED_POOL)
-            lev->typ = POOL;
+            SET_TYP_P(lev, POOL);
         else
-            lev->typ = MOAT;
+            SET_TYP_P(lev, MOAT);
 #else
-        lev->typ = (lev->icedpool == ICED_POOL ? POOL : MOAT);
+        SET_TYP_P(lev, (lev->icedpool == ICED_POOL ? POOL : MOAT));
 #endif
         lev->icedpool = 0;
     }
@@ -4460,7 +4460,7 @@ short exploding_wand_typ;
                     msgtxt = "Some water evaporates.";
             } else {
                 rangemod -= 3;
-                lev->typ = ROOM, lev->rmflags = 0;
+                SET_TYP_P(lev, ROOM, lev->rmflags = 0);
                 t = maketrap(x, y, PIT);
                 if (t)
                     t->tseen = 1;
@@ -4503,7 +4503,7 @@ short exploding_wand_typ;
                     lev->icedpool = lava ? 0
                                          : (lev->typ == POOL) ? ICED_POOL
                                                               : ICED_MOAT;
-                    lev->typ = lava ? ROOM : ICE;
+                    SET_TYP_P(lev, lava ? ROOM : ICE);
                 }
                 bury_objs(x, y);
                 if (see_it) {
@@ -4577,14 +4577,14 @@ short exploding_wand_typ;
                     Norep("The %s melt.", defsyms[S_bars].explanation);
                 if (*in_rooms(x, y, SHOPBASE)) {
                     /* in case we ever have a shop bounded by bars */
-                    lev->typ = ROOM, lev->rmflags = 0;
+                    SET_TYP_P(lev, ROOM, lev->rmflags = 0);
                     if (see_it)
                         newsym(x, y);
                     add_damage(x, y, (type >= 0) ? SHOP_BARS_COST : 0L);
                     if (type >= 0)
                         *shopdamage = TRUE;
                 } else {
-                    lev->typ = DOOR, lev->doormask = D_NODOOR;
+                    SET_TYP_P(lev, DOOR, lev->doormask = D_NODOOR);
                     if (see_it)
                         newsym(x, y);
                 }

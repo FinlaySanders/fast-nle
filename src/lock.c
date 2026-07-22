@@ -938,7 +938,7 @@ int x, y;
         case SPE_KNOCK:
         case WAN_STRIKING:
         case SPE_FORCE_BOLT:
-            door->typ = DOOR;
+            SET_TYP_P(door, DOOR);
             door->doormask = D_CLOSED | (door->doormask & D_TRAPPED);
             newsym(x, y);
             if (cansee(x, y))
@@ -970,7 +970,7 @@ int x, y;
                 return FALSE;
             }
             block_point(x, y);
-            door->typ = SDOOR, door->doormask = D_NODOOR;
+            SET_TYP_P(door, SDOOR, door->doormask = D_NODOOR);
             if (vis)
                 pline_The("doorway vanishes!");
             newsym(x, y);

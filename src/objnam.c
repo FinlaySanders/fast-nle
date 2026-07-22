@@ -3720,18 +3720,18 @@ struct obj *no_wish;
         lev = &levl[x][y];
         p = eos(bp);
         if (!BSTRCMPI(bp, p - 8, "fountain")) {
-            lev->typ = FOUNTAIN;
+            SET_TYP_P(lev, FOUNTAIN);
             level.lflags.nfountains++;
             if (!strncmpi(bp, "magic ", 6))
                 lev->blessedftn = 1;
             pline("A %sfountain.", lev->blessedftn ? "magic " : "");
             madeterrain = TRUE;
         } else if (!BSTRCMPI(bp, p - 6, "throne")) {
-            lev->typ = THRONE;
+            SET_TYP_P(lev, THRONE);
             pline("A throne.");
             madeterrain = TRUE;
         } else if (!BSTRCMPI(bp, p - 4, "sink")) {
-            lev->typ = SINK;
+            SET_TYP_P(lev, SINK);
             level.lflags.nsinks++;
             pline("A sink.");
             madeterrain = TRUE;
@@ -3739,7 +3739,7 @@ struct obj *no_wish;
         /* ("water" matches "potion of water" rather than terrain) */
         } else if (!BSTRCMPI(bp, p - 4, "pool")
                    || !BSTRCMPI(bp, p - 4, "moat")) {
-            lev->typ = !BSTRCMPI(bp, p - 4, "pool") ? POOL : MOAT;
+            SET_TYP_P(lev, !BSTRCMPI(bp, p - 4, "pool") ? POOL : MOAT);
             del_engr_at(x, y);
             pline("A %s.", (lev->typ == POOL) ? "pool" : "moat");
             /* Must manually make kelp! */
@@ -3748,7 +3748,7 @@ struct obj *no_wish;
 
         /* also matches "molten lava" */
         } else if (!BSTRCMPI(bp, p - 4, "lava")) {
-            lev->typ = LAVAPOOL;
+            SET_TYP_P(lev, LAVAPOOL);
             del_engr_at(x, y);
             pline("A pool of molten lava.");
             if (!(Levitation || Flying))
@@ -3757,7 +3757,7 @@ struct obj *no_wish;
         } else if (!BSTRCMPI(bp, p - 5, "altar")) {
             aligntyp al;
 
-            lev->typ = ALTAR;
+            SET_TYP_P(lev, ALTAR);
             if (!strncmpi(bp, "chaotic ", 8))
                 al = A_CHAOTIC;
             else if (!strncmpi(bp, "neutral ", 8))
@@ -3778,12 +3778,12 @@ struct obj *no_wish;
                                             : "Can't place a grave here");
             madeterrain = TRUE;
         } else if (!BSTRCMPI(bp, p - 4, "tree")) {
-            lev->typ = TREE;
+            SET_TYP_P(lev, TREE);
             pline("A tree.");
             block_point(x, y);
             madeterrain = TRUE;
         } else if (!BSTRCMPI(bp, p - 4, "bars")) {
-            lev->typ = IRONBARS;
+            SET_TYP_P(lev, IRONBARS);
             pline("Iron bars.");
             madeterrain = TRUE;
         }

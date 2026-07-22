@@ -321,7 +321,7 @@ int force;
                      */
                     filltype = fillholetyp(x, y, FALSE);
                     if (filltype != ROOM) {
-                        levl[x][y].typ = filltype; /* flags set via doormask */
+                        SET_TYP_XY(x, y, filltype); /* flags set via doormask */
                         liquid_flow(x, y, filltype, chasm, (char *) 0);
                     }
 

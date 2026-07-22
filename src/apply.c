@@ -443,7 +443,7 @@ register struct obj *obj;
         return res;
     case SCORR:
         You_hear(hollow_str, "passage");
-        lev->typ = CORR, lev->rmflags = 0;
+        SET_TYP_P(lev, CORR, lev->rmflags = 0);
         unblock_point(rx, ry);
         feel_newsym(rx, ry);
         return res;
@@ -3450,7 +3450,7 @@ struct obj *obj;
                  */
                 typ = fillholetyp(x, y, FALSE);
                 if (typ != ROOM) {
-                    levl[x][y].typ = typ, levl[x][y].rmflags = 0;
+                    SET_TYP_XY(x, y, typ, levl[x][y].rmflags = 0);
                     liquid_flow(x, y, typ, t_at(x, y),
                                 fillmsg
                                   ? (char *) 0

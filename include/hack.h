@@ -586,6 +586,23 @@ is_moat(int x, int y)
     return FALSE;
 }
 
+/* levl[][].typ byte-plane mirror (see globals.def nh_typ_plane).
+   SET_TYP_P bounds-checks the pointer against the CURRENT level's array,
+   so writes through foreign rm pointers (or same-named fields of other
+   structs) update only the real field — the plane stays coherent. */
+#define TYP_AT(x, y) (nh_typ_plane[x][y])
+#define SET_TYP_XY(x, y, ...) \
+    do { schar set_typ_v_ = (__VA_ARGS__); levl[x][y].typ = set_typ_v_; \
+         nh_typ_plane[x][y] = set_typ_v_; } while (0)
+#define SET_TYP_P(p, ...) \
+    do { schar set_typ_v_ = (__VA_ARGS__); struct rm *set_typ_p_ = (p); \
+         long set_typ_i_ = (long)(set_typ_p_ - &levl[0][0]); \
+         set_typ_p_->typ = set_typ_v_; \
+         if (set_typ_i_ >= 0 && set_typ_i_ < COLNO * ROWNO) \
+             (&nh_typ_plane[0][0])[set_typ_i_] = set_typ_v_; } while (0)
+extern void NDECL(nh_typ_sync);
+extern void FDECL(nh_typ_verify, (const char *));
+
 static inline boolean
 is_pool(int x, int y)
 {
@@ -593,7 +610,7 @@ is_pool(int x, int y)
 
     if (!isok(x, y))
         return FALSE;
-    ltyp = levl[x][y].typ;
+    ltyp = TYP_AT(x, y);
     /* The ltyp == MOAT is not redundant with is_moat, because the
      * Juiblex level does not have moats, although it has MOATs. There
      * is probably a better way to express this. */
@@ -609,7 +626,7 @@ is_lava(int x, int y)
 
     if (!isok(x, y))
         return FALSE;
-    ltyp = levl[x][y].typ;
+    ltyp = TYP_AT(x, y);
     if (ltyp == LAVAPOOL
         || (ltyp == DRAWBRIDGE_UP
             && (levl[x][y].drawbridgemask & DB_UNDER) == DB_LAVA))
@@ -633,7 +650,7 @@ is_ice(int x, int y)
 
     if (!isok(x, y))
         return FALSE;
-    ltyp = levl[x][y].typ;
+    ltyp = TYP_AT(x, y);
     if (ltyp == ICE || (ltyp == DRAWBRIDGE_UP
                         && (levl[x][y].drawbridgemask & DB_UNDER) == DB_ICE))
         return TRUE;

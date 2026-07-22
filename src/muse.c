@@ -871,7 +871,7 @@ struct monst *mtmp;
                   vtense(fakename[0], locomotion(mtmp->data, "jump")),
                   (t->ttyp == TRAPDOOR) ? "trap door" : "hole");
             if (levl[trapx][trapy].typ == SCORR) {
-                levl[trapx][trapy].typ = CORR;
+                SET_TYP_XY(trapx, trapy, CORR);
                 unblock_point(trapx, trapy);
             }
             seetrap(t_at(trapx, trapy));

@@ -1311,7 +1311,7 @@ long flag;
 
     x = mon->mx;
     y = mon->my;
-    nowtyp = levl[x][y].typ;
+    nowtyp = TYP_AT(x, y);
 
     nodiag = NODIAG(mdat - mons);
     wantpool = (mdat->mlet == S_EEL);
@@ -1367,7 +1367,7 @@ nexttry: /* eels prefer the water, but if there is no water nearby,
         for (ny = max(0, y - 1); ny <= maxy; ny++) {
             if (nx == x && ny == y)
                 continue;
-            ntyp = levl[nx][ny].typ;
+            ntyp = TYP_AT(nx, ny);
             if (IS_ROCK(ntyp)
                 && !((flag & ALLOW_WALL) && may_passwall(nx, ny))
                 && !((IS_TREE(ntyp) ? treeok : rockok) && may_dig(nx, ny)))

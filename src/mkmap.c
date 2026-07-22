@@ -37,7 +37,7 @@ schar bg_typ;
 
     for (i = 1; i < COLNO; i++)
         for (j = 0; j < ROWNO; j++)
-            levl[i][j].typ = bg_typ;
+            SET_TYP_XY(i, j, bg_typ);
 }
 
 STATIC_OVL void
@@ -53,7 +53,7 @@ schar bg_typ, fg_typ;
         i = rn1(WIDTH - 1, 2);
         j = rnd(HEIGHT - 1);
         if (levl[i][j].typ == bg_typ) {
-            levl[i][j].typ = fg_typ;
+            SET_TYP_XY(i, j, fg_typ);
             count++;
         }
     }
@@ -90,13 +90,13 @@ schar bg_typ, fg_typ;
             case 0: /* death */
             case 1:
             case 2:
-                levl[i][j].typ = bg_typ;
+                SET_TYP_XY(i, j, bg_typ);
                 break;
             case 5:
             case 6:
             case 7:
             case 8:
-                levl[i][j].typ = fg_typ;
+                SET_TYP_XY(i, j, fg_typ);
                 break;
             default:
                 break;
@@ -127,7 +127,7 @@ schar bg_typ, fg_typ;
 
     for (i = 2; i <= WIDTH; i++)
         for (j = 1; j < HEIGHT; j++)
-            levl[i][j].typ = new_loc(i, j);
+            SET_TYP_XY(i, j, new_loc(i, j));
 }
 
 STATIC_OVL void
@@ -151,7 +151,7 @@ schar bg_typ, fg_typ;
 
     for (i = 2; i <= WIDTH; i++)
         for (j = 1; j < HEIGHT; j++)
-            levl[i][j].typ = new_loc(i, j);
+            SET_TYP_XY(i, j, new_loc(i, j));
 }
 
 /*
@@ -266,9 +266,9 @@ wallify_map()
                     for (xx = x - 1; xx <= x + 1; xx++)
                         if (isok(xx, yy) && levl[xx][yy].typ == ROOM) {
                             if (yy != y)
-                                levl[x][y].typ = HWALL;
+                                SET_TYP_XY(x, y, HWALL);
                             else
-                                levl[x][y].typ = VWALL;
+                                SET_TYP_XY(x, y, VWALL);
                         }
             }
 }
@@ -307,7 +307,7 @@ schar bg_typ, fg_typ;
                         for (sy = min_ry; sy <= max_ry; sy++)
                             if ((int) levl[sx][sy].roomno
                                 == nroom + ROOMOFFSET) {
-                                levl[sx][sy].typ = bg_typ;
+                                SET_TYP_XY(sx, sy, bg_typ);
                                 levl[sx][sy].roomno = NO_ROOM;
                             }
                 }

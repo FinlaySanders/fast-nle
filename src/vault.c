@@ -86,7 +86,7 @@ boolean forceshow;
         lev = &levl[fcx][fcy];
         if (lev->typ == CORR && cansee(fcx, fcy))
             sawcorridor = TRUE;
-        lev->typ = egrd->fakecorr[fcbeg].ftyp;
+        SET_TYP_P(lev, egrd->fakecorr[fcbeg].ftyp);
         if (IS_STWALL(lev->typ)) {
             /* destroy any trap here (pit dug by you, hole dug via
                wand while levitating or by monster, bear trap or land
@@ -543,7 +543,7 @@ invault()
             else if (x == lowx - 1 || x == hix + 1)
                 EGD(guard)->fakecorr[0].ftyp = VWALL;
         }
-        levl[x][y].typ = DOOR;
+        SET_TYP_XY(x, y, DOOR);
         levl[x][y].doormask = D_NODOOR;
         unblock_point(x, y); /* doesn't block light */
         EGD(guard)->fcend = 1;
@@ -608,7 +608,7 @@ struct monst *grd;
                         (y == loy) ? TRCORNER : (y == hiy) ? BRCORNER : VWALL;
                 else /* not left or right side, must be top or bottom */
                     typ = HWALL;
-                levl[x][y].typ = typ;
+                SET_TYP_XY(x, y, typ);
                 levl[x][y].doormask = 0;
                 /*
                  * hack: player knows walls are restored because of the
@@ -813,7 +813,7 @@ register struct monst *grd;
                 if (!Deaf)
                     verbalize("You've been warned, knave!");
                 mnexto(grd);
-                levl[m][n].typ = egrd->fakecorr[0].ftyp;
+                SET_TYP_XY(m, n, egrd->fakecorr[0].ftyp);
                 newsym(m, n);
                 grd->mpeaceful = 0;
                 return -1;
@@ -829,7 +829,7 @@ register struct monst *grd;
                 m = grd->mx;
                 n = grd->my;
                 (void) rloc(grd, TRUE);
-                levl[m][n].typ = egrd->fakecorr[0].ftyp;
+                SET_TYP_XY(m, n, egrd->fakecorr[0].ftyp);
                 newsym(m, n);
                 grd->mpeaceful = 0;
  letknow:
@@ -941,11 +941,11 @@ register struct monst *grd;
                         goto newpos;
 #ifdef STUPID
                     if (typ == SCORR)
-                        crm->typ = CORR;
+                        SET_TYP_P(crm, CORR);
                     else
-                        crm->typ = DOOR;
+                        SET_TYP_P(crm, DOOR);
 #else
-                    crm->typ = (typ == SCORR) ? CORR : DOOR;
+                    SET_TYP_P(crm, (typ == SCORR) ? CORR : DOOR);
 #endif
                     if (crm->typ == DOOR)
                         crm->doormask = D_NODOOR;
@@ -972,7 +972,7 @@ register struct monst *grd;
         /* must be a wall here */
         if (isok(nx + nx - x, ny + ny - y) && !IS_POOL(typ)
             && IS_ROOM(levl[nx + nx - x][ny + ny - y].typ)) {
-            crm->typ = DOOR;
+            SET_TYP_P(crm, DOOR);
             crm->doormask = D_NODOOR;
             goto proceed;
         }
@@ -989,13 +989,13 @@ register struct monst *grd;
         }
         /* I don't like this, but ... */
         if (IS_ROOM(typ)) {
-            crm->typ = DOOR;
+            SET_TYP_P(crm, DOOR);
             crm->doormask = D_NODOOR;
             goto proceed;
         }
         break;
     }
-    crm->typ = CORR;
+    SET_TYP_P(crm, CORR);
  proceed:
     newspot = TRUE;
     unblock_point(nx, ny); /* doesn't block light */

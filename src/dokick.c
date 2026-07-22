@@ -1022,7 +1022,7 @@ dokick()
             if (!Levitation && rn2(30) < avrg_attrib) {
                 pline("Crash!  You kick open a secret passage!");
                 exercise(A_DEX, TRUE);
-                maploc->typ = CORR;
+                SET_TYP_P(maploc, CORR);
                 feel_newsym(x, y); /* we know it's gone */
                 unblock_point(x, y); /* vision */
                 return 1;
@@ -1034,7 +1034,7 @@ dokick()
             if (Levitation)
                 goto dumb;
             if ((Luck < 0 || maploc->doormask) && !rn2(3)) {
-                maploc->typ = ROOM;
+                SET_TYP_P(maploc, ROOM);
                 maploc->doormask = 0; /* don't leave loose ends.. */
                 (void) mkgold((long) rnd(200), x, y);
                 if (Blind)
@@ -1107,7 +1107,7 @@ dokick()
                 || ((u.ualign.type == A_LAWFUL) && (u.ualign.record > -10))) {
                 adjalign(-sgn(u.ualign.type));
             }
-            maploc->typ = ROOM;
+            SET_TYP_P(maploc, ROOM);
             maploc->doormask = 0;
             (void) mksobj_at(ROCK, x, y, TRUE, FALSE);
             del_engr_at(x, y);

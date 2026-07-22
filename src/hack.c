@@ -507,16 +507,16 @@ xchar x, y;
         }
         digtxt = "chew a hole in the wall.";
         if (level.lflags.is_maze_lev) {
-            lev->typ = ROOM;
+            SET_TYP_P(lev, ROOM);
         } else if (level.lflags.is_cavernous_lev && !in_town(x, y)) {
-            lev->typ = CORR;
+            SET_TYP_P(lev, CORR);
         } else {
-            lev->typ = DOOR;
+            SET_TYP_P(lev, DOOR);
             lev->doormask = D_NODOOR;
         }
     } else if (IS_TREE(lev->typ)) {
         digtxt = "chew through the tree.";
-        lev->typ = ROOM;
+        SET_TYP_P(lev, ROOM);
     } else if (lev->typ == IRONBARS) {
         digtxt = "eat through the bars.";
         dissolve_bars(x, y);
@@ -528,7 +528,7 @@ xchar x, y;
             digtxt = "chew through the secret door.";
             lev->doormask = D_BROKEN;
         }
-        lev->typ = DOOR;
+        SET_TYP_P(lev, DOOR);
 
     } else if (IS_DOOR(lev->typ)) {
         if (*in_rooms(x, y, SHOPBASE)) {
@@ -545,7 +545,7 @@ xchar x, y;
 
     } else { /* STONE or SCORR */
         digtxt = "chew a passage through the rock.";
-        lev->typ = CORR;
+        SET_TYP_P(lev, CORR);
     }
 
     unblock_point(x, y); /* vision */

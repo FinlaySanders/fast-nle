@@ -409,7 +409,7 @@ struct mkroom *sroom;
     switch (type) {
     case COURT: {
         struct obj *chest, *gold;
-        levl[tx][ty].typ = THRONE;
+        SET_TYP_XY(tx, ty, THRONE);
         (void) somexy(sroom, &mm);
         gold = mksobj(GOLD_PIECE, TRUE, FALSE);
         gold->quan = (long) rn1(50 * level_difficulty(), 10);
@@ -534,7 +534,7 @@ mkswamp() /* Michiel Huisjes & Fred de Wilde */
                 if (!OBJ_AT(sx, sy) && !MON_AT(sx, sy) && !t_at(sx, sy)
                     && !nexttodoor(sx, sy)) {
                     if ((sx + sy) % 2) {
-                        levl[sx][sy].typ = POOL;
+                        SET_TYP_XY(sx, sy, POOL);
                         if (!eelct || !rn2(4)) {
                             /* mkclass() won't do, as we might get kraken */
                             (void) makemon(rn2(5)
@@ -595,7 +595,7 @@ mktemple()
      */
     shrine_spot = shrine_pos((int) ((sroom - rooms) + ROOMOFFSET));
     lev = &levl[shrine_spot->x][shrine_spot->y];
-    lev->typ = ALTAR;
+    SET_TYP_P(lev, ALTAR);
     lev->altarmask = induced_align(80);
     priestini(&u.uz, sroom, shrine_spot->x, shrine_spot->y, FALSE);
     lev->altarmask |= AM_SHRINE;

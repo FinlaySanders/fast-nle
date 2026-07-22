@@ -1,63 +1,39 @@
-#!/ usr / bin / env python
-""
-        "Record golden trajectories from *stock* NLE for equivalence testing.
+#!/usr/bin/env python
+"""Record golden trajectories from *stock* NLE for equivalence testing.
 
-        Oracle(b) from docs
-        / DESIGN.md.Drives the low
-    - level nle.nethack.Nethack
-      class(raw keycodes,
-            no gym layer) with fixed seeds and a deterministic scripted policy
-    ,
-    and writes one text file per episode :
+Oracle (b) from docs/DESIGN.md. Drives the low-level nle.nethack.Nethack
+class (raw keycodes, no gym layer) with fixed seeds and a deterministic
+scripted policy, and writes one text file per episode:
 
-#fast - nle golden v1
-    meta core = <seed> disp = <seed> reseed = 0 meta lgen =
-        <seed>(only if a level - gen seed was used) meta
-    options = < full NETHACKOPTIONS string incl.name : > meta fix_moon_phase =
-        1 init<fnv1a64 hex of initial observation> step<keycode>
-            <fnv1a64 hex of observation AFTER the step>... end < done reason
-    : done
-        | steplimit >
+    # fast-nle golden v1
+    meta core=<seed> disp=<seed> reseed=0
+    meta lgen=<seed>              (only if a level-gen seed was used)
+    meta options=<full NETHACKOPTIONS string incl. name:>
+    meta fix_moon_phase=1
+    init <fnv1a64 hex of initial observation>
+    step <keycode> <fnv1a64 hex of observation AFTER the step>
+    ...
+    end <done reason: done|steplimit>
 
-              The hash covers,
-         in order : glyphs(int16),
-         chars,
-         colors,
-         specials(u8),
-         blstats(int64),
-         message(u8) — native little - endian bytes,
-         exactly the buffers the C API exposes.tests / replay_golden.c
-                        / replay_multi.c compute the identical hash;
-any engine change that alters game behavior flips
-        it.
+The hash covers, in order: glyphs (int16), chars, colors, specials (u8),
+blstats (int64), message (u8) — native little-endian bytes, exactly the
+buffers the C API exposes. tests/replay_golden.c / replay_multi.c compute
+the identical hash; any engine change that alters game behavior flips it.
 
-    IMPORTANT
-    : record against a STOCK build.The venv's editable install compiles its
-          own engine at pip
-    - install time;
-if in
-    doubt,
-        reinstall from the pristine import commit(
-            or verify the corpus against a stock
-                   - worktree library with replay_golden before trusting it)
-                .
+IMPORTANT: record against a STOCK build. The venv's editable install
+compiles its own engine at pip-install time; if in doubt, reinstall from
+the pristine import commit (or verify the corpus against a stock-worktree
+library with replay_golden before trusting it).
 
-            Run with `python
-            - P` (or from outside the repo
-                      root) so the installed nle package is used,
-        not the repo's source tree: .venv / bin / python
-            - P tools / record_goldens.py-- outdir tests
-                  / goldens
+Run with `python -P` (or from outside the repo root) so the installed nle
+package is used, not the repo's source tree:
+    .venv/bin/python -P tools/record_goldens.py --outdir tests/goldens
 
-                  Policy : a weighted random
-                           "prodder" that exercises many subsystems — movement
-        ,
-        search, stair descent, inventory, eat / quaff / read / wear / wield,
-        kick, throw, open / close, pray, engrave,
-        cast — with deterministic prompt
-        handling(getline->a name + return; y / n->mix of y / n / ESC;
-                 menus->ESC / space)
-            .Depth still comes from episode length; TODO(phase-0b):
+Policy: a weighted random "prodder" that exercises many subsystems —
+movement, search, stair descent, inventory, eat/quaff/read/wear/wield,
+kick, throw, open/close, pray, engrave, cast — with deterministic prompt
+handling (getline -> a name + return; y/n -> mix of y/n/ESC; menus ->
+ESC/space). Depth still comes from episode length; TODO(phase-0b):
 AutoAscend driver for real deep-game coverage.
 """
 
@@ -75,8 +51,8 @@ FNV_OFFSET = 0xCBF29CE484222325
 FNV_PRIME = 0x100000001B3
 MASK64 = 0xFFFFFFFFFFFFFFFF
 
-#All 13 roles, with valid race / gender / alignment combos for coverage of
-#role - specific inventories, pets, intrinsics and quest plumbing.
+# All 13 roles, with valid race/gender/alignment combos for coverage of
+# role-specific inventories, pets, intrinsics and quest plumbing.
 ROLES = [
     "Agent-arc-hum-law-fem",
     "Agent-bar-orc-cha-mal",
@@ -108,18 +84,19 @@ def obs_hash(obs) -> int:
         h = fnv1a64(arr.tobytes(), h)  # native little-endian on all targets
     return h
 
-#Weighted action pool.Movement dominates(games must progress), but the
-#rest pokes items, terrain, prayer, spellcasting, engraving, kicking...
-#Prompt - heavy commands are safe : the handler below dismisses anything.
+
+# Weighted action pool. Movement dominates (games must progress), but the
+# rest pokes items, terrain, prayer, spellcasting, engraving, kicking...
+# Prompt-heavy commands are safe: the handler below dismisses anything.
 ACTIONS = (
     [ord(c) for c in "hjklyubn"] * 6      # movement (dominant: games must progress)
     + [ord("s")] * 8                       # search (advances turns reliably)
     + [ord(">")] * 4                       # descend when on stairs
     + [ord("<"), ord("."), ord(".")]       # up, rest
     + [ord(",")] * 2                       # pickup
-#one of each subsystem poke(~15 % of the pool) : eat quaff read wear
-#wield takeoff throw open close kick cast pay drop fight inventory
-#engrave
+    # one of each subsystem poke (~15% of the pool): eat quaff read wear
+    # wield takeoff throw open close kick cast pay drop fight inventory
+    # engrave
     + [ord(c) for c in "eqrWwTtoc"]
     + [4, ord("Z"), ord("p"), ord("d"), ord("F"), ord("i"), ord("E")]
 )
@@ -128,7 +105,7 @@ ACTIONS = (
 def pick_action(rng: random.Random, misc, step_no: int) -> int:
     in_yn, in_getlin, waiting_space = int(misc[0]), int(misc[1]), int(misc[2])
     if in_getlin:
-#type a short deterministic name sometimes, else just return
+        # type a short deterministic name sometimes, else just return
         return ord("\r") if rng.random() < 0.8 else ord("x")
     if waiting_space:
         return 0x1B if rng.random() < 0.1 else ord(" ")
@@ -139,24 +116,23 @@ def pick_action(rng: random.Random, misc, step_no: int) -> int:
         if r < 0.8:
             return ord("n")
         return 0x1B
-#rarely pray(exercises alignment / luck / god plumbing)
+    # rarely pray (exercises alignment/luck/god plumbing)
     if step_no and step_no % 1201 == 0:
-        return ord("#")  # extended prompt;
-dismissed by the handlers above return rng
-    .choice(ACTIONS)
+        return ord("#")  # extended prompt; dismissed by the handlers above
+    return rng.choice(ACTIONS)
 
-        def record_episode(outdir, core, disp, max_steps, role, lgen = None,
-                           actions_file = None)
-    :
-#Pin wall - clock(the ubirthday gameplay leak) to the same epoch the
-#fast - nle engine derives from time_seed.Effective when the process
-#runs under tools / faketime_shim.c(LD_PRELOAD / DYLD_INSERT_LIBRARIES);
-#keep the formula in sync with nle_birthday_maybe_fixed().
-      os.environ["NLE_FAKE_TIME"] =
-    str(1600000000 + ((core + 1) % 100000) * 257) game =
-        Nethack(observation_keys = OBS_KEYS, playername = role, ttyrec = None,
-                fix_moon_phase = True)
-try : game.set_initial_seeds(core, disp, False, lgen)
+
+def record_episode(outdir, core, disp, max_steps, role, lgen=None,
+                   actions_file=None):
+    # Pin wall-clock (the ubirthday gameplay leak) to the same epoch the
+    # fast-nle engine derives from time_seed. Effective when the process
+    # runs under tools/faketime_shim.c (LD_PRELOAD / DYLD_INSERT_LIBRARIES);
+    # keep the formula in sync with nle_birthday_maybe_fixed().
+    os.environ["NLE_FAKE_TIME"] = str(1600000000 + ((core + 1) % 100000) * 257)
+    game = Nethack(observation_keys=OBS_KEYS, playername=role, ttyrec=None,
+                   fix_moon_phase=True)
+    try:
+        game.set_initial_seeds(core, disp, False, lgen)
         obs = game.reset()
         rng = random.Random(core)  # policy RNG seeded by episode seed
         actions = None
