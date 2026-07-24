@@ -1022,7 +1022,12 @@ level_tele()
     schedule_goto(&newlevel, FALSE, FALSE, 0, (char *) 0, (char *) 0);
     /* in case player just read a scroll and is about to be asked to
        call it something, we can't defer until the end of the turn */
-    if (u.utotype && !context.mon_moving)
+    if (u.utotype && !context.mon_moving
+        /* ...except when called from xkilled's spoteffects (killed an
+           engulfer sitting on a level-teleport trap): goto_level frees
+           the current level INCLUDING the monster xkilled still holds.
+           Defer to the moveloop's u.utotype check instead. */
+        && !program_state.in_killer_spoteffects)
         deferred_goto();
 }
 

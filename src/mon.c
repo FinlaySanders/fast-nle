@@ -2445,8 +2445,14 @@ int xkill_flags; /* 1: suppress message, 2: suppress corpse, 4: pacifist */
             }
         }
     }
-    if (wasinside)
+    if (wasinside) {
+        /* landing spot may hold a level-teleport trap: force level_tele
+           to defer the change or this level -- and mtmp -- get freed
+           while still referenced below (experience) */
+        program_state.in_killer_spoteffects++;
         spoteffects(TRUE); /* poor man's expels() */
+        program_state.in_killer_spoteffects--;
+    }
     /* monster is gone, corpse or other object might now be visible */
     newsym(x, y);
 

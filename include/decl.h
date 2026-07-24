@@ -166,6 +166,10 @@ E NEARDATA struct sinfo {
     int in_paniclog;
 #endif
     int wizkit_wishing;
+    int in_killer_spoteffects; /* xkilled's expels-spoteffects is running:
+                                * an immediate level change would free the
+                                * level -- and the monster being killed --
+                                * out from under xkilled (see level_tele) */
 } program_state;
 
 E boolean restoring;
