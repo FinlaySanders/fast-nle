@@ -254,7 +254,12 @@ boolean message;
     unstuck(mtmp); /* ball&chain returned in unstuck() */
     mnexto(mtmp);
     newsym(u.ux, u.uy);
+    /* mtmp is used below and by callers (newcham): a level-tele trap here
+       must defer its goto_level or the whole level -- mtmp included -- is
+       freed under us (see level_tele) */
+    program_state.in_mon_spoteffects++;
     spoteffects(TRUE);
+    program_state.in_mon_spoteffects--;
     /* to cover for a case where mtmp is not in a next square */
     if (um_dist(mtmp->mx, mtmp->my, 1))
         pline("Brrooaa...  You land hard at some distance.");

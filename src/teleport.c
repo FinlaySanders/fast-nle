@@ -1027,7 +1027,7 @@ level_tele()
            engulfer sitting on a level-teleport trap): goto_level frees
            the current level INCLUDING the monster xkilled still holds.
            Defer to the moveloop's u.utotype check instead. */
-        && !program_state.in_killer_spoteffects)
+        && !program_state.in_mon_spoteffects)
         deferred_goto();
 }
 
