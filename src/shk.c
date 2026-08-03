@@ -889,7 +889,10 @@ struct mkroom *sroom;
 {
     struct monst *mtmp = sroom->resident;
 
-    return !mtmp ? FALSE : (boolean) inhishop(mtmp);
+    /* Fix: same stale-resident guard as next_shkp()/shop_keeper() above —
+     * this path reads rooms[].resident directly, so a dealloc'd-mextra
+     * shopkeeper segfaults in inhishop's ESHK deref. */
+    return (!mtmp || !has_eshk(mtmp)) ? FALSE : (boolean) inhishop(mtmp);
 }
 
 STATIC_OVL struct bill_x *
@@ -2462,7 +2465,11 @@ long amt; /* if 0, use regular shop pricing, otherwise force amount;
     struct monst *shkp;
     long new_price;
 
-    for (shkp = next_shkp(fmon, TRUE); shkp; shkp = next_shkp(shkp, TRUE))
+    /* Fix: advance from shkp->nmon — next_shkp() starts its scan AT the
+     * monster it's given, so stepping with next_shkp(shkp, ...) returns the
+     * same shopkeeper forever (infinite loop when the object is billed by a
+     * later shk). Matches the loop idiom used elsewhere in this file. */
+    for (shkp = next_shkp(fmon, TRUE); shkp; shkp = next_shkp(shkp->nmon, TRUE))
         if ((bp = onbill(obj, shkp, TRUE)) != 0) {
             new_price = !amt ? get_cost(obj, shkp) : (amt < 0L) ? -amt : amt;
             if (new_price > bp->price || amt < 0L) {
