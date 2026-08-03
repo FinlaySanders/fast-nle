@@ -537,6 +537,66 @@ nle_start(nle_obs *obs, FILE *ttyrec, nle_settings *settings_p)
     return nle;
 }
 
+/* Terrain glyph under the hero, ignoring any objects piled on it. The map
+ * observation shows only the TOP item of a tile (underfoot_glyphs), so a
+ * scroll dropped on a staircase hides the staircase; callers that gate on
+ * terrain need this. Shuffling is irrelevant for cmap glyphs. Reads only. */
+int
+nle_terrain_underfoot(nle_ctx_t *nle)
+{
+    struct nh_ctx *saved = nh_cur;
+    int g;
+
+    nh_cur = (struct nh_ctx *) nle->nh;
+    g = back_to_glyph(u.ux, u.uy);
+    nh_cur = saved;
+    return g;
+}
+
+/* Shop state under the hero: -1 not standing on shop goods, otherwise the
+ * asking price of the unpaid item there (0 if it carries no charge). The
+ * shopkeeper quotes this to the player on arrival, so it is public
+ * information, not a peek at hidden state. Reads only; no RNG. */
+long
+nle_shop_price(nle_ctx_t *nle)
+{
+    struct nh_ctx *saved = nh_cur;
+    struct obj *otmp;
+    long price = -1L;
+
+    nh_cur = (struct nh_ctx *) nle->nh;
+    if (shop_object(u.ux, u.uy) != 0) {
+        /* PICKUP takes the WHOLE pile (select-all), so the caller needs the
+         * total bill, not the price of whichever item happens to be on top. */
+        price = 0L;
+        for (otmp = level.objs[u.ux][u.uy]; otmp; otmp = otmp->nexthere) {
+            int nochrg = -1;
+            long cost;
+            if (otmp->oclass == COIN_CLASS)
+                continue;
+            cost = get_cost_of_shop_item(otmp, &nochrg);
+            if (nochrg == 0)
+                price += cost;
+        }
+    }
+    nh_cur = saved;
+    return price;
+}
+
+/* Hero tiles walked during the last nle_step, oldest first, as x,y pairs.
+ * Multi-move commands (rush, occupations) resolve many moves inside one step
+ * and lookaround() turns corners, so the caller cannot reconstruct the path
+ * from the endpoints. Returns the number of tiles written (<= max). */
+int
+nle_path_drain(nle_ctx_t *nle, short *out, int max)
+{
+    struct nh_ctx *nh = (struct nh_ctx *) nle->nh;
+    int n = nh->g_nle_hero_path_n;
+    if (n > max) n = max;
+    for (int i = 0; i < 2 * n; i++) out[i] = nh->g_nle_hero_path[i];
+    return n;
+}
+
 /* Out-of-band full observation export: runs the standard fill against the
  * current game state without stepping. Pairs with nle_obs.partial — a
  * wrapper that sends several keys per logical step keeps partial set (cheap
@@ -561,6 +621,7 @@ nle_step(nle_ctx_t *nle, nle_obs *obs)
     current_nle_ctx = nle;
     nh_cur = (struct nh_ctx *) nle->nh;
     nle->observation = obs;
+    nle_hero_path_n = 0;   /* path accumulates within this step only */
     /* tty gating tracks the CURRENT step's bindings, not nle_start's:
      * the C API lets each step pass a different obs, so tty_* fields can
      * appear/vanish mid-game. Keep ttyDisplay's cached copy in sync. */

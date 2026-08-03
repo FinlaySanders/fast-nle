@@ -1943,6 +1943,13 @@ domove_core()
         /* let caller know so that an evaluation may take place */
         domove_succeeded |= (domove_attempting & (DOMOVE_RUSH | DOMOVE_WALK));
         u.umoved = TRUE;
+        /* nle: record traversed tile; multi-move commands resolve inside
+           one step and the wrapper otherwise sees only the endpoint */
+        if (nle_hero_path_n < 128) {
+            nle_hero_path[nle_hero_path_n * 2] = (short) u.ux;
+            nle_hero_path[nle_hero_path_n * 2 + 1] = (short) u.uy;
+            nle_hero_path_n++;
+        }
         /* Clean old position -- vision_recalc() will print our new one. */
         newsym(u.ux0, u.uy0);
         /* Since the hero has moved, adjust what can be seen/unseen. */

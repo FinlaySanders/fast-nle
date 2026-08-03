@@ -127,6 +127,22 @@ nle_end(nledl_ctx *nledl)
     free(nledl);
 }
 
+int
+nle_path_drain(nledl_ctx *nledl, short *out, int max)
+{
+    int (*drain)(void *, short *, int);
+
+    drain = dlsym(nledl->dlhandle, "nle_path_drain");
+
+    char *error = dlerror();
+    if (error != NULL) {
+        fprintf(stderr, "%s\n", error);
+        exit(EXIT_FAILURE);
+    }
+
+    return drain(nledl->nle_ctx, out, max);
+}
+
 void
 nle_set_seed(nledl_ctx *nledl, unsigned long core, unsigned long disp,
              char reseed, unsigned long lgen)

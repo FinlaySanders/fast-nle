@@ -366,6 +366,8 @@ global | cold | boolean | restoring | | 0
 global | cold | boolean | notonhead | | 0
 # NLE RNG seed record (hacklib.c / nlernd.c)
 global | cold | unsigned long | nle_seeds | [3] | 0
+global | cold | short | nle_hero_path | [256] | 0
+global | cold | int | nle_hero_path_n | | 0
 # rumors.c (lazy slots 29=oracle_loc 30=state)
 rumors.c | cold | int | oracle_flg | | 0
 rumors.c | cold | unsigned | oracle_cnt | | 0

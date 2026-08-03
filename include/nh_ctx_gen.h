@@ -312,6 +312,8 @@ struct nh_ctx {
     boolean g_restoring; /* global: restoring */
     boolean g_notonhead; /* global: notonhead */
     unsigned long g_nle_seeds[3]; /* global: nle_seeds */
+    short g_nle_hero_path[256]; /* global: nle_hero_path */
+    int g_nle_hero_path_n; /* global: nle_hero_path_n */
     int g_rumors_c_oracle_flg; /* rumors.c: oracle_flg */
     unsigned g_rumors_c_oracle_cnt; /* rumors.c: oracle_cnt */
     long g_rumors_c_true_rumor_size; /* rumors.c: true_rumor_size */
@@ -636,6 +638,8 @@ void nh_ctx_fixup(struct nh_ctx *);
 #define restoring (nh_cur->g_restoring)
 #define notonhead (nh_cur->g_notonhead)
 #define nle_seeds (nh_cur->g_nle_seeds)
+#define nle_hero_path (nh_cur->g_nle_hero_path)
+#define nle_hero_path_n (nh_cur->g_nle_hero_path_n)
 #define symset_list (nh_cur->g_symset_list)
 
 #endif /* NH_CTX_GEN_H */

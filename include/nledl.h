@@ -21,6 +21,7 @@ nledl_ctx *nle_start(const char *, nle_obs *, FILE *, nle_settings *);
 nledl_ctx *nle_step(nledl_ctx *, nle_obs *);
 
 void nle_reset(nledl_ctx *, nle_obs *, FILE *, nle_settings *);
+int nle_path_drain(nledl_ctx *, short *, int);
 void nle_end(nledl_ctx *);
 
 void nle_set_seed(nledl_ctx *, unsigned long, unsigned long, char,
