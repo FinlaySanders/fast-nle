@@ -608,6 +608,10 @@ nle_path_drain(nle_ctx_t *nle, short *out, int max)
     int n = nh->g_nle_hero_path_n;
     if (n > max) n = max;
     for (int i = 0; i < 2 * n; i++) out[i] = nh->g_nle_hero_path[i];
+    /* drain semantics: the caller's logical step may span several nle_step
+     * calls (prompt drains, macro keys), so clearing per nle_step would wipe
+     * the walked path before the caller reads it. Clear on read instead. */
+    nh->g_nle_hero_path_n = 0;
     return n;
 }
 
@@ -635,7 +639,6 @@ nle_step(nle_ctx_t *nle, nle_obs *obs)
     current_nle_ctx = nle;
     nh_cur = (struct nh_ctx *) nle->nh;
     nle->observation = obs;
-    nle_hero_path_n = 0;   /* path accumulates within this step only */
     /* tty gating tracks the CURRENT step's bindings, not nle_start's:
      * the C API lets each step pass a different obs, so tty_* fields can
      * appear/vanish mid-game. Keep ttyDisplay's cached copy in sync. */
