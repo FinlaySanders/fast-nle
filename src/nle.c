@@ -537,6 +537,20 @@ nle_start(nle_obs *obs, FILE *ttyrec, nle_settings *settings_p)
     return nle;
 }
 
+/* 1 if the hero is inside a shop room (any tile, merchandise or not).
+ * Public information: the shopkeeper greets the player on entry. */
+int
+nle_inside_shop(nle_ctx_t *nle)
+{
+    struct nh_ctx *saved = nh_cur;
+    int r;
+
+    nh_cur = (struct nh_ctx *) nle->nh;
+    r = inside_shop(u.ux, u.uy) ? 1 : 0;
+    nh_cur = saved;
+    return r;
+}
+
 /* Terrain glyph under the hero, ignoring any objects piled on it. The map
  * observation shows only the TOP item of a tile (underfoot_glyphs), so a
  * scroll dropped on a staircase hides the staircase; callers that gate on
