@@ -38,6 +38,49 @@ STATIC_DCL void NDECL(sortspells);
 STATIC_DCL boolean NDECL(spellsortmenu);
 STATIC_DCL boolean FDECL(dospellmenu, (const char *, int, int *));
 STATIC_DCL int FDECL(percent_success, (int));
+
+/* NLE: expose the spell menu's fail%% column (100 - success chance) for the
+ * first MAXSPELL slots. Interface-public: the '+' menu prints it. Reads only;
+ * no RNG. Returns number of known spells filled. */
+int
+nle_spell_summary(ids, levs, fails, max)
+short *ids;
+signed char *levs, *fails;
+int max;
+{
+    int i, n = 0;
+    for (i = 0; i < MAXSPELL && spellid(i) != NO_SPELL && n < max; i++) {
+        if (spellknow(i) <= 0)
+            continue;
+        ids[n] = spl_book[i].sp_id;
+        levs[n] = (signed char) spl_book[i].sp_lev;
+        fails[n] = (signed char) (100 - percent_success(i));
+        n++;
+    }
+    return n;
+}
+
+/* NLE: slot-faithful variant. Reports spl_book slots in place (index == cast
+ * menu letter) including forgotten entries (know 0) so retention decay and the
+ * re-read cue are observable. Returns highest filled slot + 1. Reads only;
+ * no RNG. */
+int
+nle_spell_summary2(ids, levs, fails, knows, max)
+short *ids;
+signed char *levs, *fails;
+int *knows;
+int max;
+{
+    int i, n = 0;
+    for (i = 0; i < MAXSPELL && spellid(i) != NO_SPELL && i < max; i++) {
+        ids[i] = spl_book[i].sp_id;
+        levs[i] = (signed char) spl_book[i].sp_lev;
+        fails[i] = (signed char) (100 - percent_success(i));
+        knows[i] = spellknow(i) > 0 ? spellknow(i) : 0;
+        n = i + 1;
+    }
+    return n;
+}
 STATIC_DCL char *FDECL(spellretention, (int, char *));
 STATIC_DCL int NDECL(throwspell);
 STATIC_DCL void NDECL(cast_protection);

@@ -33,7 +33,11 @@
 /* ASan redzones inflate frames ~4-8x; give the game coroutine room. */
 #define STACK_SIZE (1 << 20) /* 1MiB under ASan */
 #else
-#define STACK_SIZE (1 << 16) /* 64KiB */
+#define STACK_SIZE (1 << 18) /* 256KiB: 64KiB overflowed on deep call chains
+                              * (throw/explode cascades in rich late states);
+                              * multi-KB frames can leap the guard page and
+                              * zero live frames -> ret-to-0 segv. Lazily
+                              * committed, so cost is virtual only. */
 #endif
 
 static size_t
@@ -595,6 +599,153 @@ nle_shop_price(nle_ctx_t *nle)
     }
     nh_cur = saved;
     return price;
+}
+
+/* Tippable containers (chest/box/bag) on the hero's tile. Presence is
+ * public (the container renders as its object glyph); known-empty and
+ * known-locked are gated on cknown/lknown, which track what the HERO has
+ * learned, so this leaks no hidden state. A tip of a locked box costs a
+ * real turn for "It's locked." and sets lknown; kicking the lock open
+ * clears olocked and the container counts again. Reads only; no RNG. */
+/* Any FOOD_CLASS object in the pile on the hero's tile (corpses included).
+ * Presence is public (pile renders as object glyphs). Reads only; no RNG. */
+int
+nle_food_underfoot(nle_ctx_t *nle)
+{
+    struct nh_ctx *saved = nh_cur;
+    struct obj *otmp;
+    int n = 0;
+
+    nh_cur = (struct nh_ctx *) nle->nh;
+    for (otmp = level.objs[u.ux][u.uy]; otmp; otmp = otmp->nexthere)
+        if (otmp->oclass == FOOD_CLASS) { n = 1; break; }
+    nh_cur = saved;
+    return n;
+}
+
+/* AC granted by the protection spell (u.uspellprot); decays on its own
+ * clock. Reads only; no RNG. */
+int
+nle_spellprot(nle_ctx_t *nle)
+{
+    struct nh_ctx *saved = nh_cur;
+    int n;
+
+    nh_cur = (struct nh_ctx *) nle->nh;
+    n = (int) u.uspellprot;
+    nh_cur = saved;
+    return n;
+}
+
+/* Carried weight and capacity (inv_weight is relative to capacity in the
+ * engine: it returns wc-adjusted; export both raw). Reads only; no RNG. */
+void
+nle_weight(nle_ctx_t *nle, int *wt, int *cap)
+{
+    struct nh_ctx *saved = nh_cur;
+
+    nh_cur = (struct nh_ctx *) nle->nh;
+    *cap = weight_cap();
+    *wt = inv_weight() + *cap;   /* inv_weight() returns carried - cap */
+    nh_cur = saved;
+}
+
+int
+nle_container_at(nle_ctx_t *nle)
+{
+    struct nh_ctx *saved = nh_cur;
+    struct obj *otmp;
+    int n = 0;
+
+    nh_cur = (struct nh_ctx *) nle->nh;
+    for (otmp = level.objs[u.ux][u.uy]; otmp; otmp = otmp->nexthere) {
+        if (!Is_container(otmp))
+            continue;
+        if (otmp->cknown && !otmp->cobj)
+            continue;   /* seen inside; it was/is empty */
+        if (otmp->lknown && otmp->olocked)
+            continue;   /* known locked: tip would waste the turn */
+        n++;
+    }
+    nh_cur = saved;
+    return n;
+}
+
+/* Known-spell summary for the obs: sp_id, level, fail%% (the '+' menu's
+ * column) per slot. Interface-public; reads only; no RNG. */
+int
+nle_spells(nle, ids, levs, fails, max)
+nle_ctx_t *nle;
+short *ids;
+signed char *levs, *fails;
+int max;
+{
+    struct nh_ctx *saved = nh_cur;
+    int n;
+    extern int nle_spell_summary();
+
+    nh_cur = (struct nh_ctx *) nle->nh;
+    n = nle_spell_summary(ids, levs, fails, max);
+    nh_cur = saved;
+    return n;
+}
+
+/* Slot-faithful spell summary with retention (sp_know turns, 0 = forgotten).
+ * Slot index == cast menu letter. Interface-public; reads only; no RNG. */
+int
+nle_spells2(nle, ids, levs, fails, knows, max)
+nle_ctx_t *nle;
+short *ids;
+signed char *levs, *fails;
+int *knows;
+int max;
+{
+    struct nh_ctx *saved = nh_cur;
+    int n;
+    extern int nle_spell_summary2();
+
+    nh_cur = (struct nh_ctx *) nle->nh;
+    n = nle_spell_summary2(ids, levs, fails, knows, max);
+    nh_cur = saved;
+    return n;
+}
+
+/* 1 if a peaceful or tame monster occupies (x,y). Farlook names attitude
+ * for any monster the hero can see, so this is interface-public; callers
+ * only query positions where a visible monster glyph exists. Reads only;
+ * no RNG. */
+int
+nle_peaceful_at(nle_ctx_t *nle, int x, int y)
+{
+    struct nh_ctx *saved = nh_cur;
+    struct monst *mtmp;
+    int r = 0;
+
+    nh_cur = (struct nh_ctx *) nle->nh;
+    if (x >= 1 && x < COLNO && y >= 0 && y < ROWNO) {
+        mtmp = m_at(x, y);
+        if (mtmp && (mtmp->mpeaceful || mtmp->mtame))
+            r = 1;
+    }
+    nh_cur = saved;
+    return r;
+}
+
+/* Number of object types the hero has discovered (the discoveries list,
+ * including born-known types — callers difference per episode). Reads only;
+ * no RNG. */
+int
+nle_discoveries(nle_ctx_t *nle)
+{
+    struct nh_ctx *saved = nh_cur;
+    int i, n = 0;
+
+    nh_cur = (struct nh_ctx *) nle->nh;
+    for (i = 1; i < NUM_OBJECTS; i++)
+        if (objects[i].oc_name_known)
+            n++;
+    nh_cur = saved;
+    return n;
 }
 
 /* Hero tiles walked during the last nle_step, oldest first, as x,y pairs.

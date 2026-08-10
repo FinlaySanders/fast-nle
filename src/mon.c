@@ -3805,21 +3805,28 @@ boolean msg;      /* "The oldmon turns into a newmon!" */
      */
     /* former giants can't continue carrying boulders */
     if (mtmp->minvent && !throws_rocks(mdat)) {
-        register struct obj *otmp, *otmp2;
+        register struct obj *otmp;
 
-        for (otmp = mtmp->minvent; otmp; otmp = otmp2) {
-            otmp2 = otmp->nobj;
-            if (otmp->otyp == BOULDER) {
-                /* this keeps otmp from being polymorphed in the
-                   same zap that the monster that held it is polymorphed */
-                if (polyspot)
-                    bypass_obj(otmp);
-                obj_extract_self(otmp);
-                /* probably ought to give some "drop" message here */
-                if (flooreffects(otmp, mtmp->mx, mtmp->my, ""))
-                    continue;
+        /* Rescan from the head after every drop instead of caching 'nobj':
+           the boulder lands on mtmp's own square, and if mtmp is pit-trapped
+           flooreffects crushes it with its own rock (mondied -> m_detach ->
+           relobj, then bury_objs), which relocates or frees the rest of this
+           inventory -- a saved successor would dangle.  Each boulder is
+           extracted before the drop, so the rescan can't loop.  */
+        while (!DEADMONSTER(mtmp)) {
+            for (otmp = mtmp->minvent; otmp; otmp = otmp->nobj)
+                if (otmp->otyp == BOULDER)
+                    break;
+            if (!otmp)
+                break;
+            /* this keeps otmp from being polymorphed in the
+               same zap that the monster that held it is polymorphed */
+            if (polyspot)
+                bypass_obj(otmp);
+            obj_extract_self(otmp);
+            /* probably ought to give some "drop" message here */
+            if (!flooreffects(otmp, mtmp->mx, mtmp->my, ""))
                 place_object(otmp, mtmp->mx, mtmp->my);
-            }
         }
     }
 

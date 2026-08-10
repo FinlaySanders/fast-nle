@@ -94,6 +94,12 @@ typedef struct nle_observation {
        displays: [buc, spe, quan, eroded, eroded2, flags, typeknown, rsvd].
        Size NLE_INVENTORY_SIZE * NLE_INV_STATE_FIELDS. */
     signed char *inv_state;
+    /* Discovered-type channel: per slot, the TRUE (unshuffled) object glyph
+       iff the inventory line would print the real name (dknown &&
+       oc_name_known — the xname rule), else NO_GLYPH. The appearance stays
+       in inv_glyphs; this exports the discoveries list, not hidden state.
+       Size NLE_INVENTORY_SIZE. */
+    short *inv_true_glyphs;
     /* Opt-in cheap fills: when set, in-game fills export only prog_state,
        misc and message (what a multi-key wrapper reads between keystrokes);
        glyphs/blstats/internal/inv_* wait for the next full fill — either a

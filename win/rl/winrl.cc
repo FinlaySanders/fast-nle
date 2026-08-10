@@ -236,6 +236,9 @@ class NetHackRL
 
     std::array<std::string, MAXBLSTATS> status_;
     long condition_bits_;
+    // opt-in (NLE_TRUE_GLYPHS): export true glyphs for discovered types
+    bool true_glyphs_;
+    int maybe_true_glyph(int glyph);
 
     void update_blstats();
     long blstats_[NLE_BLSTATS_SIZE];
@@ -272,6 +275,20 @@ NetHackRL::NetHackRL(int &argc, char **argv) : glyphs_(), blstats_{}
     assert(BASE_WINDOW == 0);
     windows_.emplace_back(new rl_window({ NHW_BASE }));
     glyphs_.fill(nul_glyph);
+    true_glyphs_ = getenv("NLE_TRUE_GLYPHS") != NULL;
+}
+
+/* Discovered-type map export (opt-in): once a type is in the discoveries
+ * list, farlook names every instance on the floor, so the true glyph is
+ * interface-public. Undiscovered (and everything when the flag is off,
+ * e.g. golden replays) stays appearance-shuffled. */
+int
+NetHackRL::maybe_true_glyph(int glyph)
+{
+    if (true_glyphs_ && glyph_is_normal_object(glyph)
+        && objects[glyph_to_obj(glyph)].oc_name_known)
+        return glyph;
+    return shuffled_glyph(glyph);
 }
 
 void
@@ -366,7 +383,12 @@ NetHackRL::fill_obs(nle_obs *obs)
         obs->internal[3] = xwaitingforspace;
         obs->internal[4] = stairs_down;
         obs->internal[5] = u.ublesscnt; /* prayer cooldown (was core seed) */
-        obs->internal[6] = 0;           /* used to be disp seed */
+        /* engraving underfoot: 2 = active Elbereth, 1 = other (was: dead 0
+         * since fork — the obs feature read constant zero). Bit 2 = engulfed,
+         * consumed env-side for legality masking, stripped before the obs. */
+        obs->internal[6] = (sengr_at("Elbereth", u.ux, u.uy, TRUE) ? 2
+                         : (engr_at(u.ux, u.uy) ? 1 : 0))
+                         | (u.uswallow ? 4 : 0);
         obs->internal[7] = u.uhunger;
         obs->internal[8] =
             u.urexp; /* score (careful! check botl_score() and end.c) */
@@ -447,7 +469,7 @@ NetHackRL::fill_obs(nle_obs *obs)
         int g = under ? obj_to_glyph(under, rn2_on_display_rng)
                       : back_to_glyph(u.ux, u.uy);
         obs->glyphs[(size_t) u.uy * (COLNO - 1) + (u.ux - 1)] =
-            shuffled_glyph(g);
+            maybe_true_glyph(g);
     }
 fill_message:
     if (obs->message) {
@@ -608,6 +630,23 @@ fill_message:
         std::memset(obs->inv_state + i * NLE_INV_STATE_FIELDS, 0,
                     (NLE_INVENTORY_SIZE - i) * NLE_INV_STATE_FIELDS);
     }
+    if (obs->inv_true_glyphs && !nle_partial) {
+        /* True type only once discovered AND this instance was seen
+           (matches the xname display rule via st[6] above). Flag reads
+           only; no RNG. */
+        int i = 0;
+        struct obj *otmp;
+        for (otmp = invent; otmp && i < NLE_INVENTORY_SIZE;
+             otmp = otmp->nobj, ++i) {
+            obs->inv_true_glyphs[i] =
+                (otmp->dknown && objects[otmp->otyp].oc_name_known)
+                    ? GLYPH_OBJ_OFF + otmp->otyp
+                    : NO_GLYPH;
+        }
+        for (; i < NLE_INVENTORY_SIZE; ++i) {
+            obs->inv_true_glyphs[i] = NO_GLYPH;
+        }
+    }
     if (obs->screen_descriptions && !nle_partial) {
         memcpy(obs->screen_descriptions, &screen_descriptions_,
                screen_descriptions_.size());
@@ -680,7 +719,7 @@ NetHackRL::store_glyph(XCHAR_P x, XCHAR_P y, int glyph)
     size_t offset = j * (COLNO - 1) + i;
 
     // TODO: Glyphs might be taken from gbuf[y][x].glyph.
-    glyphs_[offset] = shuffled_glyph(glyph);
+    glyphs_[offset] = maybe_true_glyph(glyph);
     dirty_rows_ |= 1u << j;
 }
 
