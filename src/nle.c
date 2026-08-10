@@ -710,6 +710,22 @@ int max;
     return n;
 }
 
+/* 1 if the engine would refuse a cast for free before spell selection
+ * (stun, chant, freehand, too-weak).  RL-mask gate; pure predicate. */
+int
+nle_cast_blocked2(nle)
+nle_ctx_t *nle;
+{
+    struct nh_ctx *saved = nh_cur;
+    int r;
+    extern int nle_cast_blocked();
+
+    nh_cur = (struct nh_ctx *) nle->nh;
+    r = nle_cast_blocked();
+    nh_cur = saved;
+    return r;
+}
+
 /* 1 if a peaceful or tame monster occupies (x,y). Farlook names attitude
  * for any monster the hero can see, so this is interface-public; callers
  * only query positions where a visible monster glyph exists. Reads only;

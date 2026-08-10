@@ -693,6 +693,18 @@ const char *goal;
     int gcount[NUM_GLOCS] = DUMMY;
     int gidx[NUM_GLOCS] = DUMMY;
 
+    /* Headless RL port: getpos is a human cursor-browse UI (detection map
+       browse, crystal ball, controlled teleport).  It raises no prompt flag,
+       so an agent's keystrokes are eaten silently until an exit key happens
+       to arrive -- observed wedging ~1/300 heavy-caster episodes for ~9K
+       steps.  Answer immediately instead: abort when allowed (callers treat
+       it as ESC; controlled teleport falls back to the uncontrolled roll),
+       else the hero's own square. */
+    if (!force) return -1;
+    ccp->x = u.ux;
+    ccp->y = u.uy;
+    return 0;
+
     for (i = 0; i < SIZE(pick_chars_def); i++)
         pick_chars[i] = Cmd.spkeys[pick_chars_def[i].nhkf];
     pick_chars[SIZE(pick_chars_def)] = '\0';

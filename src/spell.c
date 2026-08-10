@@ -81,6 +81,17 @@ int max;
     }
     return n;
 }
+/* Zero-turn cast gate for the RL mask: mirrors the refusals spelleffects
+ * makes before any spell is selected (rejectcasting: stun, chant,
+ * freehand) plus the too-weak check.  Pure predicate; no messages, no
+ * RNG. */
+int
+nle_cast_blocked()
+{
+    return (Stunned || !can_chant(&youmonst) || !freehand()
+            || ACURR(A_STR) < 4) ? 1 : 0;
+}
+
 STATIC_DCL char *FDECL(spellretention, (int, char *));
 STATIC_DCL int NDECL(throwspell);
 STATIC_DCL void NDECL(cast_protection);

@@ -284,6 +284,21 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
        real. Exits 0 regardless; never use in a gate. */
     int keep_going = getenv("NLE_REPLAY_KEEP_GOING") != NULL;
     long kg_mismatches = 0;
+    /* NLE_REPLAY_UPDATE: replay the recorded actions and write
+       <golden>.new with freshly computed hashes instead of comparing —
+       for re-pinning goldens after an intentional behavior change. */
+    int update = getenv("NLE_REPLAY_UPDATE") != NULL;
+    FILE *uf = NULL;
+    if (update) {
+        char newpath[4096];
+        snprintf(newpath, sizeof(newpath), "%s.new", golden_path);
+        uf = fopen(newpath, "w");
+        if (!uf) {
+            fprintf(stderr, "%s: cannot open %s\n", golden_path, newpath);
+            fclose(f);
+            return 1;
+        }
+    }
     /* No mismatch tolerance. The "transient" flickers once tolerated here
      * were wall-clock leaking into gameplay through ubirthday (shopkeeper
      * names etc.); goldens are now recorded with time(2) pinned to the
@@ -293,6 +308,9 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
 
     while (fgets(line, sizeof(line), f)) {
         lineno++;
+        if (uf && (line[0] == '#' || line[0] == '\n'
+                   || strncmp(line, "meta ", 5) == 0))
+            fputs(line, uf);
         if (line[0] == '#' || line[0] == '\n')
             continue;
         if (strncmp(line, "meta core=", 10) == 0) {
@@ -353,7 +371,9 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
             if (dump_step_wanted(0))
                 dump_obs(&obs, 0); /* init frame */
             uint64_t h = obs_hash(&obs);
-            if (h != init_hash) {
+            if (uf) {
+                fprintf(uf, "init %016llx\n", (unsigned long long) h);
+            } else if (h != init_hash) {
                 fprintf(stderr,
                         "%s: INIT HASH MISMATCH: got %016llx want %016llx\n",
                         golden_path, (unsigned long long) h,
@@ -393,6 +413,15 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
             uint64_t h = obs_hash(&obs);
             if (dump_step_wanted(steps))
                 dump_obs(&obs, steps);
+            if (uf) {
+                fprintf(uf, "step %d %016llx\n", action,
+                        (unsigned long long) h);
+                if (obs.done) {
+                    fprintf(uf, "end done\n");
+                    break;
+                }
+                continue;
+            }
             if (keep_going) {
                 if (h != want) {
                     kg_mismatches++;
@@ -421,6 +450,8 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
             if (obs.done)
                 break; /* trailing steps in file (if any) are unreachable */
         } else if (strncmp(line, "end ", 4) == 0) {
+            if (uf)
+                fputs(line, uf);
             break;
         } else {
             fprintf(stderr, "%s:%ld: unknown line: %s", golden_path, lineno,
@@ -433,6 +464,11 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
     if (nle)
         lib_end(nle);
     fclose(f);
+    if (uf) {
+        fclose(uf);
+        printf("UPDATED %s.new (%ld steps)\n", golden_path, steps);
+        return rc;
+    }
     if (keep_going)
         printf("KEEP-GOING %s (%ld steps, %ld hash mismatches ignored)\n",
                golden_path, steps, kg_mismatches);
