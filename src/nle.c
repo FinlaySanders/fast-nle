@@ -437,9 +437,7 @@ nle_yield(void *notdone)
 void
 nethack_exit(int status)
 {
-    if (status) {
-        fprintf(stderr, "NetHack exit with status %i\n", status);
-    }
+    (void) status;
     nle_yield(NULL);
 }
 
