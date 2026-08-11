@@ -671,29 +671,10 @@ nle_container_at(nle_ctx_t *nle)
     return n;
 }
 
-/* Known-spell summary for the obs: sp_id, level, fail%% (the '+' menu's
- * column) per slot. Interface-public; reads only; no RNG. */
-int
-nle_spells(nle, ids, levs, fails, max)
-nle_ctx_t *nle;
-short *ids;
-signed char *levs, *fails;
-int max;
-{
-    struct nh_ctx *saved = nh_cur;
-    int n;
-    extern int nle_spell_summary();
-
-    nh_cur = (struct nh_ctx *) nle->nh;
-    n = nle_spell_summary(ids, levs, fails, max);
-    nh_cur = saved;
-    return n;
-}
-
 /* Slot-faithful spell summary with retention (sp_know turns, 0 = forgotten).
  * Slot index == cast menu letter. Interface-public; reads only; no RNG. */
 int
-nle_spells2(nle, ids, levs, fails, knows, max)
+nle_spells(nle, ids, levs, fails, knows, max)
 nle_ctx_t *nle;
 short *ids;
 signed char *levs, *fails;
@@ -702,10 +683,10 @@ int max;
 {
     struct nh_ctx *saved = nh_cur;
     int n;
-    extern int nle_spell_summary2();
+    extern int nle_spell_summary();
 
     nh_cur = (struct nh_ctx *) nle->nh;
-    n = nle_spell_summary2(ids, levs, fails, knows, max);
+    n = nle_spell_summary(ids, levs, fails, knows, max);
     nh_cur = saved;
     return n;
 }
@@ -713,15 +694,15 @@ int max;
 /* 1 if the engine would refuse a cast for free before spell selection
  * (stun, chant, freehand, too-weak).  RL-mask gate; pure predicate. */
 int
-nle_cast_blocked2(nle)
+nle_cast_blocked(nle)
 nle_ctx_t *nle;
 {
     struct nh_ctx *saved = nh_cur;
     int r;
-    extern int nle_cast_blocked();
+    extern int nle_cast_blocked_impl();
 
     nh_cur = (struct nh_ctx *) nle->nh;
-    r = nle_cast_blocked();
+    r = nle_cast_blocked_impl();
     nh_cur = saved;
     return r;
 }
