@@ -747,6 +747,20 @@ nle_discoveries(nle_ctx_t *nle)
     return n;
 }
 
+/* Post-newgame identity: the engine's PICK_RANDOM choices (challenge
+   protocol). Reads flags.init*, set by role_init for random specs. */
+void
+nle_identity(nle_ctx_t *nle, int *role, int *race, int *gend, int *algn)
+{
+    struct nh_ctx *saved = nh_cur;
+    nh_cur = (struct nh_ctx *) nle->nh;
+    *role = flags.initrole;
+    *race = flags.initrace;
+    *gend = flags.initgend;
+    *algn = flags.initalign;
+    nh_cur = saved;
+}
+
 /* Hero tiles walked during the last nle_step, oldest first, as x,y pairs.
  * Multi-move commands (rush, occupations) resolve many moves inside one step
  * and lookaround() turns corners, so the caller cannot reconstruct the path
