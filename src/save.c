@@ -1658,6 +1658,17 @@ freedynamicdata()
 
     /* level-specific data */
     free_current_level();
+    /* The per-env ctx outlives the game (fork: no process exit), and env
+       accessors (nle_container_at &c) may walk level.objs/monsters between
+       death and reset. free_current_level leaves those cell arrays dangling
+       at their freed chains -- a mid-action death (e.g. touch_artifact
+       inside pickup) then reads freed memory: rare segv class. Dead game
+       has no objects: null the maps. Runs strictly after the final obs
+       fill, so golden hashes are unaffected. */
+    (void) memset((genericptr_t) level.objs, 0, sizeof(level.objs));
+    (void) memset((genericptr_t) level.monsters, 0, sizeof(level.monsters));
+    fobj = (struct obj *) 0;
+    fmon = (struct monst *) 0;
 
     /* game-state data [ought to reorganize savegamestate() to handle this] */
     free_killers();

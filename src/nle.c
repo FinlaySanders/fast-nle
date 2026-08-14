@@ -428,8 +428,12 @@ nle_yield(void *notdone)
                                 stack->ssize);
 #endif
 
-    if (notdone)
-        nle->returncontext = t.ctx;
+    /* Unconditional: the guard skipped this on the final yield, so a game
+       resumed after death (stray key from a multi-key macro) would yield
+       through a stale record into recycled stack memory (#GP in
+       jump_fcontext's ldmxcsr). The resumed-after-done case is exactly
+       when the fresh record matters. */
+    nle->returncontext = t.ctx;
 
     return t.data;
 }
@@ -782,6 +786,11 @@ nle_obs_refresh(nle_ctx_t *nle, nle_obs *obs)
 nle_ctx_t *
 nle_step(nle_ctx_t *nle, nle_obs *obs)
 {
+    if (nle->done) { /* dead games don't step; a stray macro key must not
+                        resume the coroutine past its final yield */
+        obs->done = 1;
+        return nle;
+    }
     current_nle_ctx = nle;
     nh_cur = (struct nh_ctx *) nle->nh;
     nle->observation = obs;
