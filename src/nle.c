@@ -625,6 +625,138 @@ nle_food_underfoot(nle_ctx_t *nle)
     return n;
 }
 
+/* Worst-case rot from eat.c edibility_prompts (divisor 10, no rn2).
+ * 1 = would food-poison / petrify / slime / species-poison. Reads only. */
+static int
+nle_food_would_sicken(struct obj *otmp)
+{
+    int mnum;
+    long rotted;
+
+    if (!otmp || otmp->oclass != FOOD_CLASS)
+        return 1;
+    if (otmp->otyp != CORPSE && !otmp->globby)
+        return 0;
+    mnum = otmp->corpsenm;
+    if (mnum < LOW_PM)
+        return 1;
+    if ((touch_petrifies(&mons[mnum]) || mnum == PM_MEDUSA)
+        && !Stone_resistance)
+        return 1;
+    if ((mnum == PM_GREEN_SLIME || otmp->otyp == GLOB_OF_GREEN_SLIME)
+        && !Unchanging && !slimeproof(youmonst.data))
+        return 1;
+    if (poisonous(&mons[mnum]) && !Poison_resistance)
+        return 1;
+    if (acidic(&mons[mnum]) && !Acid_resistance)
+        return 1;
+    if (mnum == PM_LIZARD || mnum == PM_LICHEN || is_rider(&mons[mnum]))
+        return 0;
+    rotted = (monstermoves - peek_at_iced_corpse_age(otmp)) / 10L;
+    if (otmp->cursed)
+        rotted += 2L;
+    else if (otmp->blessed)
+        rotted -= 2L;
+    return (otmp->orotten || rotted > 3L);
+}
+
+/* First edible object on the tile, same walk as floorfood("eat"). 1 if
+ * that object is safe to bite. Fresh kill on the floor stays legal. */
+int
+nle_floor_eat_safe(nle_ctx_t *nle)
+{
+    struct nh_ctx *saved = nh_cur;
+    struct obj *otmp;
+    int ok = 0;
+
+    nh_cur = (struct nh_ctx *) nle->nh;
+    for (otmp = level.objs[u.ux][u.uy]; otmp; otmp = otmp->nexthere) {
+        if (otmp->oclass != COIN_CLASS && is_edible(otmp)) {
+            ok = !nle_food_would_sicken(otmp);
+            break;
+        }
+    }
+    nh_cur = saved;
+    return ok;
+}
+
+/* Inventory letter: 1 if that item is a corpse/glob that would sicken. */
+int
+nle_invlet_food_unsafe(nle_ctx_t *nle, int letter)
+{
+    struct nh_ctx *saved = nh_cur;
+    struct obj *otmp;
+    int bad = 0;
+
+    nh_cur = (struct nh_ctx *) nle->nh;
+    for (otmp = invent; otmp; otmp = otmp->nobj) {
+        if (otmp->invlet == (char) letter) {
+            bad = nle_food_would_sicken(otmp);
+            break;
+        }
+    }
+    nh_cur = saved;
+    return bad;
+}
+
+/* Player-knowable INTRINSIC properties as a bitfield: corpse-gained ones are
+ * announced by the game ("You feel healthy"), race/role/level ones are
+ * documented. Intrinsic sources only (H*), never extrinsic (E*): an
+ * unidentified ring's effect would be a leak. Reads only; no RNG. */
+int
+nle_intrinsics(nle_ctx_t *nle)
+{
+    struct nh_ctx *saved = nh_cur;
+    int b = 0;
+
+    nh_cur = (struct nh_ctx *) nle->nh;
+    if (HPoison_resistance) b |= 1;
+    if (HFire_resistance) b |= 2;
+    if (HCold_resistance) b |= 4;
+    if (HSleep_resistance) b |= 8;
+    if (HShock_resistance) b |= 16;
+    if (HTelepat) b |= 32;
+    if (HSee_invisible) b |= 64;
+    if (HFast) b |= 128;
+    nh_cur = saved;
+    return b;
+}
+
+/* Which special level the hero currently stands on, as a bitfield.
+ * Engine-truth topology (player-knowable once you are there). Reads only. */
+int
+nle_special_level(nle_ctx_t *nle)
+{
+    struct nh_ctx *saved = nh_cur;
+    int b = 0;
+
+    nh_cur = (struct nh_ctx *) nle->nh;
+    if (Is_medusa_level(&u.uz)) b |= 1;
+    if (Is_stronghold(&u.uz)) b |= 2;   /* the Castle */
+    if (In_sokoban(&u.uz)) b |= 4;
+    if (In_mines(&u.uz)) b |= 8;
+    if (Is_valley(&u.uz)) b |= 16;
+    if (In_hell(&u.uz)) b |= 32;        /* Gehennom */
+    nh_cur = saved;
+    return b;
+}
+
+/* Total monsters vanquished this game (the end-of-game list): sum of
+ * mvitals[].died. Includes deaths to traps/conflict like the real tally.
+ * Reads only; no RNG. */
+int
+nle_vanquished(nle_ctx_t *nle)
+{
+    struct nh_ctx *saved = nh_cur;
+    int i, total = 0;
+
+    nh_cur = (struct nh_ctx *) nle->nh;
+    for (i = 0; i < NUMMONS; i++)
+        total += (int) mvitals[i].died;
+    nh_cur = saved;
+    return total;
+}
+
 /* AC granted by the protection spell (u.uspellprot); decays on its own
  * clock. Reads only; no RNG. */
 int
@@ -730,6 +862,217 @@ nle_peaceful_at(nle_ctx_t *nle, int x, int y)
     return r;
 }
 
+/* Hazard bits for species i from mons[] attack tables: bit0 passive
+ * counterattack, bit1 engulf, bit2 explosive, bit3 poisonous. Static per
+ * species; used to generate NH_MON_HAZ. Reads only; no RNG. */
+int
+nle_mon_haz(nle_ctx_t *nle, int i)
+{
+    int a, h = 0;
+
+    (void) nle;
+    if (i < 0 || i >= NUMMONS)
+        return 0;
+    for (a = 0; a < NATTK; a++) {
+        const struct attack *at = &mons[i].mattk[a];
+        if (at->aatyp == AT_NONE && (at->damn || at->damd || at->adtyp == AD_STON))
+            h |= 1;
+        if (at->aatyp == AT_ENGL) h |= 2;
+        if (at->aatyp == AT_BOOM || at->aatyp == AT_EXPL) h |= 4;
+        if (at->adtyp == AD_DRST || at->adtyp == AD_DRDX || at->adtyp == AD_DRCO)
+            h |= 8;
+    }
+    return h;
+}
+
+/* Engine-truth species name (mons[i].mname). Reads only. */
+void
+nle_mon_name(nle_ctx_t *nle, int i, char *buf, int n)
+{
+    (void) nle;
+    buf[0] = '\0';
+    if (i >= 0 && i < NUMMONS) {
+        strncpy(buf, mons[i].mname, n - 1);
+        buf[n - 1] = '\0';
+    }
+}
+
+/* Inventory-lab targets: per-slot class/flag bytes (invent chain order,
+ * matching the obs slot order) and summary ints. Reads only; no RNG. */
+void
+nle_inv_probe(nle_ctx_t *nle, unsigned char *slot_class,
+              unsigned char *slot_flags, int *out)
+{
+    struct nh_ctx *saved = nh_cur;
+    struct obj *o;
+    int i = 0, nweap = 0, nfood = 0, ncursed = 0, nunid = 0, upg = 0;
+    int wsd = -1;
+
+    nh_cur = (struct nh_ctx *) nle->nh;
+    if (uwep && uwep->oclass == WEAPON_CLASS)
+        wsd = (int) objects[uwep->otyp].oc_wsdam;
+    for (o = invent; o && i < 55; o = o->nobj, i++) {
+        int f = 0;
+        slot_class[i] = (unsigned char) o->oclass;
+        if (is_ammo(o)) f |= 1;
+        if (o->oclass == WEAPON_CLASS
+            && objects[o->otyp].oc_skill >= P_BOW
+            && objects[o->otyp].oc_skill <= P_CROSSBOW) f |= 2;
+        if (o->oclass == FOOD_CLASS) { f |= 4; nfood++; }
+        if (o->oclass == WEAPON_CLASS) {
+            f |= 8; nweap++;
+            if (o != uwep && (int) objects[o->otyp].oc_wsdam > wsd) upg = 1;
+        }
+        if (o == uwep) f |= 16;
+        if (o->bknown && o->cursed) { f |= 32; ncursed++; }
+        if (!objects[o->otyp].oc_name_known && !o->dknown) nunid++;
+        slot_flags[i] = (unsigned char) f;
+    }
+    for (; i < 55; i++) { slot_class[i] = 255; slot_flags[i] = 0; }
+    out[0] = nle_lnc_bits(nle); /* re-enters safely: saves/restores nh_cur */
+    nh_cur = (struct nh_ctx *) nle->nh;
+    out[1] = uwep ? (int) uwep->otyp : -1;
+    out[2] = uwep ? (int) uwep->oclass : -1;
+    out[3] = upg;
+    out[4] = nweap; out[5] = nfood; out[6] = ncursed; out[7] = nunid;
+    nh_cur = saved;
+}
+
+/* Trunk-probe targets: prayer counter, lycanthropy, youngest corpse age at
+ * the hero's cell, sickness timer. Reads only; no RNG. */
+void
+nle_probe_state(nle_ctx_t *nle, int *out)
+{
+    struct nh_ctx *saved = nh_cur;
+    struct obj *o;
+    int cage = -1;
+
+    nh_cur = (struct nh_ctx *) nle->nh;
+    out[0] = (int) u.ublesscnt;
+    out[1] = (int) u.ulycn; /* -1 = no lycanthropy */
+    for (o = level.objs[u.ux][u.uy]; o; o = o->nexthere)
+        if (o->otyp == CORPSE) {
+            int a = (int) (monstermoves - o->age);
+            if (cage < 0 || a < cage)
+                cage = a;
+        }
+    out[2] = cage; /* -1 = no corpse underfoot */
+    out[3] = Sick ? (int) (u.uprops[SICK].intrinsic & TIMEOUT) : 0;
+    nh_cur = saved;
+}
+
+/* Copy the last death's killer string (killer.name at really_done time).
+ * Reads only; valid after a terminal step. */
+void
+nle_killer_name(nle_ctx_t *nle, char *buf, int n)
+{
+    struct nh_ctx *saved = nh_cur;
+
+    nh_cur = (struct nh_ctx *) nle->nh;
+    strncpy(buf, killer.name, n - 1);
+    buf[n - 1] = '\0';
+    nh_cur = saved;
+}
+
+/* Classify the inventory item at position idx (invent chain order) for a
+ * throw: 0 = no item, 1 = not ammo, 2 = ammo without its wielded launcher,
+ * 3 = ammo matching the wielded launcher (a real "fire"). Reads only. */
+int
+nle_throw_kind(nle_ctx_t *nle, int idx)
+{
+    struct nh_ctx *saved = nh_cur;
+    struct obj *o;
+    int i = 0, r = 0;
+
+    nh_cur = (struct nh_ctx *) nle->nh;
+    for (o = invent; o && i < idx; o = o->nobj, i++)
+        ;
+    if (o)
+        r = !is_ammo(o) ? 1
+            : (uwep && ammo_and_launcher(o, uwep)) ? 3 : 2;
+    nh_cur = saved;
+    return r;
+}
+
+/* Launcher/ammo readiness bits from the hero's own inventory (all
+ * hero-known): bit0 = some (launcher, matching ammo) pair carried,
+ * bit1 = wielding a launcher, bit2 = wielding a launcher with matching
+ * ammo carried. Reads only; no RNG. */
+/* Kit-census helpers (read-only, no RNG). Wielded-item class:
+ * 0 none/bare, 1 launcher, 2 melee weapon (incl. weptools), 3 ammo/missile
+ * (bad-wield), 4 other non-weapon. */
+int
+nle_wield_class(nle_ctx_t *nle)
+{
+    struct nh_ctx *saved = nh_cur;
+    int r;
+
+    nh_cur = (struct nh_ctx *) nle->nh;
+    if (!uwep) r = 0;
+    else if (is_launcher(uwep)) r = 1;
+    else if (uwep->oclass == WEAPON_CLASS
+             ? !is_ammo(uwep) && !is_missile(uwep)
+             : is_weptool(uwep)) r = 2;
+    else if (uwep->oclass == WEAPON_CLASS) r = 3;
+    else r = 4;
+    nh_cur = saved;
+    return r;
+}
+
+/* Fire kind of throwing the item at inventory letter `let`:
+ * 0 not found/not throw-relevant, 1 FIRE (ammo matching the wielded
+ * launcher), 2 ammo hand-thrown (no matching wielded launcher),
+ * 3 non-ammo throw (dagger etc.). */
+int
+nle_throw_fire_kind(nle_ctx_t *nle, int let)
+{
+    struct nh_ctx *saved = nh_cur;
+    struct obj *o;
+    int r = 0;
+
+    nh_cur = (struct nh_ctx *) nle->nh;
+    for (o = invent; o; o = o->nobj)
+        if ((int) o->invlet == let)
+            break;
+    if (o) {
+        if (is_ammo(o))
+            r = (uwep && ammo_and_launcher(o, uwep)) ? 1 : 2;
+        else
+            r = 3;
+    }
+    nh_cur = saved;
+    return r;
+}
+
+int
+nle_lnc_bits(nle_ctx_t *nle)
+{
+    struct nh_ctx *saved = nh_cur;
+    struct obj *l, *a;
+    int r = 0;
+
+    nh_cur = (struct nh_ctx *) nle->nh;
+    for (l = invent; l && !(r & 1); l = l->nobj) {
+        if (!is_launcher(l))
+            continue;
+        for (a = invent; a; a = a->nobj)
+            if (ammo_and_launcher(a, l)) {
+                r |= 1;
+                break;
+            }
+    }
+    if (uwep && is_launcher(uwep)) {
+        r |= 2;
+        for (a = invent; a; a = a->nobj)
+            if (ammo_and_launcher(a, uwep)) {
+                r |= 4;
+                break;
+            }
+    }
+    nh_cur = saved;
+    return r;
+}
+
 /* Number of object types the hero has discovered (the discoveries list,
  * including born-known types — callers difference per episode). Reads only;
  * no RNG. */
@@ -759,6 +1102,37 @@ nle_identity(nle_ctx_t *nle, int *role, int *race, int *gend, int *algn)
     *gend = flags.initgend;
     *algn = flags.initalign;
     nh_cur = saved;
+}
+
+/* Current special-level bits: 1=oracle 2=medusa 4=castle. Reads only. */
+int
+nle_landmarks(nle_ctx_t *nle)
+{
+    struct nh_ctx *saved = nh_cur;
+    int b;
+
+    nh_cur = (struct nh_ctx *) nle->nh;
+    b = 0;
+    if (Is_oracle_level(&u.uz))
+        b |= 1;
+    if (Is_medusa_level(&u.uz))
+        b |= 2;
+    if (Is_stronghold(&u.uz))
+        b |= 4;
+    nh_cur = saved;
+    return b;
+}
+
+int
+nle_killed_medusa(nle_ctx_t *nle)
+{
+    struct nh_ctx *saved = nh_cur;
+    int k;
+
+    nh_cur = (struct nh_ctx *) nle->nh;
+    k = (int) u.uachieve.killed_medusa;
+    nh_cur = saved;
+    return k;
 }
 
 /* Hero tiles walked during the last nle_step, oldest first, as x,y pairs.
