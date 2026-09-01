@@ -1,3 +1,8 @@
+if(EMSCRIPTEN)
+  set(NLE_RUN ${CMAKE_CROSSCOMPILING_EMULATOR})
+else()
+  set(NLE_RUN)
+endif()
 find_program(FLEX_EXECUTABLE NAMES flex flex.exe)
 find_program(BISON_EXECUTABLE NAMES bison bison.exe)
 
@@ -48,23 +53,23 @@ target_include_directories(recover PRIVATE ${NLE_INC} ${NLE_INC_GEN}
 add_custom_command(
   DEPENDS makedefs
   OUTPUT ${NLE_INC_GEN}/date.h
-  COMMAND $<TARGET_FILE:makedefs> ARGS -v)
+  COMMAND ${NLE_RUN} $<TARGET_FILE:makedefs> ARGS -v)
 
 add_custom_command(
   DEPENDS makedefs
   OUTPUT ${NLE_INC_GEN}/onames.h
-  COMMAND $<TARGET_FILE:makedefs> ARGS -o)
+  COMMAND ${NLE_RUN} $<TARGET_FILE:makedefs> ARGS -o)
 
 add_custom_command(
   DEPENDS makedefs
   OUTPUT ${NLE_INC_GEN}/pm.h
-  COMMAND $<TARGET_FILE:makedefs> ARGS -p)
+  COMMAND ${NLE_RUN} $<TARGET_FILE:makedefs> ARGS -p)
 add_custom_target(generate_pm_h DEPENDS ${NLE_INC_GEN}/pm.h)
 
 add_custom_command(
   DEPENDS tilemap
   OUTPUT ${NLE_SRC_GEN}/tile.c
-  COMMAND $<TARGET_FILE:tilemap>)
+  COMMAND ${NLE_RUN} $<TARGET_FILE:tilemap>)
 add_custom_target(generate_tile_c DEPENDS ${NLE_SRC_GEN}/tile.c)
 
 add_custom_command(
@@ -120,3 +125,13 @@ set(TXT_DOCS
 install(TARGETS makedefs dgn_comp lev_comp dlb recover DESTINATION ${INSTDIR})
 install(FILES ${MAN_PAGES} DESTINATION ${INSTDIR}/man)
 install(FILES ${TXT_DOCS} DESTINATION ${INSTDIR}/doc)
+
+if(EMSCRIPTEN)
+  # build-time tools run under node (CROSSCOMPILING_EMULATOR); NODERAWFS so
+  # they read/write the real build tree, producing wasm32-layout dat files
+  foreach(t makedefs dgn_comp lev_comp dlb recover tilemap)
+    if(TARGET ${t})
+      target_link_options(${t} PRIVATE -sNODERAWFS=1 -sEXIT_RUNTIME=1)
+    endif()
+  endforeach()
+endif()

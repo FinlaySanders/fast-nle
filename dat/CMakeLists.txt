@@ -1,3 +1,8 @@
+if(EMSCRIPTEN)
+  set(NLE_RUN ${CMAKE_CROSSCOMPILING_EMULATOR})
+else()
+  set(NLE_RUN)
+endif()
 set(DATHELP
     help
     hh
@@ -200,33 +205,33 @@ set(LEVS_GEN
 add_custom_command(
   DEPENDS $<TARGET_FILE:makedefs> bogusmon.txt engrave.txt epitaph.txt
   OUTPUT bogusmon epitaph engrave
-  COMMAND makedefs ARGS -s)
+  COMMAND ${NLE_RUN} $<TARGET_FILE:makedefs> ARGS -s)
 
 add_custom_command(
   DEPENDS $<TARGET_FILE:makedefs> data.base
   OUTPUT data
-  COMMAND makedefs ARGS -d)
+  COMMAND ${NLE_RUN} $<TARGET_FILE:makedefs> ARGS -d)
 
 add_custom_command(
   DEPENDS $<TARGET_FILE:makedefs> rumors.tru rumors.fal
   OUTPUT rumors
-  COMMAND makedefs ARGS -r)
+  COMMAND ${NLE_RUN} $<TARGET_FILE:makedefs> ARGS -r)
 
 add_custom_command(
   DEPENDS $<TARGET_FILE:makedefs> quest.txt
   OUTPUT quest.dat
-  COMMAND makedefs ARGS -q)
+  COMMAND ${NLE_RUN} $<TARGET_FILE:makedefs> ARGS -q)
 
 add_custom_command(
   DEPENDS $<TARGET_FILE:makedefs> oracles.txt
   OUTPUT oracles
-  COMMAND makedefs ARGS -h)
+  COMMAND ${NLE_RUN} $<TARGET_FILE:makedefs> ARGS -h)
 
 # Hack: Depend on date.h to avoid race.
 add_custom_command(
   DEPENDS $<TARGET_FILE:makedefs> ${NLE_INC_GEN}/date.h
   OUTPUT options
-  COMMAND makedefs ARGS -v)
+  COMMAND ${NLE_RUN} $<TARGET_FILE:makedefs> ARGS -v)
 
 # Hack: Depend on bogusmon to avoid race wrt. makedef's grep.tmp file. Best to
 # be defensive about the paths (matters if NetHack's make install was run).
@@ -234,14 +239,14 @@ add_custom_command(
   DEPENDS $<TARGET_FILE:makedefs> $<TARGET_FILE:dgn_comp>
           ${NLE_DAT_GEN}/dungeon.def ${NLE_DAT_GEN}/bogusmon
   OUTPUT dungeon dungeon.pdf
-  COMMAND makedefs ARGS -e
-  COMMAND dgn_comp ARGS dungeon.pdf)
+  COMMAND ${NLE_RUN} $<TARGET_FILE:makedefs> ARGS -e
+  COMMAND ${NLE_RUN} $<TARGET_FILE:dgn_comp> ARGS dungeon.pdf)
 
 add_custom_command(
   DEPENDS lev_comp
   OUTPUT ${LEVS_GEN}
-  COMMAND lev_comp ${SPECIAL_LEVELS}
-  COMMAND lev_comp ${QUEST_LEVELS})
+  COMMAND ${NLE_RUN} $<TARGET_FILE:lev_comp> ${SPECIAL_LEVELS}
+  COMMAND ${NLE_RUN} $<TARGET_FILE:lev_comp> ${QUEST_LEVELS})
 
 add_custom_command(
   OUTPUT perm record logfile xlogfile COMMAND ${CMAKE_COMMAND} -E touch perm
@@ -256,7 +261,7 @@ list(TRANSFORM LEVS_GEN PREPEND ${NLE_DAT_GEN}/ OUTPUT_VARIABLE
 add_custom_command(
   DEPENDS dlb ${NLE_DAT_GEN_DATDLB} ${NLE_DAT_GEN_LEVS_GEN}
   OUTPUT nhdat
-  COMMAND LC_ALL=C $<TARGET_FILE:dlb> ARGS cf nhdat ${DATDLB} ${LEVS_GEN})
+  COMMAND ${CMAKE_COMMAND} -E env LC_ALL=C ${NLE_RUN} $<TARGET_FILE:dlb> ARGS cf nhdat ${DATDLB} ${LEVS_GEN})
 
 set(ALL_DAT_GEN nhdat perm record logfile xlogfile)
 list(TRANSFORM ALL_DAT_GEN PREPEND ${NLE_DAT_GEN}/)

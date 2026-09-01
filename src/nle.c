@@ -897,6 +897,8 @@ nle_mon_name(nle_ctx_t *nle, int i, char *buf, int n)
     }
 }
 
+int nle_lnc_bits(nle_ctx_t *);
+
 /* Inventory-lab targets: per-slot class/flag bytes (invent chain order,
  * matching the obs slot order) and summary ints. Reads only; no RNG. */
 void

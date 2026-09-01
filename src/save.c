@@ -44,9 +44,11 @@ long bytes_counted;
  *   sizeof(struct obj)   == 96   (matches restore.c)
  * Hypothesis 1 (sizeof asymmetry) is ruled out — both TUs agree. */
 #if defined(__GNUC__) || defined(__clang__)
+#ifndef __EMSCRIPTEN__ /* wasm32: ILP32 sizes differ; drift canary is native-only */
 _Static_assert(sizeof(struct eshk)  == 4936, "save.c: sizeof(struct eshk) drifted");
 _Static_assert(sizeof(struct monst) ==  144, "save.c: sizeof(struct monst) drifted");
 _Static_assert(sizeof(struct obj)   ==   96, "save.c: sizeof(struct obj) drifted");
+#endif
 #endif
 
 #ifdef MICRO

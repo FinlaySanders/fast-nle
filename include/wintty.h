@@ -274,7 +274,7 @@ E void FDECL(video_update_positionbar, (char *));
 #undef fflush
 E int FDECL(nle_putchar, (int) );
 E int FDECL(nle_puts, (const char *) );
-E int FDECL(nle_xputs, (const char *) );
+E void FDECL(nle_xputs, (const char *) );
 E int FDECL(nle_fflush, (FILE *) );
 
 /* Gate the per-byte emitters inline: with no tty obs bound and no ttyrec,

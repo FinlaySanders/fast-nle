@@ -71,12 +71,14 @@ set(INSTDIR ${HACKDIR})
 
 # pybind11 via FetchContent
 include(FetchContent)
-FetchContent_Declare(
-  pybind11
-  GIT_REPOSITORY https://github.com/pybind/pybind11.git
-  GIT_TAG v3.0.1
-  EXCLUDE_FROM_ALL)
-FetchContent_MakeAvailable(pybind11)
+if(NOT EMSCRIPTEN)
+  FetchContent_Declare(
+    pybind11
+    GIT_REPOSITORY https://github.com/pybind/pybind11.git
+    GIT_TAG v3.0.1
+    EXCLUDE_FROM_ALL)
+  FetchContent_MakeAvailable(pybind11)
+endif()
 
 # de-boost-ified version of boost.context via FetchContent
 FetchContent_Declare(
@@ -162,12 +164,19 @@ option(NLE_TLS_INITIAL_EXEC
        "initial-exec TLS for per-env pointers (migration-safe)" ON)
 
 # libnethack library
-add_library(nethack SHARED ${NETHACK_SRC})
-if(NLE_TLS_INITIAL_EXEC)
-  target_compile_definitions(nethack PRIVATE NH_TLS_INITIAL_EXEC)
+if(EMSCRIPTEN)
+  add_library(nethack STATIC ${NETHACK_SRC} src/nle_fcontext_emscripten.c)
+  set_target_properties(nethack PROPERTIES CXX_STANDARD 14)
+  target_include_directories(nethack PUBLIC ${deboost_context_SOURCE_DIR}/include)
+  add_dependencies(nethack util dat)
+else()
+  add_library(nethack SHARED ${NETHACK_SRC})
+  if(NLE_TLS_INITIAL_EXEC)
+    target_compile_definitions(nethack PRIVATE NH_TLS_INITIAL_EXEC)
+  endif()
+  add_dependencies(nethack util dat)
+  set_target_properties(nethack PROPERTIES CXX_STANDARD 14 SUFFIX ".so")
 endif()
-add_dependencies(nethack util dat)
-set_target_properties(nethack PROPERTIES CXX_STANDARD 14 SUFFIX ".so")
 target_compile_options(
   nethack
   PRIVATE -Wno-deprecated-non-prototype
@@ -181,17 +190,22 @@ target_include_directories(
 # Careful with -DMONITOR_HEAP: Ironically, it fails to fclose FILE* heaplog.
 # target_compile_definitions(nethack PUBLIC "$<$<CONFIG:DEBUG>:MONITOR_HEAP>")
 
-target_link_libraries(nethack PUBLIC m fcontext bz2_static tmt)
+if(EMSCRIPTEN)
+  target_link_libraries(nethack PUBLIC m bz2_static tmt)
+else()
+  target_link_libraries(nethack PUBLIC m fcontext bz2_static tmt)
+endif()
 # Bind intra-library function references locally: NetHack exports generic
 # symbol names (alloc, panic, ...) that collide with embedder symbols, and
 # without this the library's own calls resolve through the PLT to whatever
 # the host binary defines (e.g. a two-arg alloc -> instant SIGSEGV).
 # ELF only: ld64 rejects the flag, and macOS's two-level namespace already
 # binds intra-library calls to the library's own definitions.
-if(NOT APPLE)
+if(NOT APPLE AND NOT EMSCRIPTEN)
   target_link_options(nethack PRIVATE -Wl,-Bsymbolic-functions)
 endif()
 
+if(NOT EMSCRIPTEN)
 # dlopen wrapper library
 add_library(nethackdl STATIC "sys/unix/nledl.c")
 target_include_directories(
@@ -261,6 +275,7 @@ set(TILE_FILES "win/share/monsters.txt" "win/share/objects.txt"
                "win/share/other.txt")
 
 install(FILES ${TILE_FILES} DESTINATION ${INSTDIR}/tiles)
+endif() # NOT EMSCRIPTEN
 # Only install if we are building as part of a Python project.
 if(DEFINED SKBUILD_PROJECT_VERSION)
   install(

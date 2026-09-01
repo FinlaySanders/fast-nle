@@ -10,7 +10,7 @@ extern isaac64_ctx *FDECL(nle_rng_state, (int) );
 extern int FDECL(whichrng, (int FDECL((*fn), (int) )));
 
 /* See hacklib.c. */
-extern int FDECL(set_random, (unsigned long, int FDECL((*fn), (int) )));
+extern void FDECL(set_random, (unsigned long, int FDECL((*fn), (int) )));
 
 /* An appropriate version of this must always be provided in
    port-specific code somewhere. It returns a number suitable

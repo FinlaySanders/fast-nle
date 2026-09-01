@@ -1743,6 +1743,11 @@ const char *filename;
 int whichprefix;
 int retryct;
 {
+#ifdef __EMSCRIPTEN__
+    /* single-env wasm demo: MEMFS has no link(2); nothing contends */
+    nhUse(filename); nhUse(whichprefix); nhUse(retryct);
+    return TRUE;
+#endif
 #if defined(PRAGMA_UNUSED) && !(defined(UNIX) || defined(VMS)) \
     && !(defined(AMIGA) || defined(WIN32) || defined(MSDOS))
 #pragma unused(retryct)
@@ -1907,6 +1912,10 @@ void
 unlock_file(filename)
 const char *filename;
 {
+#ifdef __EMSCRIPTEN__
+    nhUse(filename);
+    return;
+#endif
 #ifndef USE_FCNTL
     char locknambuf[BUFSZ];
     const char *lockname;
