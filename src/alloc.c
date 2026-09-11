@@ -43,6 +43,14 @@ register unsigned int lth;
 #else
     register genericptr_t ptr;
 
+#ifdef NH_ARENA
+    {
+        extern void *nh_arena_alloc_hook(unsigned int);
+        ptr = nh_arena_alloc_hook(lth);
+        if (ptr)
+            return (long *) ptr;
+    }
+#endif
     ptr = malloc(lth);
 #ifndef MONITOR_HEAP
     if (!ptr)

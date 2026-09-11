@@ -51,6 +51,8 @@ struct golden {
     int have_lgen;
     char options[32768];
     int fix_moon_phase;
+    unsigned long time_seed;
+    int have_time_seed, underfoot_glyphs, true_glyphs;
     uint64_t init_hash;
     int n_steps;
     int *actions;      /* heap: MAX_STEPS entries (AutoAscend runs are long) */
@@ -84,6 +86,12 @@ parse_golden(const char *path, struct golden *g)
             snprintf(g->options, sizeof(g->options), "%s", opts);
         } else if (strncmp(line, "meta fix_moon_phase=1", 21) == 0) {
             g->fix_moon_phase = 1;
+        } else if (strncmp(line, "meta time_seed=", 15) == 0) {
+            g->have_time_seed = (sscanf(line, "meta time_seed=%lu", &g->time_seed) == 1);
+        } else if (strncmp(line, "meta underfoot_glyphs=1", 23) == 0) {
+            g->underfoot_glyphs = 1;
+        } else if (strncmp(line, "meta true_glyphs=1", 18) == 0) {
+            g->true_glyphs = 1;
         } else if (strncmp(line, "init ", 5) == 0) {
             g->init_hash = strtoull(line + 5, NULL, 16);
         } else if (strncmp(line, "step ", 5) == 0) {
@@ -218,6 +226,15 @@ env_exec(struct env *e, enum env_op op)
             e->settings.time_seed = e->g->core + 1;
             e->settings.time_seed_is_set = true;
         }
+        if (e->g->have_time_seed) {
+            e->settings.time_seed = e->g->time_seed;
+            e->settings.time_seed_is_set = true;
+        }
+        e->settings.underfoot_glyphs = e->g->underfoot_glyphs;
+        if (e->g->true_glyphs)
+            setenv("NLE_TRUE_GLYPHS", "1", 1);
+        else
+            unsetenv("NLE_TRUE_GLYPHS");
         e->nle = lib_start(&e->obs, NULL, &e->settings);
         h = env_hash(e);
         if (h != e->g->init_hash) {

@@ -453,8 +453,11 @@ long num;
     obj->nobj = otmp;
     /* Only set nexthere when on the floor, nexthere is also used */
     /* as a back pointer to the container object when contained. */
-    if (obj->where == OBJ_FLOOR)
+    if (obj->where == OBJ_FLOOR) {
         obj->nexthere = otmp;
+        nh_fobj_dirty(); /* chain edit bypasses place_object */
+        nh_pile_recompute(obj->ox, obj->oy);
+    }
     copy_oextra(otmp, obj);
     if (has_omid(otmp))
         free_omid(otmp); /* only one association with m_id*/
@@ -611,6 +614,8 @@ struct obj *otmp;
         obj->nexthere = otmp;
         extract_nobj(obj, &fobj);
         extract_nexthere(obj, &level.objs[obj->ox][obj->oy]);
+        nh_fobj_dirty(); /* in-place swap bypasses place/remove */
+        nh_pile_recompute(otmp->ox, otmp->oy);
         break;
     default:
         panic("replace_object: obj position");
@@ -1280,6 +1285,7 @@ register struct obj *otmp;
     if (otmp->lamplit)
         old_light = arti_light_radius(otmp);
     otmp->cursed = 0;
+    nh_pile_touch_obj(otmp);
     otmp->blessed = 1;
     if (carried(otmp) && confers_luck(otmp))
         set_moreluck();
@@ -1323,6 +1329,7 @@ register struct obj *otmp;
     already_cursed = otmp->cursed;
     otmp->blessed = 0;
     otmp->cursed = 1;
+    nh_pile_touch_obj(otmp);
     /* welded two-handed weapon interferes with some armor removal */
     if (otmp == uwep && bimanual(uwep))
         reset_remarm();
@@ -1358,6 +1365,7 @@ register struct obj *otmp;
     if (otmp->lamplit)
         old_light = arti_light_radius(otmp);
     otmp->cursed = 0;
+    nh_pile_touch_obj(otmp);
     if (carried(otmp) && confers_luck(otmp))
         set_moreluck();
     else if (otmp->otyp == BAG_OF_HOLDING)
@@ -1791,6 +1799,8 @@ int x, y;
     /* add to floor chain */
     otmp->nobj = fobj;
     fobj = otmp;
+    nh_pile_recompute(x, y);
+    nh_fobj_dirty();
     if (otmp->timed)
         obj_timer_checks(otmp, x, y, 0);
 }
@@ -1925,6 +1935,8 @@ register struct obj *otmp;
         panic("remove_object: obj not on floor");
     extract_nexthere(otmp, &level.objs[x][y]);
     extract_nobj(otmp, &fobj);
+    nh_pile_recompute(x, y);
+    nh_fobj_dirty();
     /* update vision iff this was the only boulder at its spot */
     if (otmp->otyp == BOULDER && !sobj_at(BOULDER, x, y))
         unblock_point(x, y); /* vision */

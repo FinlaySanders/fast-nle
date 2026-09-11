@@ -166,11 +166,13 @@ option(NLE_TLS_INITIAL_EXEC
 # libnethack library
 if(EMSCRIPTEN)
   add_library(nethack STATIC ${NETHACK_SRC} src/nle_fcontext_emscripten.c)
+  target_compile_definitions(nethack PRIVATE NH_ARENA)
   set_target_properties(nethack PROPERTIES CXX_STANDARD 14)
   target_include_directories(nethack PUBLIC ${deboost_context_SOURCE_DIR}/include)
   add_dependencies(nethack util dat)
 else()
   add_library(nethack SHARED ${NETHACK_SRC})
+  target_compile_definitions(nethack PRIVATE NH_ARENA)
   if(NLE_TLS_INITIAL_EXEC)
     target_compile_definitions(nethack PRIVATE NH_TLS_INITIAL_EXEC)
   endif()

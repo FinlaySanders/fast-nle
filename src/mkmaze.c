@@ -1982,8 +1982,14 @@ boolean ini;
             case CONS_TRAP: {
                 struct trap *btrap = (struct trap *) cons->list;
 
-                btrap->tx = cons->x;
-                btrap->ty = cons->y;
+                {
+                    int otx = btrap->tx, oty = btrap->ty;
+
+                    btrap->tx = cons->x;
+                    btrap->ty = cons->y;
+                    nh_trap_plane_fix(otx, oty);
+                    nh_trap_plane_fix(btrap->tx, btrap->ty);
+                }
                 break;
             }
 

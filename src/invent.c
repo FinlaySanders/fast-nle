@@ -1226,6 +1226,17 @@ int x, y;
 {
     register struct obj *otmp;
 
+    /* fast-nle: pile summary bits answer the common negative without a
+       walk (boulder/scare-scroll/garlic queries from the monster AI) */
+    if (x >= 0 && x < COLNO && y >= 0 && y < ROWNO) {
+        unsigned char b = nh_pile_plane[x][y];
+
+        if ((otyp == BOULDER && !(b & NH_PB_BOULDER))
+            || (otyp == SCR_SCARE_MONSTER && !(b & NH_PB_SCARE))
+            || (otyp == CLOVE_OF_GARLIC && !(b & NH_PB_GARLIC)))
+            return (struct obj *) 0;
+    }
+
     for (otmp = level.objs[x][y]; otmp; otmp = otmp->nexthere)
         if (otmp->otyp == otyp)
             break;

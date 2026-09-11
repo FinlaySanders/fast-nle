@@ -8,10 +8,18 @@ struct nh_ctx {
     /* hot: touched every step; keep packed at the front so the
      * per-step working set spans the fewest cache lines. */
     /* --- hot --- */
+    unsigned char g_track_c_nh_track_cnt[COLNO][ROWNO]; /* track.c: nh_track_cnt */
+    unsigned int g_track_c_nh_track_bits[COLNO]; /* track.c: nh_track_bits */
     long g_moves; /* global: moves */
     long g_monstermoves; /* global: monstermoves */
     int g_multi; /* global: multi */
     schar g_nh_typ_plane[COLNO][ROWNO]; /* global: nh_typ_plane */
+    struct trap * g_nh_trap_plane[COLNO][ROWNO]; /* global: nh_trap_plane */
+    struct engr * g_nh_engr_plane[COLNO][ROWNO]; /* global: nh_engr_plane */
+    unsigned char g_nh_pile_plane[COLNO][ROWNO]; /* global: nh_pile_plane */
+    int g_nh_fobj_n; /* global: nh_fobj_n */
+    unsigned short g_nh_fobj_xy[NH_FOBJ_CAP]; /* global: nh_fobj_xy */
+    struct obj * g_nh_fobj_ptr[NH_FOBJ_CAP]; /* global: nh_fobj_ptr */
     boolean g_vision_full_recalc; /* global: vision_full_recalc */
     char ** g_viz_array; /* global: viz_array */
     struct sinfo g_program_state; /* global: program_state */
@@ -511,6 +519,12 @@ void nh_ctx_fixup(struct nh_ctx *);
 #define monstermoves (nh_cur->g_monstermoves)
 #define multi (nh_cur->g_multi)
 #define nh_typ_plane (nh_cur->g_nh_typ_plane)
+#define nh_trap_plane (nh_cur->g_nh_trap_plane)
+#define nh_engr_plane (nh_cur->g_nh_engr_plane)
+#define nh_pile_plane (nh_cur->g_nh_pile_plane)
+#define nh_fobj_n (nh_cur->g_nh_fobj_n)
+#define nh_fobj_xy (nh_cur->g_nh_fobj_xy)
+#define nh_fobj_ptr (nh_cur->g_nh_fobj_ptr)
 #define vision_full_recalc (nh_cur->g_vision_full_recalc)
 #define viz_array (nh_cur->g_viz_array)
 #define program_state (nh_cur->g_program_state)

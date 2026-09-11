@@ -121,6 +121,7 @@ find_lev_obj()
     for (x = 0; x < COLNO; x++)
         for (y = 0; y < ROWNO; y++)
             level.objs[x][y] = (struct obj *) 0;
+    nh_planes_clear();
 
     /*
      * Reverse the entire fobj chain, which is necessary so that we can
@@ -1273,6 +1274,7 @@ boolean ghostly;
     level.buriedobjlist = restobjchn(fd, ghostly, FALSE);
     billobjs = restobjchn(fd, ghostly, FALSE);
     rest_engravings(fd);
+    nh_planes_sync(); /* traps, objects, engravings now restored */
 
     /* reset level.monsters for new level */
     for (x = 0; x < COLNO; x++)

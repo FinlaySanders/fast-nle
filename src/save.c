@@ -717,6 +717,8 @@ int mode;
         /* level.bonesinfo = 0; -- handled by savecemetery() */
     }
     save_engravings(fd, mode);
+    if (release_data(mode))
+        nh_planes_clear(); /* traps/engravings/objects just freed */
     savedamage(fd, mode); /* pending shop wall and/or floor repair */
     save_regions(fd, mode);
     if (mode != FREE_SAVE)
@@ -1671,6 +1673,7 @@ freedynamicdata()
     (void) memset((genericptr_t) level.monsters, 0, sizeof(level.monsters));
     fobj = (struct obj *) 0;
     fmon = (struct monst *) 0;
+    nh_planes_clear();
 
     /* game-state data [ought to reorganize savegamestate() to handle this] */
     free_killers();

@@ -245,6 +245,8 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
     unsigned long core = 0, disp = 0, lgen = 0;
     int have_seeds = 0, have_options = 0, have_lgen = 0;
     uint64_t init_hash = 0;
+    unsigned long time_seed_v = 0;
+    int have_time_seed = 0, true_glyphs = 0;
     int have_init = 0;
 
     /* Observation buffers: exactly the keys the recorder bound; all other
@@ -338,6 +340,12 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
             have_options = 1;
         } else if (strncmp(line, "meta fix_moon_phase=1", 21) == 0) {
             settings.fix_moon_phase = true;
+        } else if (strncmp(line, "meta time_seed=", 15) == 0) {
+            have_time_seed = (sscanf(line, "meta time_seed=%lu", &time_seed_v) == 1);
+        } else if (strncmp(line, "meta underfoot_glyphs=1", 23) == 0) {
+            settings.underfoot_glyphs = 1;
+        } else if (strncmp(line, "meta true_glyphs=1", 18) == 0) {
+            true_glyphs = 1;
         } else if (strncmp(line, "init ", 5) == 0) {
             if (!have_seeds || !have_options) {
                 fprintf(stderr, "%s: init before required meta\n", golden_path);
@@ -361,6 +369,14 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
                 settings.time_seed = core + 1;
                 settings.time_seed_is_set = true;
             }
+            if (have_time_seed) { /* policy-driven goldens: env's own time seed */
+                settings.time_seed = time_seed_v;
+                settings.time_seed_is_set = true;
+            }
+            if (true_glyphs)
+                setenv("NLE_TRUE_GLYPHS", "1", 1);
+            else
+                unsetenv("NLE_TRUE_GLYPHS");
 
             nle = lib_start(&obs, NULL, &settings);
             if (!nle) {

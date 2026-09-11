@@ -1064,6 +1064,7 @@ register struct obj *obj;
         case SCROLL_CLASS:
             costly_alteration(obj, COST_CANCEL);
             obj->otyp = SCR_BLANK_PAPER;
+            nh_pile_touch_obj(obj);
             obj->spe = 0;
             break;
         case SPBOOK_CLASS:
@@ -1071,6 +1072,7 @@ register struct obj *obj;
                 && otyp != SPE_BOOK_OF_THE_DEAD) {
                 costly_alteration(obj, COST_CANCEL);
                 obj->otyp = SPE_BLANK_PAPER;
+                nh_pile_touch_obj(obj);
             }
             break;
         case POTION_CLASS:
@@ -1084,8 +1086,10 @@ register struct obj *obj;
                    whereas see invisible tastes like "enchanted" fruit
                    juice, it similarly cancels */
                 obj->otyp = POT_FRUIT_JUICE;
+                nh_pile_touch_obj(obj);
             } else {
                 obj->otyp = POT_WATER;
+                nh_pile_touch_obj(obj);
                 obj->odiluted = 0; /* same as any other water */
             }
             break;
@@ -4747,6 +4751,7 @@ register struct obj *obj; /* no texts here! */
 
     obj->otyp = ROCK;
     obj->oclass = GEM_CLASS;
+    nh_pile_touch_obj(obj);
     obj->quan = (long) rn1(60, 7);
     obj->owt = weight(obj);
     obj->dknown = obj->bknown = obj->rknown = 0;

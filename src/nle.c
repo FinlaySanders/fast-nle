@@ -15,6 +15,7 @@
 #include "dlb.h"
 
 #include "nle.h"
+#include "nh_arena.h"
 #include "nlernd.h"
 
 #ifdef NLE_BZ2_TTYRECS
@@ -154,6 +155,9 @@ init_nle(FILE *ttyrec, nle_obs *obs)
      * statics; garbage here becomes garbage in the misc[] observation and
      * in winrl branches. */
     nle_ctx_t *nle = calloc(1, sizeof(nle_ctx_t));
+#ifdef NH_ARENA
+    nle->arena = nh_arena_new();
+#endif
 
     /* fast-nle: allocate this env's migrated game state and anchor the
      * context pointer before any game code can run. */
@@ -780,7 +784,21 @@ nle_weight(nle_ctx_t *nle, int *wt, int *cap)
 
     nh_cur = (struct nh_ctx *) nle->nh;
     *cap = weight_cap();
-    *wt = inv_weight() + *cap;   /* inv_weight() returns carried - cap */
+    {   /* public-obs convention: what a player can total from the inventory text --
+           containers count empty (contents unseen), partly eaten food counts half */
+        long w = 0;
+        struct obj *otmp;
+        for (otmp = invent; otmp; otmp = otmp->nobj) {
+            long q = otmp->quan, base;
+            if (otmp->oclass == COIN_CLASS) { w += (q + 50L) / 100L; continue; }
+            if (otmp->otyp == CORPSE && otmp->corpsenm >= 0) base = mons[otmp->corpsenm].cwt;
+            else base = objects[otmp->otyp].oc_weight;
+            base *= q;
+            if (otmp->oeaten) base /= 2;
+            w += base;
+        }
+        *wt = (int) w;
+    }
     nh_cur = saved;
 }
 
@@ -1268,9 +1286,16 @@ nle_end(nle_ctx_t *nle)
         tmt_close(nle->vterminal);
 
     destroy_fcontext_stack(&nle->stack);
-    nh_cur = (struct nh_ctx *) 0;
-    current_nle_ctx = (nle_ctx_t *) 0;
+    /* nh_ctx_free releases the context's heap members: with the arena it must
+       run while this env is still current (arena blocks route back to it,
+       libc blocks to libc); only then drop the arena and the anchors */
     nh_ctx_free((struct nh_ctx *) nle->nh);
+    nh_cur = (struct nh_ctx *) 0;
+#ifdef NH_ARENA
+    nh_arena_destroy((nh_arena *) nle->arena); /* everything alloc()ed by this game */
+    nle->arena = (void *) 0;
+#endif
+    current_nle_ctx = (nle_ctx_t *) 0;
     free(nle);
 }
 

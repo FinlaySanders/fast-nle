@@ -598,6 +598,52 @@ is_moat(int x, int y)
          if (set_typ_i_ >= 0 && set_typ_i_ < COLNO * ROWNO) \
              (&nh_typ_plane[0][0])[set_typ_i_] = set_typ_v_; } while (0)
 extern void NDECL(nh_typ_sync);
+/* fast-nle: per-cell lookup planes for the monster-AI hot loops (traps,
+   engravings, pile summary bits) plus a compact floor-object index. All
+   write-through at the mutation sites, rebuilt at level entry, exact-
+   compared against the lists under NLE_PLANE_VERIFY. See src/nhplanes.c. */
+#define NH_PB_BOULDER 1u
+#define NH_PB_SCARE 2u
+#define NH_PB_GARLIC 4u
+#define NH_PB_CURSED 8u
+extern void NDECL(nh_planes_sync);
+extern void NDECL(nh_planes_clear);
+extern void FDECL(nh_planes_verify, (const char *));
+extern void FDECL(nh_pile_recompute, (int, int));
+extern void FDECL(nh_pile_touch_obj, (struct obj *));
+extern void FDECL(nh_trap_plane_fix, (int, int));
+extern void FDECL(nh_engr_plane_fix, (int, int));
+extern void NDECL(nh_engr_plane_sync);
+extern void FDECL(nh_engr_plane_verify, (const char *));
+extern void NDECL(nh_fobj_rebuild);
+#define nh_fobj_dirty() (nh_fobj_n = -1)
+#if defined(NH_CTX_GEN_H) && !defined(LEV_LEX_C) && !defined(MAKEDEFS_C)
+/* next floor object, in fobj order, whose cell lies inside the window
+   [lx..hx]x[ly..hy]; *it is the index cursor (start at 0, prev NULL). The
+   compact index carries the coords, so objects outside the window are
+   skipped without touching them. Falls back to the plain list walk when
+   the index overflowed. */
+static inline struct obj *
+nh_fobj_next_in(int *it, struct obj *prev, int lx, int hx, int ly, int hy)
+{
+    if (nh_fobj_n == -1)
+        nh_fobj_rebuild();
+    if (nh_fobj_n < 0) {
+        struct obj *o = prev ? prev->nobj : fobj;
+        for (; o; o = o->nobj)
+            if (o->ox >= lx && o->ox <= hx && o->oy >= ly && o->oy <= hy)
+                return o;
+        return (struct obj *) 0;
+    }
+    while (*it < nh_fobj_n) {
+        int x = nh_fobj_xy[*it] >> 8, y = nh_fobj_xy[*it] & 0xff;
+        (*it)++;
+        if (x >= lx && x <= hx && y >= ly && y <= hy)
+            return nh_fobj_ptr[*it - 1];
+    }
+    return (struct obj *) 0;
+}
+#endif
 extern void FDECL(nh_typ_verify, (const char *));
 
 static inline boolean

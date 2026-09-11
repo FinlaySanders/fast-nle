@@ -648,6 +648,7 @@ clear_level_structures()
     level.objlist = (struct obj *) 0;
     level.buriedobjlist = (struct obj *) 0;
     level.monlist = (struct monst *) 0;
+    nh_planes_clear();
     level.damagelist = (struct damage *) 0;
     level.bonesinfo = (struct cemetery *) 0;
 
@@ -688,6 +689,7 @@ clear_level_structures()
     made_branch = FALSE;
     clear_regions();
     nh_typ_sync();
+    nh_planes_sync();
 }
 
 /* Added for NLE. */

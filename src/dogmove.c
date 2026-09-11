@@ -139,6 +139,9 @@ int x, y;
 {
     struct obj *otmp;
 
+    if (x >= 0 && x < COLNO && y >= 0 && y < ROWNO
+        && !(nh_pile_plane[x][y] & NH_PB_CURSED))
+        return FALSE;
     for (otmp = level.objs[x][y]; otmp; otmp = otmp->nexthere)
         if (otmp->cursed)
             return TRUE;
@@ -524,7 +527,11 @@ int after, udist, whappr;
             max_y = ROWNO - 1;
 
         /* nearby food is the first choice, then other objects */
-        for (obj = fobj; obj; obj = obj->nobj) {
+        {
+        int fi_ = 0;
+
+        for (obj = nh_fobj_next_in(&fi_, (struct obj *) 0, min_x, max_x, min_y, max_y);
+             obj; obj = nh_fobj_next_in(&fi_, obj, min_x, max_x, min_y, max_y)) {
             nx = obj->ox;
             ny = obj->oy;
             if (nx >= min_x && nx <= max_x && ny >= min_y && ny <= max_y) {
@@ -557,6 +564,7 @@ int after, udist, whappr;
                     gtyp = APPORT;
                 }
             }
+        }
         }
     }
 

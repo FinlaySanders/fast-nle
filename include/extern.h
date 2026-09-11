@@ -1426,6 +1426,12 @@ E int FDECL(undead_to_corpse, (int));
 E int FDECL(genus, (int, int));
 E int FDECL(pm_to_cham, (int));
 E int FDECL(minliquid, (struct monst *));
+/* NLE: on a dry, non-fountain cell minliquid() returns 0 for every
+   non-eel without side effects; decide that inline (exact, same tests). */
+#define NH_MINLIQUID(m) \
+    ((!is_pool((m)->mx, (m)->my) && !is_lava((m)->mx, (m)->my)            \
+      && !IS_FOUNTAIN(TYP_AT((m)->mx, (m)->my)) && (m)->data->mlet != S_EEL) \
+         ? 0 : minliquid(m))
 E int NDECL(movemon);
 E int FDECL(meatmetal, (struct monst *));
 E int FDECL(meatobj, (struct monst *));
@@ -1538,6 +1544,17 @@ E boolean FDECL(monhaskey, (struct monst *, BOOLEAN_P));
 E void FDECL(mon_regen, (struct monst *, BOOLEAN_P));
 E int FDECL(dochugw, (struct monst *));
 E boolean FDECL(onscary, (int, int, struct monst *));
+/* NLE: onscary() can only be TRUE for the <0,0> probe, an altar, a
+   scare-monster pile, or the hero's (displaced) square; test the cell
+   inline and skip the call for every other cell (exact: same predicates
+   as the head of onscary(), all side-effect free). */
+#define NH_ONSCARY(x, y, m) \
+    ((!((x) == 0 && (y) == 0) && (x) >= 0 && (x) < COLNO && (y) >= 0    \
+      && (y) < ROWNO && !IS_ALTAR(TYP_AT((x), (y)))                     \
+      && !(nh_pile_plane[(x)][(y)] & NH_PB_SCARE)                       \
+      && !((u.ux == (x) && u.uy == (y))                                 \
+           || (Displaced && (m)->mux == (x) && (m)->muy == (y))))       \
+         ? FALSE : onscary((x), (y), (m)))
 E void FDECL(monflee, (struct monst *, int, BOOLEAN_P, BOOLEAN_P));
 E void FDECL(mon_yells, (struct monst *, const char *));
 E int FDECL(dochug, (struct monst *));
@@ -2128,6 +2145,7 @@ E boolean FDECL(m_in_out_region, (struct monst *, XCHAR_P, XCHAR_P));
 E void NDECL(update_player_regions);
 E void FDECL(update_monster_region, (struct monst *));
 E NhRegion *FDECL(visible_region_at, (XCHAR_P, XCHAR_P));
+E boolean FDECL(any_visible_region_glyph, (int));
 E void FDECL(show_region, (NhRegion *, XCHAR_P, XCHAR_P));
 E void FDECL(save_regions, (int, int));
 E void FDECL(rest_regions, (int, BOOLEAN_P));

@@ -7,4 +7,6 @@
 #define utcnt (nh_cur->g_track_c_utcnt)
 #define utpnt (nh_cur->g_track_c_utpnt)
 #define utrack (nh_cur->g_track_c_utrack)
+#define nh_track_cnt (nh_cur->g_track_c_nh_track_cnt)
+#define nh_track_bits (nh_cur->g_track_c_nh_track_bits)
 #endif /* NH_CTX_FILE_TRACK_C_H */

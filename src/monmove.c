@@ -124,7 +124,7 @@ register struct monst *mtmp;
         /* can see it now, or sense it and would normally see it */
         && (canseemon(mtmp) || (sensemon(mtmp) && couldsee(x, y)))
         && mtmp->mcanmove && !noattacks(mtmp->data)
-        && !onscary(u.ux, u.uy, mtmp))
+        && !NH_ONSCARY(u.ux, u.uy, mtmp))
         stop_occupation();
 
     return rd;
@@ -135,6 +135,17 @@ onscary(x, y, mtmp)
 int x, y;
 struct monst *mtmp;
 {
+    /* NLE: cell-first exact fast path. Every TRUE below needs the cell to
+       be the musical <0,0> probe, an altar, a scare-monster pile, or the
+       hero's square (or displaced image) with an engraving; any other cell
+       is FALSE for every monster, so test the cell before the monster.
+       All clauses are pure predicates; result identical, no side effects. */
+    if (!(x == 0 && y == 0) && x >= 0 && x < COLNO && y >= 0 && y < ROWNO
+        && !IS_ALTAR(TYP_AT(x, y)) && !(nh_pile_plane[x][y] & NH_PB_SCARE)
+        && !((u.ux == x && u.uy == y)
+             || (Displaced && mtmp->mux == x && mtmp->muy == y)))
+        return FALSE;
+
     /* creatures who are directly resistant to magical scaring:
      * Rodney, lawful minions, Angels, the Riders, shopkeepers
      * inside their own shop, priests inside their own temple */
@@ -156,7 +167,9 @@ struct monst *mtmp;
 
     /* the scare monster scroll doesn't have any of the below
      * restrictions, being its own source of power */
-    if (sobj_at(SCR_SCARE_MONSTER, x, y))
+    /* NLE: pile-plane bit is a necessary condition for a scare scroll here;
+       skip the pile walk when it is clear (exact, same contract as mfndpos) */
+    if ((nh_pile_plane[x][y] & NH_PB_SCARE) && sobj_at(SCR_SCARE_MONSTER, x, y))
         return TRUE;
 
     /*
@@ -342,7 +355,7 @@ int *inrange, *nearby, *scared;
         seescaryy = u.uy;
     }
 
-    sawscary = onscary(seescaryx, seescaryy, mtmp);
+    sawscary = onscary(seescaryx, seescaryy, mtmp); /* hero square: no inline test */
     if (*nearby && (sawscary
                     || (flees_light(mtmp) && !bravegremlin)
                     || (!mtmp->mpeaceful && in_your_sanctuary(mtmp, 0, 0)))) {
@@ -991,7 +1004,11 @@ register int after;
             oomy = min(ROWNO - 1, omy + minr);
             lmx = max(1, omx - minr);
             lmy = max(0, omy - minr);
-            for (otmp = fobj; otmp; otmp = otmp->nobj) {
+            {
+            int fi_ = 0;
+
+            for (otmp = nh_fobj_next_in(&fi_, (struct obj *) 0, lmx, oomx, lmy, oomy);
+                 otmp; otmp = nh_fobj_next_in(&fi_, otmp, lmx, oomx, lmy, oomy)) {
                 /* monsters may pick rocks up, but won't go out of their way
                    to grab them; this might hamper sling wielders, but it cuts
                    down on move overhead by filtering out most common item */
@@ -1042,7 +1059,7 @@ register int after;
                             && (!is_unicorn(ptr)
                                 || objects[otmp->otyp].oc_material == GEMSTONE)
                             /* Don't get stuck circling an Elbereth */
-                            && !onscary(xx, yy, mtmp)) {
+                            && !NH_ONSCARY(xx, yy, mtmp)) {
                             minr = distmin(omx, omy, xx, yy);
                             oomx = min(COLNO - 1, omx + minr);
                             oomy = min(ROWNO - 1, omy + minr);
@@ -1057,6 +1074,7 @@ register int after;
                         }
                     }
                 }
+            }
             }
         } else if (likegold) {
             /* don't try to pick up anything else, but use the same loop */
@@ -1132,8 +1150,16 @@ register int after;
                 if (!(info[i] & NOTONL))
                     avoid = TRUE;
         }
-        better_with_displacing =
-            should_displace(mtmp, poss, info, cnt, gx, gy);
+        /* NLE: should_displace() can only return TRUE if some candidate
+           carries ALLOW_MDISP; skip its dist2 loop otherwise (exact). */
+        {
+            register int di;
+            long anydisp = 0L;
+            for (di = 0; di < cnt; di++)
+                anydisp |= info[di];
+            better_with_displacing = (anydisp & ALLOW_MDISP)
+                ? should_displace(mtmp, poss, info, cnt, gx, gy) : FALSE;
+        }
         for (i = 0; i < cnt; i++) {
             if (avoid && (info[i] & NOTONL))
                 continue;
@@ -1539,7 +1565,9 @@ register struct monst *mtmp;
 {
     boolean notseen, gotu;
     register int disp, mx = mtmp->mux, my = mtmp->muy;
-    long umoney = money_cnt(invent);
+    /* NLE: the inventory gold count is only consulted for xorns below; walking
+       invent for every monster every turn is pure overhead (exact: money_cnt is
+       a side-effect-free function of invent, evaluated at the same point). */
 
     /*
      * do cheapest and/or most likely tests first
@@ -1559,7 +1587,7 @@ register struct monst *mtmp;
     if (notseen || Underwater) {
         /* Xorns can smell quantities of valuable metal
             like that in solid gold coins, treat as seen */
-        if ((mtmp->data == &mons[PM_XORN]) && umoney && !Underwater)
+        if ((mtmp->data == &mons[PM_XORN]) && money_cnt(invent) && !Underwater)
             disp = 0;
         else
             disp = 1;

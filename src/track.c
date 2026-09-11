@@ -13,18 +13,29 @@ void
 initrack()
 {
     utcnt = utpnt = 0;
+    (void) memset((genericptr_t) nh_track_cnt, 0, sizeof nh_track_cnt);
+    (void) memset((genericptr_t) nh_track_bits, 0, sizeof nh_track_bits);
 }
 
 /* add to track */
 void
 settrack()
 {
+    /* NLE: nh_track_cnt[x][y] = number of live ring entries at that cell,
+       so gettrack() can reject cells with no entry in their 3x3 block. */
+    if (utcnt == UTSZ) { /* ring full: the slot being reused is live */
+        coord *old = &utrack[utpnt == UTSZ ? 0 : utpnt];
+        if (nh_track_cnt[old->x][old->y] && !--nh_track_cnt[old->x][old->y])
+            nh_track_bits[old->x] &= ~(1u << old->y);
+    }
     if (utcnt < UTSZ)
         utcnt++;
     if (utpnt == UTSZ)
         utpnt = 0;
     utrack[utpnt].x = u.ux;
     utrack[utpnt].y = u.uy;
+    nh_track_cnt[u.ux][u.uy]++;
+    nh_track_bits[u.ux] |= 1u << u.uy; /* column mask: bit y = some entry at (x,y) */
     utpnt++;
 }
 
@@ -34,6 +45,20 @@ register int x, y;
 {
     register int cnt, ndist;
     register coord *tc;
+
+    /* NLE: the loop below returns non-null only for an entry with
+       distmin <= 1, i.e. inside the 3x3 block around (x,y); if no live
+       entry lies there the answer is null without scanning (exact). */
+    if (isok(x, y)) {
+        unsigned cols = nh_track_bits[x];
+        if (x > 0)
+            cols |= nh_track_bits[x - 1];
+        if (x < COLNO - 1)
+            cols |= nh_track_bits[x + 1];
+        /* rows y-1..y+1; y == 0 shifts to bits 0..1 (bit -1 does not exist) */
+        if (!(cols & ((y > 0) ? (7u << (y - 1)) : 3u)))
+            return (coord *) 0;
+    }
     cnt = utcnt;
     for (tc = &utrack[utpnt]; cnt--;) {
         if (tc == utrack)

@@ -74,6 +74,9 @@ extern "C" {
 extern void *nle_yield(boolean);
 extern nle_obs *nle_get_obs();
 extern int nle_underfoot_glyphs();
+// public-observation export (NLE_ABL bitmask, default all on; 0 restores the engine-truth export): 1 = ring
+// chargeability hidden for unidentified rings, 2 = blind underfoot glyph = display memory, 4 = trapped-container bit hidden
+static int nle_abl() { static int v = -1; if (v < 0) { const char* e = getenv("NLE_ABL"); v = e ? atoi(e) : 15; } return v; } // 15: leaks off + eager identity (every cell reflects the discoveries list at each fill)
 }
 
 /* Initial value of glyph_ buffer. Cf. display.c. */
@@ -100,11 +103,35 @@ namespace nethack_rl
 // glyphs (c.f. o_init.c).  In practice this means:
 //   BEFORE: looking up objclass on a glyph gives CORRECT name INCORRECT descr
 //   AFTER: looking up objclass on a glyph gives INCORRECT name CORRECT descr
+// Gems and glass share descriptions ("violet": amethyst and worthless violet glass) and are not shuffled, so the
+// appearance glyph of an unidentified gem would name the true type. Public form: the canonical twin of the description
+// (the worthless glass if there is one, else the lowest index), which is what "a violet gem" tells the player.
+// Keyed by the DESCRIPTION SLOT (oc_descr_idx), using the static description table obj_descr[]: gems are shuffled among
+// themselves too, so the description currently attached to an object is not the object's own table entry.
+// Every class: twins that share a description (bag of holding/tricks "bag", tin/magic whistle, tallow/wax candle, the gray
+// stones, amethyst/violet glass) are not shuffled, so the description slot would name the true type. Canonical twin =
+// the lowest index with that description in the class, the worthless glass for gems. Shuffled classes have unique
+// descriptions within the class, so this is the identity there.
+static int gem_canon(int slot)
+{
+    static short canon[NUM_OBJECTS + 1]; static bool init = false;
+    if (!init) { init = true;
+        for (int i = 0; i <= NUM_OBJECTS; i++) canon[i] = i;
+        for (int i = 0; i < NUM_OBJECTS; i++) { if (!obj_descr[i].oc_descr || !obj_descr[i].oc_descr[0]) continue;
+            int best = -1;
+            for (int j = 0; j < NUM_OBJECTS; j++) { if (objects[j].oc_class != objects[i].oc_class || !obj_descr[j].oc_descr || strcmp(obj_descr[i].oc_descr, obj_descr[j].oc_descr)) continue;
+                if (best < 0) best = j; if (objects[j].oc_class == GEM_CLASS && obj_descr[j].oc_name && !strncmp(obj_descr[j].oc_name, "worthless", 9)) best = j; }
+            if (best >= 0) canon[i] = best; } }
+    return canon[slot];
+}
 int
 shuffled_glyph(int glyph)
 {
     if glyph_is_normal_object (glyph) {
-        return GLYPH_OBJ_OFF + objects[glyph_to_obj(glyph)].oc_descr_idx;
+        int obj = glyph_to_obj(glyph);
+        { static int gem_true = -1; if (gem_true < 0) gem_true = getenv("NLE_GEM_TRUE") != NULL; // NLE_GEM_TRUE=1: old behaviour (true gem type), attribution only
+          if (!gem_true && !objects[obj].oc_name_known) return GLYPH_OBJ_OFF + gem_canon(objects[obj].oc_descr_idx); }
+        return GLYPH_OBJ_OFF + objects[obj].oc_descr_idx;
     }
     return glyph;
 }
@@ -350,9 +377,14 @@ NetHackRL::fill_obs(nle_obs *obs)
     {
         static int verify = -1;
         if (verify < 0)
-            verify = getenv("NLE_TYP_VERIFY") ? 1 : 0;
-        if (verify && program_state.in_moveloop && !program_state.gameover)
-            nh_typ_verify("fill_obs");
+            verify = (getenv("NLE_TYP_VERIFY") ? 1 : 0)
+                     | (getenv("NLE_PLANE_VERIFY") ? 2 : 0);
+        if (verify && program_state.in_moveloop && !program_state.gameover) {
+            if (verify & 1)
+                nh_typ_verify("fill_obs");
+            if (verify & 2)
+                nh_planes_verify("fill_obs");
+        }
     }
     if (obs->prog_state) {
         obs->prog_state[0] = program_state.gameover;
@@ -382,13 +414,27 @@ NetHackRL::fill_obs(nle_obs *obs)
         obs->internal[2] = in_getlin;
         obs->internal[3] = xwaitingforspace;
         obs->internal[4] = stairs_down;
-        obs->internal[5] = u.ublesscnt; /* prayer cooldown (was core seed) */
+        obs->internal[5] = 0; /* was prayer cooldown (u.ublesscnt): a hidden counter with no public signal,
+                                 unread by the policy, removed from the export 2026-09-10 */
         /* engraving underfoot: 2 = active Elbereth, 1 = other (was: dead 0
          * since fork — the obs feature read constant zero). Bit 2 = engulfed,
          * consumed env-side for legality masking, stripped before the obs. */
-        obs->internal[6] = (sengr_at("Elbereth", u.ux, u.uy, TRUE) ? 2
-                         : (engr_at(u.ux, u.uy) ? 1 : 0))
-                         | (u.uswallow ? 4 : 0);
+        {
+            int eb = sengr_at("Elbereth", u.ux, u.uy, TRUE) ? 2 : (engr_at(u.ux, u.uy) ? 1 : 0);
+            // Blind: the flag is what the hero last knew about the engraving on this square (read, felt or written),
+            // unread-since-written or wiped-since-read capped at 1, and nothing at all on a square it never read there.
+            // Sighted, a look reads the floor at zero cost, so the truth is public.
+            // Hallucination conceals exactly as blindness does. The "sighted" branch below rests on a look being free, but a
+            // look while hallucinating names what it finds with random_obj_to_glyph and so DRAWS from the display RNG -- a
+            // reconstruction cannot spend those draws without desyncing, so the truth is not publicly recoverable here.
+            if (Blind || Hallucination) {
+                if (u.ux == u.nle_engr_bx && u.uy == u.nle_engr_by) { eb = u.nle_engr_blind ? 1 : u.nle_engr_last; if (u.nle_engr_wiped && eb > 1) eb = 1; }
+                else eb = 0;
+            } else { // sighted: the truth is public (a look reads the floor), so it is also what the hero will remember once blinded here
+                u.nle_engr_bx = u.ux; u.nle_engr_by = u.uy; u.nle_engr_last = eb; u.nle_engr_blind = 0; u.nle_engr_wiped = 0;
+            }
+            obs->internal[6] = eb | (u.uswallow ? 4 : 0);
+        }
         obs->internal[7] = u.uhunger;
         obs->internal[8] =
             u.urexp; /* score (careful! check botl_score() and end.c) */
@@ -460,14 +506,30 @@ NetHackRL::fill_obs(nle_obs *obs)
             dirty_rows_ = 0;
         }
     }
+    if (obs->glyphs && (nle_abl() & 8)) { // eager identity mapping: every cell reflects the discoveries list now, not at its next
+        // reprint. The screen buffer holds true glyphs; maybe_true_glyph hides the ones the player has not identified.
+        for (int y = 0; y < ROWNO; y++) for (int x = 1; x < COLNO; x++)
+            obs->glyphs[(size_t) y * (COLNO - 1) + (x - 1)] = maybe_true_glyph(glyph_at(x, y));
+    }
     if (obs->glyphs && nle_underfoot_glyphs() && u.ux >= 1 && u.ux < COLNO
         && u.uy >= 0 && u.uy < ROWNO) {
         // Hero tile shows what the hero stands on (top object, else terrain)
         // instead of the hero glyph. Patched into obs->glyphs only, after the
         // dirty-row copy so it always wins; recomputed every fill.
-        struct obj *under = vobj_at(u.ux, u.uy);
-        int g = under ? obj_to_glyph(under, rn2_on_display_rng)
-                      : back_to_glyph(u.ux, u.uy);
+        // Conceal-first, and note the ORDER matters: obj_to_glyph() resolves to random_obj_to_glyph() while hallucinating,
+        // which DRAWS from the display RNG. Evaluating it before the conceal checks made this observation channel consume
+        // randomness every frame a hallucinating hero stood on an object -- unreproducible from outside, so a replay drifts
+        // for the rest of the game. Hallucination now conceals exactly as blindness does: a hallucinating hero cannot
+        // identify what is underfoot any more than a blind one can, and the screen glyph needs no draw.
+        int g;
+        if (u.uswallow) {
+            g = glyph_at(u.ux, u.uy); // engulfed: nothing under the hero can be inspected from inside
+        } else if ((nle_abl() & 2) && (Blind || Hallucination)) {
+            g = glyph_at(u.ux, u.uy); // the screen buffer at the hero's square = the hero glyph (stock shows the same)
+        } else {
+            struct obj *under = vobj_at(u.ux, u.uy);
+            g = under ? obj_to_glyph(under, rn2_on_display_rng) : back_to_glyph(u.ux, u.uy);
+        }
         obs->glyphs[(size_t) u.uy * (COLNO - 1) + (u.ux - 1)] =
             maybe_true_glyph(g);
     }
@@ -598,6 +660,7 @@ fill_message:
                 || is_weptool(otmp) || objects[otmp->otyp].oc_charged;
             st[1] =
                 (otmp->known && shows_spe) ? otmp->spe : (signed char) -128;
+            if ((nle_abl() & 1) && otmp->oclass == RING_CLASS && !(otmp->dknown && objects[otmp->otyp].oc_name_known)) st[1] = 0;
             st[2] = otmp->quan > 127 ? 127 : (signed char) otmp->quan;
             /* erosion bits are overloaded storage on other classes
                (orotten food, odiluted potions, norevive corpses) and doname
@@ -617,12 +680,16 @@ fill_message:
                                    | ((otmp->owornmask & W_WEP) ? 2 : 0)
                                    | ((otmp->owornmask & W_SWAPWEP) ? 4 : 0)
                                    | ((otmp->owornmask & W_QUIVER) ? 8 : 0)
-                                   | (otmp->opoisoned ? 16 : 0)
+                                   | ((otmp->opoisoned && !((nle_abl() & 4) && Is_container(otmp))) ? 16 : 0)
                                    | (otmp->greased ? 32 : 0)
                                    | ((erodible && otmp->rknown
                                        && otmp->oerodeproof)
                                           ? 64
                                           : 0));
+            // REVERTED 2026-09-11: dropping dknown here gave no clear parity gain (rate 76.9% -> 77.4%, inside corpus
+            // noise, and a fork change re-rolls the corpus so before/after are not strictly comparable) AND it ADDS information
+            // to the agent, flagging types known for instances never seen. Wrong direction for a record claim; the ~22 affected
+            // games stay as a known underivable residual instead.
             st[6] =
                 (otmp->dknown && objects[otmp->otyp].oc_name_known) ? 1 : 0;
             st[7] = 0;

@@ -441,6 +441,7 @@ int x, y, typ;
     if (!oldplace) {
         ttmp->ntrap = ftrap;
         ftrap = ttmp;
+        nh_trap_plane_fix(x, y);
     } else {
         /* oldplace;
            it shouldn't be possible to override a sokoban pit or hole
@@ -1106,8 +1107,8 @@ unsigned trflags;
                   body_part(FOOT));
             {
                 /* fast-nle: sequence rng draws (arg eval order unspecified) */
-                long side = rn2(2) ? RIGHT_SIDE : LEFT_SIDE;
                 int dur = rn1(10, 10);
+                long side = rn2(2) ? RIGHT_SIDE : LEFT_SIDE;
 
                 set_wounded_legs(side, dur);
             }
@@ -3521,6 +3522,7 @@ struct obj *obj;
             }
         }
         obj->otyp = SCR_BLANK_PAPER;
+        nh_pile_touch_obj(obj);
         obj->spe = 0;
         obj->dknown = 0;
     } else
@@ -3612,6 +3614,7 @@ boolean force;
             pline("Your %s %s.", ostr, vtense(ostr, "fade"));
 
         obj->otyp = SCR_BLANK_PAPER;
+        nh_pile_touch_obj(obj);
         obj->dknown = 0;
         obj->spe = 0;
         if (carried(obj))
@@ -3633,6 +3636,7 @@ boolean force;
         }
 
         obj->otyp = SPE_BLANK_PAPER;
+        nh_pile_touch_obj(obj);
         obj->dknown = 0;
         if (carried(obj))
             update_inventory();
@@ -3679,6 +3683,7 @@ boolean force;
                 pline("Your %s %s further.", ostr, vtense(ostr, "dilute"));
 
             obj->otyp = POT_WATER;
+            nh_pile_touch_obj(obj);
             obj->dknown = 0;
             obj->blessed = obj->cursed = 0;
             obj->odiluted = 0;
@@ -5019,14 +5024,10 @@ struct trap *
 t_at(x, y)
 register int x, y;
 {
-    register struct trap *trap = ftrap;
-
-    while (trap) {
-        if (trap->tx == x && trap->ty == y)
-            return trap;
-        trap = trap->ntrap;
-    }
-    return (struct trap *) 0;
+    /* fast-nle: per-cell plane, mirrors the ftrap walk (src/nhplanes.c) */
+    if (x < 0 || x >= COLNO || y < 0 || y >= ROWNO)
+        return (struct trap *) 0;
+    return nh_trap_plane[x][y];
 }
 
 void
@@ -5046,6 +5047,7 @@ register struct trap *trap;
             panic("deltrap: no preceding trap!");
         ttmp->ntrap = trap->ntrap;
     }
+    nh_trap_plane_fix(trap->tx, trap->ty);
     if (Sokoban && (trap->ttyp == PIT || trap->ttyp == HOLE))
         maybe_finish_sokoban();
     dealloc_trap(trap);

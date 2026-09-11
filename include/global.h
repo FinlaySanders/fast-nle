@@ -288,6 +288,16 @@ extern char *FDECL(nhdupstr, (const char *, const char *, int));
 #else /* !MONITOR_HEAP */
 extern long *FDECL(alloc, (unsigned int));  /* alloc.c */
 extern char *FDECL(dupstr, (const char *)); /* ditto */
+#ifdef NH_ARENA
+/* fast-nle: per-game arena behind alloc(); free() of an arena block returns
+   it to the game's free list, anything else reaches libc (nh_arena.c) */
+#ifdef __cplusplus
+extern "C" void nh_arena_free_hook(void *);
+#else
+extern void nh_arena_free_hook(void *);
+#endif
+#define free(a) nh_arena_free_hook(a)
+#endif
 #endif
 
 /* Used for consistency checks of various data files; declare it here so
@@ -326,6 +336,7 @@ struct savefile_info {
 /* size of terminal screen is (at least) (ROWNO+3) by COLNO */
 #define COLNO 80
 #define ROWNO 21
+#define NH_FOBJ_CAP 4096 /* fast-nle: compact floor-object index capacity */
 
 #define MAXNROFROOMS 40 /* max number of rooms per level */
 #define MAX_SUBROOMS 24 /* max # of subrooms in a given room */

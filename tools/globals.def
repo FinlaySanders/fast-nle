@@ -38,6 +38,8 @@
 track.c | cold | int   | utcnt  |      | 0
 track.c | cold | int   | utpnt  |      | 0
 track.c | cold | coord | utrack | [50] | 0
+track.c | hot | unsigned char | nh_track_cnt | [COLNO][ROWNO] | 0
+track.c | hot | unsigned int | nh_track_bits | [COLNO] | 0
 
 # ---------------------------------------------------------------------------
 # decl.c — the central globals file. Heat: step-hot scalars/pointers first;
@@ -47,6 +49,12 @@ global | hot | long | moves | | 1
 global | hot | long | monstermoves | | 1
 global | hot | int | multi | | 0
 global | hot | schar | nh_typ_plane | [COLNO][ROWNO] | 0
+global | hot | struct trap * | nh_trap_plane | [COLNO][ROWNO] | 0
+global | hot | struct engr * | nh_engr_plane | [COLNO][ROWNO] | 0
+global | hot | unsigned char | nh_pile_plane | [COLNO][ROWNO] | 0
+global | hot | int | nh_fobj_n | | 0
+global | hot | unsigned short | nh_fobj_xy | [NH_FOBJ_CAP] | 0
+global | hot | struct obj * | nh_fobj_ptr | [NH_FOBJ_CAP] | 0
 global | hot | boolean | vision_full_recalc | | 0
 global | hot | char ** | viz_array | | 0
 global | hot | struct sinfo | program_state | | 0

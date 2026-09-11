@@ -247,14 +247,10 @@ struct engr *
 engr_at(x, y)
 xchar x, y;
 {
-    register struct engr *ep = head_engr;
-
-    while (ep) {
-        if (x == ep->engr_x && y == ep->engr_y)
-            return ep;
-        ep = ep->nxt_engr;
-    }
-    return (struct engr *) 0;
+    /* fast-nle: per-cell plane, mirrors the head_engr walk (src/nhplanes.c) */
+    if (x < 0 || x >= COLNO || y < 0 || y >= ROWNO)
+        return (struct engr *) 0;
+    return nh_engr_plane[x][y];
 }
 
 /* Decide whether a particular string is engraved at a specified
@@ -284,6 +280,7 @@ void
 u_wipe_engr(cnt)
 int cnt;
 {
+    if (u.ux == u.nle_engr_bx && u.uy == u.nle_engr_by) u.nle_engr_wiped = 1; /* the hero knows it may have smudged it */
     if (can_reach_floor(TRUE))
         wipe_engr_at(u.ux, u.uy, cnt, FALSE);
 }
@@ -369,6 +366,7 @@ int x, y;
 
         if (sensed) {
             char *et, buf[BUFSZ];
+            u.nle_engr_bx = x; u.nle_engr_by = y; u.nle_engr_blind = 0; u.nle_engr_wiped = 0; u.nle_engr_last = sengr_at("Elbereth", x, y, TRUE) ? 2 : 1; /* read or felt: known */
             int maxelen = (int) (sizeof buf
                                  /* sizeof "literal" counts terminating \0 */
                                  - sizeof "You feel the words: \"\".");
@@ -405,6 +403,7 @@ xchar e_type;
     head_engr = ep;
     ep->engr_x = x;
     ep->engr_y = y;
+    nh_engr_plane_fix(x, y);
     ep->engr_txt = (char *) (ep + 1);
     Strcpy(ep->engr_txt, s);
     /* engraving Elbereth shows wisdom */
@@ -413,6 +412,52 @@ xchar e_type;
     ep->engr_time = e_time;
     ep->engr_type = e_type > 0 ? e_type : rnd(N_ENGRAVE - 1);
     ep->engr_lth = smem;
+}
+
+/* fast-nle: per-cell engraving plane (head_engr is private to this file).
+   Plane entry = first engraving in head_engr order at (x,y), exactly what
+   the old engr_at() walk returned. */
+void
+nh_engr_plane_fix(int x, int y)
+{
+    struct engr *ep;
+
+    if (x < 0 || x >= COLNO || y < 0 || y >= ROWNO)
+        return;
+    for (ep = head_engr; ep; ep = ep->nxt_engr)
+        if (ep->engr_x == x && ep->engr_y == y)
+            break;
+    nh_engr_plane[x][y] = ep;
+}
+
+void
+nh_engr_plane_sync(void)
+{
+    struct engr *ep;
+
+    (void) memset((genericptr_t) nh_engr_plane, 0, sizeof nh_engr_plane);
+    for (ep = head_engr; ep; ep = ep->nxt_engr)
+        if (ep->engr_x >= 0 && ep->engr_x < COLNO && ep->engr_y >= 0
+            && ep->engr_y < ROWNO && !nh_engr_plane[ep->engr_x][ep->engr_y])
+            nh_engr_plane[ep->engr_x][ep->engr_y] = ep;
+}
+
+void
+nh_engr_plane_verify(const char *where)
+{
+    struct engr *ep;
+    int x, y;
+    struct engr *ee[COLNO][ROWNO]; /* stack: verify must not touch the allocator */
+
+    (void) memset((genericptr_t) ee, 0, sizeof ee);
+    for (ep = head_engr; ep; ep = ep->nxt_engr)
+        if (ep->engr_x >= 0 && ep->engr_x < COLNO && ep->engr_y >= 0
+            && ep->engr_y < ROWNO && !ee[ep->engr_x][ep->engr_y])
+            ee[ep->engr_x][ep->engr_y] = ep;
+    for (x = 0; x < COLNO; x++)
+        for (y = 0; y < ROWNO; y++)
+            if (nh_engr_plane[x][y] != ee[x][y])
+                { fprintf(stderr, "PLANE: engr desync (%d,%d) [%s]\n", x, y, where); panic("engr plane desync [%s]", where); }
 }
 
 /* delete any engraving at location <x,y> */
@@ -910,6 +955,7 @@ doengrave()
     /* Something has changed the engraving here */
     if (*buf) {
         make_engr_at(u.ux, u.uy, buf, moves, type);
+        u.nle_engr_blind = 1; u.nle_engr_bx = u.ux; u.nle_engr_by = u.uy; u.nle_engr_last = 1; u.nle_engr_wiped = 0; /* unread since written */
         if (!Blind)
             pline_The("engraving now reads: \"%s\".", buf);
         ptext = FALSE;
@@ -1156,6 +1202,7 @@ doengrave()
     (void) strncat(buf, ebuf, BUFSZ - (int) strlen(buf) - 1);
     /* Put the engraving onto the map */
     make_engr_at(u.ux, u.uy, buf, moves - multi, type);
+    u.nle_engr_blind = 1; u.nle_engr_bx = u.ux; u.nle_engr_by = u.uy; u.nle_engr_last = 1; u.nle_engr_wiped = 0; /* unread since written */
 
     if (post_engr_text[0])
         pline("%s", post_engr_text);
@@ -1263,6 +1310,7 @@ register struct engr *ep;
             return;
         }
     }
+    nh_engr_plane_fix(ep->engr_x, ep->engr_y);
     dealloc_engr(ep);
 }
 
@@ -1280,8 +1328,14 @@ struct engr *ep;
         ty = rn2(ROWNO);
     } while (engr_at(tx, ty) || !goodpos(tx, ty, (struct monst *) 0, 0));
 
-    ep->engr_x = tx;
-    ep->engr_y = ty;
+    {
+        int oex = ep->engr_x, oey = ep->engr_y;
+
+        ep->engr_x = tx;
+        ep->engr_y = ty;
+        nh_engr_plane_fix(oex, oey);
+        nh_engr_plane_fix(tx, ty);
+    }
 }
 
 /* Create a headstone at the given location.

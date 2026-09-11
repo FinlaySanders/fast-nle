@@ -505,6 +505,18 @@ int minliquid(mtmp) register struct monst *mtmp;
               && !(is_flyer(mtmp->data) || is_floater(mtmp->data)));
     infountain = IS_FOUNTAIN(TYP_AT(mtmp->mx, mtmp->my));
 
+    /* NLE: dry, non-fountain cell -- every branch below needs inpool,
+       inlava or infountain except the out-of-water eel case, which is
+       the final else; same statements, same RNG, taken directly. */
+    if (!inpool && !inlava && !infountain) {
+        if (mtmp->data->mlet == S_EEL && !Is_waterlevel(&u.uz)) {
+            if (mtmp->mhp > 1 && rn2(mtmp->mhp) > rn2(8))
+                mtmp->mhp--;
+            monflee(mtmp, 2, FALSE, FALSE);
+        }
+        return 0;
+    }
+
     /* Flying and levitation keeps our steed out of the liquid
        (but not water-walking or swimming; note: if hero is in a
        water location on the Plane of Water, flight and levitating
@@ -691,7 +703,7 @@ mcalcdistress()
         if (mtmp->data->mmove == 0) {
             if (vision_full_recalc)
                 vision_recalc(0);
-            if (minliquid(mtmp))
+            if (NH_MINLIQUID(mtmp))
                 continue;
         }
 
@@ -704,7 +716,8 @@ mcalcdistress()
                 mtmp, (canspotmon(mtmp) || (u.uswallow && mtmp == u.ustuck))
                           ? SHIFT_MSG
                           : 0);
-        were_change(mtmp);
+        if (is_were(mtmp->data)) /* NLE: same first test as were_change() */
+            were_change(mtmp);
 
         /* gradually time out temporary problems */
         if (mtmp->mblinded && !--mtmp->mblinded)
@@ -787,7 +800,7 @@ movemon()
         if (context.bypasses)
             clear_bypasses();
         clear_splitobjs();
-        if (minliquid(mtmp))
+        if (NH_MINLIQUID(mtmp))
             continue;
 
         /* after losing equipment, try to put on replacement */
@@ -1306,6 +1319,8 @@ long flag;
     boolean rockok = FALSE, treeok = FALSE, thrudoor;
     int maxx, maxy;
     boolean poisongas_ok, in_poisongas;
+    int any_gas_region;
+    boolean monseeu_h, displaced_h; /* NLE: hoisted per-monster invariants */
     NhRegion *gas_reg;
     int gas_glyph = cmap_to_glyph(S_poisoncloud);
 
@@ -1330,6 +1345,16 @@ long flag;
          || resists_poison(mon));
     in_poisongas = ((gas_reg = visible_region_at(x, y)) != 0
                     && gas_reg->glyph == gas_glyph);
+    /* NLE: the per-cell gas test below can only succeed if some visible
+       region on the level is a gas cloud; decide that once per call instead
+       of scanning the region list for each of the 8 candidate cells. Exact:
+       when no such region exists, visible_region_at() can never return one
+       whose glyph is gas_glyph, so the clause is false for every cell. */
+    any_gas_region = any_visible_region_glyph(gas_glyph);
+    /* NLE: per-monster invariants, were recomputed for every candidate
+       cell (Invis/perceives/Displaced are property lookups) */
+    monseeu_h = (mon->mcansee && (!Invis || perceives(mdat)));
+    displaced_h = Displaced ? TRUE : FALSE;
 
     if (flag & ALLOW_DIG) {
         struct obj *mw_tmp;
@@ -1353,6 +1378,37 @@ long flag;
             thrudoor = TRUE;
     }
 
+#ifdef NH_MFNDPOS_PROBE
+    {
+        /* how often would an exact cross-turn cache hit? hash every input
+           the loop reads for the 9 cells + hero/monster state; compare
+           with this monster's previous call. Debug build only. */
+        static unsigned long long probe_last[4096]; static int probe_calls, probe_hits;
+        unsigned long long h = 1469598103934665603ULL;
+#define PH(v) (h = (h ^ (unsigned long long) (v)) * 1099511628211ULL)
+        int px, py;
+        PH(x); PH(y); PH(u.ux); PH(u.uy); PH(flag); PH(mon->mux); PH(mon->muy);
+        PH(mon->mcansee); PH(mon->mconf); PH(mon->mtrapseen); PH((long) mdat);
+        PH(Invis); PH(Displaced);
+        for (px = x - 1; px <= x + 1; px++)
+            for (py = y - 1; py <= y + 1; py++) {
+                if (px < 0 || px >= COLNO || py < 0 || py >= ROWNO) continue;
+                PH(TYP_AT(px, py)); PH(levl[px][py].doormask); PH(levl[px][py].wall_info);
+                PH((long) level.monsters[px][py]); PH((long) nh_trap_plane[px][py]);
+                PH(nh_pile_plane[px][py]); PH((long) OBJ_AT(px, py));
+                if (level.monsters[px][py]) { PH(level.monsters[px][py]->mtame); PH(level.monsters[px][py]->mpeaceful); PH((long) level.monsters[px][py]->data); }
+            }
+        {
+            unsigned idx = (unsigned) (((unsigned long) mon >> 4) & 4095);
+            probe_calls++;
+            if (probe_last[idx] == h) probe_hits++;
+            probe_last[idx] = h;
+            if (probe_calls % 100000 == 0)
+                fprintf(stderr, "MFNDPOS_PROBE calls=%d hits=%d (%.1f%%)\n", probe_calls, probe_hits, 100.0 * probe_hits / probe_calls);
+        }
+#undef PH
+    }
+#endif
 nexttry: /* eels prefer the water, but if there is no water nearby,
             they will crawl over land */
     if (mon->mconf) {
@@ -1386,7 +1442,7 @@ nexttry: /* eels prefer the water, but if there is no water nearby,
                 && !thrudoor)
                 continue;
             /* avoid poison gas? */
-            if (!poisongas_ok && !in_poisongas
+            if (!poisongas_ok && !in_poisongas && any_gas_region
                 && (gas_reg = visible_region_at(nx, ny)) != 0
                 && gas_reg->glyph == gas_glyph)
                 continue;
@@ -1405,14 +1461,13 @@ nexttry: /* eels prefer the water, but if there is no water nearby,
             if ((is_pool(nx, ny) == wantpool || poolok)
                 && (lavaok || !is_lava(nx, ny))) {
                 int dispx, dispy;
-                boolean monseeu =
-                    (mon->mcansee && (!Invis || perceives(mdat)));
+                boolean monseeu = monseeu_h;
                 boolean checkobj = OBJ_AT(nx, ny);
 
                 /* Displacement also displaces the Elbereth/scare monster,
                  * as long as you are visible.
                  */
-                if (Displaced && monseeu && mon->mux == nx
+                if (displaced_h && monseeu && mon->mux == nx
                     && mon->muy == ny) {
                     dispx = u.ux;
                     dispy = u.uy;
@@ -1422,7 +1477,7 @@ nexttry: /* eels prefer the water, but if there is no water nearby,
                 }
 
                 info[cnt] = 0;
-                if (onscary(dispx, dispy, mon)) {
+                if (NH_ONSCARY(dispx, dispy, mon)) {
                     if (!(flag & ALLOW_SSM))
                         continue;
                     info[cnt] |= ALLOW_SSM;
@@ -1475,14 +1530,9 @@ nexttry: /* eels prefer the water, but if there is no water nearby,
                     /* one pass over the pile for both garlic and boulder
                        (was two full sobj_at chain walks per candidate cell
                        in the hottest steady-state function) */
-                    register struct obj *po;
-                    boolean garlic = FALSE, boulder = FALSE;
-                    for (po = level.objs[nx][ny]; po; po = po->nexthere) {
-                        if (po->otyp == CLOVE_OF_GARLIC)
-                            garlic = TRUE;
-                        else if (po->otyp == BOULDER)
-                            boulder = TRUE;
-                    }
+                    unsigned char pb = nh_pile_plane[nx][ny];
+                    boolean garlic = (pb & NH_PB_GARLIC) != 0,
+                            boulder = (pb & NH_PB_BOULDER) != 0;
                     if (garlic) {
                         if (flag & NOGARLIC)
                             continue;
@@ -2871,7 +2921,7 @@ boolean via_attack;
         /* only hypocritical if monster is vulnerable to Elbereth (or
            peaceful--not vulnerable but attacking it is hypocritical) */
         && (onscary(u.ux, u.uy, mtmp) || mtmp->mpeaceful)) {
-        You_feel("like a hypocrite.");
+        You_feel("like a hypocrite."); u.nle_engr_last = 0; u.nle_engr_blind = 0; /* the message says the engraving is gone: public knowledge */
         /* AIS: Yes, I know alignment penalties and bonuses aren't balanced
            at the moment. This is about correct relative to other "small"
            penalties; it should be fairly large, as attacking while standing

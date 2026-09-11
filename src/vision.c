@@ -208,6 +208,7 @@ void
 vision_reset()
 {
     nh_typ_sync();
+    nh_planes_sync();
     int y;
     register int x, i, dig_left, block;
     register struct rm *lev;

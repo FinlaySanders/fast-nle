@@ -196,6 +196,7 @@ typedef struct nle_globals {
      * Gates byte emission only — tty window STATE updates (curx/cury,
      * topline wrap driving --More-- pacing) always run. */
     char tty_emit;
+    void *arena; /* fast-nle: per-game allocator behind alloc()/free() (nh_arena.c) */
 } nle_ctx_t;
 
 /* (nle_settings moved above nle_ctx_t — it is a member now) */

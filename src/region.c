@@ -606,6 +606,21 @@ struct monst *mon;
  * Check if a spot is under a visible region (eg: gas cloud).
  * Returns NULL if not, otherwise returns region.
  */
+/* NLE: does any visible, non-expired region carry this glyph?  Lets callers
+   skip per-cell visible_region_at() scans when the answer is no (exact). */
+boolean
+any_visible_region_glyph(glyph)
+int glyph;
+{
+    register int i;
+
+    for (i = 0; i < n_regions; i++)
+        if (regions[i]->visible && regions[i]->ttl != -2L
+            && regions[i]->glyph == glyph)
+            return TRUE;
+    return FALSE;
+}
+
 NhRegion *
 visible_region_at(x, y)
 xchar x, y;
