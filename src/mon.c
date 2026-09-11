@@ -2871,7 +2871,7 @@ boolean via_attack;
         /* only hypocritical if monster is vulnerable to Elbereth (or
            peaceful--not vulnerable but attacking it is hypocritical) */
         && (onscary(u.ux, u.uy, mtmp) || mtmp->mpeaceful)) {
-        You_feel("like a hypocrite.");
+        You_feel("like a hypocrite."); u.nle_engr_last = 0; u.nle_engr_blind = 0; /* the message says the engraving is gone: public knowledge */
         /* AIS: Yes, I know alignment penalties and bonuses aren't balanced
            at the moment. This is about correct relative to other "small"
            penalties; it should be fairly large, as attacking while standing

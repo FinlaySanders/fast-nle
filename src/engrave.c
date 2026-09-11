@@ -284,6 +284,7 @@ void
 u_wipe_engr(cnt)
 int cnt;
 {
+    if (u.ux == u.nle_engr_bx && u.uy == u.nle_engr_by) u.nle_engr_wiped = 1; /* the hero knows it may have smudged it */
     if (can_reach_floor(TRUE))
         wipe_engr_at(u.ux, u.uy, cnt, FALSE);
 }
@@ -369,6 +370,7 @@ int x, y;
 
         if (sensed) {
             char *et, buf[BUFSZ];
+            u.nle_engr_bx = x; u.nle_engr_by = y; u.nle_engr_blind = 0; u.nle_engr_wiped = 0; u.nle_engr_last = sengr_at("Elbereth", x, y, TRUE) ? 2 : 1; /* read or felt: known */
             int maxelen = (int) (sizeof buf
                                  /* sizeof "literal" counts terminating \0 */
                                  - sizeof "You feel the words: \"\".");
@@ -910,6 +912,7 @@ doengrave()
     /* Something has changed the engraving here */
     if (*buf) {
         make_engr_at(u.ux, u.uy, buf, moves, type);
+        u.nle_engr_blind = 1; u.nle_engr_bx = u.ux; u.nle_engr_by = u.uy; u.nle_engr_last = 1; u.nle_engr_wiped = 0; /* unread since written */
         if (!Blind)
             pline_The("engraving now reads: \"%s\".", buf);
         ptext = FALSE;
@@ -1156,6 +1159,7 @@ doengrave()
     (void) strncat(buf, ebuf, BUFSZ - (int) strlen(buf) - 1);
     /* Put the engraving onto the map */
     make_engr_at(u.ux, u.uy, buf, moves - multi, type);
+    u.nle_engr_blind = 1; u.nle_engr_bx = u.ux; u.nle_engr_by = u.uy; u.nle_engr_last = 1; u.nle_engr_wiped = 0; /* unread since written */
 
     if (post_engr_text[0])
         pline("%s", post_engr_text);

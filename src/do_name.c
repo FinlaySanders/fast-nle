@@ -700,10 +700,13 @@ const char *goal;
        steps.  Answer immediately instead: abort when allowed (callers treat
        it as ESC; controlled teleport falls back to the uncontrolled roll),
        else the hero's own square. */
+    { static int normal = -1; if (normal < 0) normal = getenv("NLE_GETPOS_NORMAL") != NULL; /* harness/probe use: real cursor prompt */
+      if (!normal) {
     if (!force) return -1;
     ccp->x = u.ux;
     ccp->y = u.uy;
     return 0;
+      } }
 
     for (i = 0; i < SIZE(pick_chars_def); i++)
         pick_chars[i] = Cmd.spkeys[pick_chars_def[i].nhkf];

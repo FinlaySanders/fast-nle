@@ -394,6 +394,11 @@ struct you {
     xchar skill_record[P_SKILL_LIMIT]; /* skill advancements */
     struct skills weapon_skills[P_NUM_SKILLS];
     boolean twoweap;         /* KMH -- Using two-weapon combat */
+    /* public-obs export: the engraving the hero last wrote, at (bx,by), has not been read or felt since.
+       While the hero is blind there, the engraving flag reports 1 (present, text unknown), not the RNG truth:
+       sighted, a look reads it at zero cost, so the truth is public; blind, it is not. */
+    xchar nle_engr_blind, nle_engr_bx, nle_engr_by;
+    xchar nle_engr_last, nle_engr_wiped; /* last value read/felt there (0/1/2), and a hero wipe since */
 
 }; /* end of `struct you' */
 

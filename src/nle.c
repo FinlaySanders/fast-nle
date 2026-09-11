@@ -780,7 +780,21 @@ nle_weight(nle_ctx_t *nle, int *wt, int *cap)
 
     nh_cur = (struct nh_ctx *) nle->nh;
     *cap = weight_cap();
-    *wt = inv_weight() + *cap;   /* inv_weight() returns carried - cap */
+    {   /* public-obs convention: what a player can total from the inventory text --
+           containers count empty (contents unseen), partly eaten food counts half */
+        long w = 0;
+        struct obj *otmp;
+        for (otmp = invent; otmp; otmp = otmp->nobj) {
+            long q = otmp->quan, base;
+            if (otmp->oclass == COIN_CLASS) { w += (q + 50L) / 100L; continue; }
+            if (otmp->otyp == CORPSE && otmp->corpsenm >= 0) base = mons[otmp->corpsenm].cwt;
+            else base = objects[otmp->otyp].oc_weight;
+            base *= q;
+            if (otmp->oeaten) base /= 2;
+            w += base;
+        }
+        *wt = (int) w;
+    }
     nh_cur = saved;
 }
 
