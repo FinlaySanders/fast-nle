@@ -135,6 +135,11 @@ shuffled_glyph(int glyph)
     }
     return glyph;
 }
+extern "C" int
+nle_shuffled_glyph_c(int glyph) /* C entry for nle.c (public weight pricing) */
+{
+    return shuffled_glyph(glyph);
+}
 
 class NetHackRL
 {
