@@ -222,3 +222,7 @@ tools/faketime_shim.so
 wandb/
 build-asan/
 build-dbg/
+stock/libnhagent.so
+stock/*.o
+stock/__pycache__/
+stock/build/

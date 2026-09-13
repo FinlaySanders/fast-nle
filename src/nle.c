@@ -625,79 +625,6 @@ nle_food_underfoot(nle_ctx_t *nle)
     return n;
 }
 
-/* Worst-case rot from eat.c edibility_prompts (divisor 10, no rn2).
- * 1 = would food-poison / petrify / slime / species-poison. Reads only. */
-static int
-nle_food_would_sicken(struct obj *otmp)
-{
-    int mnum;
-    long rotted;
-
-    if (!otmp || otmp->oclass != FOOD_CLASS)
-        return 1;
-    if (otmp->otyp != CORPSE && !otmp->globby)
-        return 0;
-    mnum = otmp->corpsenm;
-    if (mnum < LOW_PM)
-        return 1;
-    if ((touch_petrifies(&mons[mnum]) || mnum == PM_MEDUSA)
-        && !Stone_resistance)
-        return 1;
-    if ((mnum == PM_GREEN_SLIME || otmp->otyp == GLOB_OF_GREEN_SLIME)
-        && !Unchanging && !slimeproof(youmonst.data))
-        return 1;
-    if (poisonous(&mons[mnum]) && !Poison_resistance)
-        return 1;
-    if (acidic(&mons[mnum]) && !Acid_resistance)
-        return 1;
-    if (mnum == PM_LIZARD || mnum == PM_LICHEN || is_rider(&mons[mnum]))
-        return 0;
-    rotted = (monstermoves - peek_at_iced_corpse_age(otmp)) / 10L;
-    if (otmp->cursed)
-        rotted += 2L;
-    else if (otmp->blessed)
-        rotted -= 2L;
-    return (otmp->orotten || rotted > 3L);
-}
-
-/* First edible object on the tile, same walk as floorfood("eat"). 1 if
- * that object is safe to bite. Fresh kill on the floor stays legal. */
-int
-nle_floor_eat_safe(nle_ctx_t *nle)
-{
-    struct nh_ctx *saved = nh_cur;
-    struct obj *otmp;
-    int ok = 0;
-
-    nh_cur = (struct nh_ctx *) nle->nh;
-    for (otmp = level.objs[u.ux][u.uy]; otmp; otmp = otmp->nexthere) {
-        if (otmp->oclass != COIN_CLASS && is_edible(otmp)) {
-            ok = !nle_food_would_sicken(otmp);
-            break;
-        }
-    }
-    nh_cur = saved;
-    return ok;
-}
-
-/* Inventory letter: 1 if that item is a corpse/glob that would sicken. */
-int
-nle_invlet_food_unsafe(nle_ctx_t *nle, int letter)
-{
-    struct nh_ctx *saved = nh_cur;
-    struct obj *otmp;
-    int bad = 0;
-
-    nh_cur = (struct nh_ctx *) nle->nh;
-    for (otmp = invent; otmp; otmp = otmp->nobj) {
-        if (otmp->invlet == (char) letter) {
-            bad = nle_food_would_sicken(otmp);
-            break;
-        }
-    }
-    nh_cur = saved;
-    return bad;
-}
 
 /* Player-knowable INTRINSIC properties as a bitfield: corpse-gained ones are
  * announced by the game ("You feel healthy"), race/role/level ones are
@@ -773,6 +700,7 @@ nle_spellprot(nle_ctx_t *nle)
 
 /* Carried weight and capacity (inv_weight is relative to capacity in the
  * engine: it returns wc-adjusted; export both raw). Reads only; no RNG. */
+extern int nle_shuffled_glyph_c(int glyph); /* winrl.cc: appearance (shuffled) glyph of a true-type glyph */
 void
 nle_weight(nle_ctx_t *nle, int *wt, int *cap)
 {
@@ -780,7 +708,30 @@ nle_weight(nle_ctx_t *nle, int *wt, int *cap)
 
     nh_cur = (struct nh_ctx *) nle->nh;
     *cap = weight_cap();
-    *wt = inv_weight() + *cap;   /* inv_weight() returns carried - cap */
+    {   /* public-obs convention: what a player can total from the inventory text --
+           containers count empty (contents unseen), partly eaten food counts half */
+        long w = 0;
+        struct obj *otmp;
+        for (otmp = invent; otmp; otmp = otmp->nobj) {
+            long q = otmp->quan, base;
+            if (otmp->oclass == COIN_CLASS) { w += (q + 50L) / 100L; continue; }
+            if (otmp->otyp == CORPSE && otmp->corpsenm >= 0) base = mons[otmp->corpsenm].cwt;
+            else {
+                /* Public pricing (2026-09-12): the true type only while its name is displayed
+                   (doname's dknown && oc_name_known); otherwise the appearance's canonical type,
+                   the same object the inventory glyph shows.  Pricing every item by otyp leaked
+                   the identity of unidentified boots, gloves, helmets and gray stones. */
+                int typ = (otmp->dknown && objects[otmp->otyp].oc_name_known)
+                              ? otmp->otyp
+                              : glyph_to_obj(nle_shuffled_glyph_c(GLYPH_OBJ_OFF + otmp->otyp));
+                base = objects[typ].oc_weight;
+            }
+            base *= q;
+            if (otmp->oeaten) base /= 2;
+            w += base;
+        }
+        *wt = (int) w;
+    }
     nh_cur = saved;
 }
 
