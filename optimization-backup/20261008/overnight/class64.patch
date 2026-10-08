@@ -1,0 +1,24 @@
+--- a/src/monmove.c
++++ b/src/monmove.c
+@@ -1130,18 +1130,18 @@
+                         continue;
+ 
+                     if (((likegold && otmp->oclass == COIN_CLASS)
+-                         || (likeobjs && index(practical, otmp->oclass)
++                         || (likeobjs && (otmp->oclass == 0 || otmp->oclass == WEAPON_CLASS || otmp->oclass == ARMOR_CLASS || otmp->oclass == GEM_CLASS || otmp->oclass == FOOD_CLASS)
+                              && (otmp->otyp != CORPSE
+                                  || (ptr->mlet == S_NYMPH
+                                      && !is_rider(&mons[otmp->corpsenm]))))
+-                         || (likemagic && index(magical, otmp->oclass))
++                         || (likemagic && (otmp->oclass == 0 || otmp->oclass == AMULET_CLASS || otmp->oclass == POTION_CLASS || otmp->oclass == SCROLL_CLASS || otmp->oclass == WAND_CLASS || otmp->oclass == RING_CLASS || otmp->oclass == SPBOOK_CLASS))
+                          || (uses_items && searches_for_item(mtmp, otmp))
+                          || (likerock && otmp->otyp == BOULDER)
+                          || (likegems && otmp->oclass == GEM_CLASS
+                              && objects[otmp->otyp].oc_material != MINERAL)
+                          || (conceals && !cansee(otmp->ox, otmp->oy))
+                          || (ptr == &mons[PM_GELATINOUS_CUBE]
+-                             && !index(indigestion, otmp->oclass)
++                             && !(otmp->oclass == 0 || otmp->oclass == BALL_CLASS || otmp->oclass == ROCK_CLASS)
+                              && !(otmp->otyp == CORPSE
+                                   && touch_petrifies(&mons[otmp->corpsenm]))))
+                         && touch_artifact(otmp, mtmp)) {

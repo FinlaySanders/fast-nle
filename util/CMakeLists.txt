@@ -91,7 +91,13 @@ add_custom_command(
           ${NLE_UTIL}/lev_comp.l
   DEPENDS ${NLE_UTIL}/lev_comp.l)
 
-add_custom_target(util DEPENDS ${MAKEDEFS_HEADERS} recover)
+add_executable(mkcanon mkcanon.c)
+target_include_directories(mkcanon PRIVATE ${NLE_INC} ${NLE_INC_GEN})
+add_custom_command(
+  OUTPUT ${NLE_INC_GEN}/appearance_canon.h
+  COMMAND $<TARGET_FILE:mkcanon> ${NLE_INC_GEN}/appearance_canon.h
+  DEPENDS mkcanon)
+add_custom_target(util DEPENDS ${MAKEDEFS_HEADERS} ${NLE_INC_GEN}/appearance_canon.h recover)
 
 add_executable(tilemap ${NLE_WIN}/share/tilemap.c)
 target_include_directories(tilemap PUBLIC ${NLE_INC} ${NLE_INC_GEN})

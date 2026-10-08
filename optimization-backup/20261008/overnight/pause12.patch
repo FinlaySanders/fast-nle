@@ -1,0 +1,41 @@
+--- a/src/pufferl.cu
++++ b/src/pufferl.cu
+@@ -1118,6 +1118,12 @@
+         n * mask * sizeof(unsigned char), cudaMemcpyHostToDevice, stream);
+ }
+ 
++static inline void cpu_spin_pause(void) {
++#if defined(__x86_64__) || defined(__i386__)
++    __asm__ __volatile__("pause");
++#endif
++}
++
+ // CPU worker handshake. Atomic on worker_state[]; calloc leaves BUF_STARTING.
+ enum {
+     BUF_STARTING,
+@@ -1160,6 +1166,7 @@
+     float ms = 0.0f;
+     while (true) {
+         while (__atomic_load_n(state, __ATOMIC_SEQ_CST) != BUF_RUNNING) {
++            cpu_spin_pause();
+             if (__atomic_load_n(&vec->shutdown, __ATOMIC_SEQ_CST)) {
+                 for (int i = 0; i < NUM_EV; i++) {
+                     cudaEventDestroy(ev[i]);
+@@ -1291,7 +1298,7 @@
+     }
+     for (int i = 0; i < vec->buffers; i++) {
+         int* state = &vec->worker_state[i];
+-        while (__atomic_load_n(state, __ATOMIC_SEQ_CST) != BUF_WAITING) {}
++        while (__atomic_load_n(state, __ATOMIC_SEQ_CST) != BUF_WAITING) {cpu_spin_pause();}
+     }
+ }
+ 
+@@ -1375,7 +1382,7 @@
+     }
+     for (int buf = 0; buf < p->vec->buffers; buf++) {
+         int* state = &p->vec->worker_state[buf];
+-        while (__atomic_load_n(state, __ATOMIC_SEQ_CST) != BUF_WAITING) {}
++        while (__atomic_load_n(state, __ATOMIC_SEQ_CST) != BUF_WAITING) {cpu_spin_pause();}
+     }
+     float sec = (float)(wall_clock() - t0);
+     p->profile.accum[PROF_ROLLOUT] += sec * 1000.0f;

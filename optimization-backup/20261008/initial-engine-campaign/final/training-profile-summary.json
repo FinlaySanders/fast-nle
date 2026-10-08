@@ -1,0 +1,154 @@
+[
+  {
+    "label": "original",
+    "capture_seconds": 15,
+    "kernel_busy_seconds": 13.220467842,
+    "kernel_busy_percent": 88.13645228,
+    "gpu_union_seconds": {
+      "unattributed": 1.021864622,
+      "all_kernels": 13.220467842,
+      "fused_rollout": 4.982947656,
+      "train_forward_backward": 11.637702809
+    },
+    "overlapping_training_and_inference_seconds": 4.034855694000001,
+    "kernel_duration_sum_seconds": {
+      "unattributed": 1.044051834,
+      "fused_rollout": 6.961740651,
+      "train_forward_backward": 11.868570513
+    },
+    "kernel_count": {
+      "unattributed": 44473,
+      "fused_rollout": 939465,
+      "train_forward_backward": 504600
+    },
+    "top_kernels": [
+      {
+        "name": "void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_s161616gemm_bf16_16x16_128x1_nt_align8>(T1::Params)",
+        "seconds": 3.058706957,
+        "fraction_of_summed_kernel_time": 0.15390213801105496
+      },
+      {
+        "name": "void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_s161616gemm_bf16_16x16_128x2_nt_align8>(T1::Params)",
+        "seconds": 2.184350728,
+        "fraction_of_summed_kernel_time": 0.10990796174045005
+      },
+      {
+        "name": "sample_logits(Prec, Prec, int *, float *, float *, __nv_bfloat16 *, __nv_bfloat16 *, curandStatePhilox4_32_10 *, __nv_bfloat16 *, int)",
+        "seconds": 2.131682321,
+        "fraction_of_summed_kernel_time": 0.10725789406254257
+      },
+      {
+        "name": "void cutlass::Kernel2<cutlass_80_tensorop_bf16_s16816gemm_relu_bf16_64x64_32x6_tn_align8>(T1::Params)",
+        "seconds": 1.042891135,
+        "fraction_of_summed_kernel_time": 0.05247419175673446
+      },
+      {
+        "name": "void cutlass::Kernel2<cutlass_80_tensorop_bf16_s16816gemm_relu_bf16_64x64_32x6_nn_align8>(T1::Params)",
+        "seconds": 1.018719462,
+        "fraction_of_summed_kernel_time": 0.051257967971225844
+      },
+      {
+        "name": "void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_s161616gemm_bf16_16x16_128x1_tn_align8>(T1::Params)",
+        "seconds": 0.941346556,
+        "fraction_of_summed_kernel_time": 0.04736486679320136
+      },
+      {
+        "name": "ampere_bf16_s16816gemm_bf16_128x64_ldg8_f2f_stages_64x3_nt",
+        "seconds": 0.727557943,
+        "fraction_of_summed_kernel_time": 0.03660786225315577
+      },
+      {
+        "name": "nh_bias_relu_kernel(__nv_bfloat16 *, const __nv_bfloat16 *, int, int)",
+        "seconds": 0.565181379,
+        "fraction_of_summed_kernel_time": 0.02843771038381836
+      },
+      {
+        "name": "ampere_bf16_s1688gemm_bf16_128x128_ldg8_f2f_stages_32x1_nn",
+        "seconds": 0.489024526,
+        "fraction_of_summed_kernel_time": 0.024605796223466966
+      },
+      {
+        "name": "ampere_bf16_s1688gemm_bf16_128x64_sliced1x2_ldg8_f2f_nt",
+        "seconds": 0.486874232,
+        "fraction_of_summed_kernel_time": 0.024497601862711032
+      }
+    ],
+    "scope": "15-second warmed Nsight trace. CUDA correlation IDs associate kernels with existing NVTX inference/PPO enqueue ranges. GPU busy is union of kernel intervals, not occupancy or utilization of all SMs. Concurrent kernel-duration sums exceed wall time; profiles have overhead and are not clean throughput measurements."
+  },
+  {
+    "label": "optimized-retry",
+    "capture_seconds": 15,
+    "kernel_busy_seconds": 13.933681264,
+    "kernel_busy_percent": 92.89120842666667,
+    "gpu_union_seconds": {
+      "unattributed": 0.00920959,
+      "all_kernels": 13.933681264,
+      "fused_rollout": 4.587752162,
+      "train_forward_backward": 13.55426598
+    },
+    "overlapping_training_and_inference_seconds": 4.217546468000002,
+    "kernel_duration_sum_seconds": {
+      "unattributed": 0.017349697,
+      "fused_rollout": 8.429592628,
+      "train_forward_backward": 13.828044453
+    },
+    "kernel_count": {
+      "unattributed": 2028,
+      "fused_rollout": 1003302,
+      "train_forward_backward": 589574
+    },
+    "top_kernels": [
+      {
+        "name": "void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_s161616gemm_bf16_16x16_128x1_nt_align8>(T1::Params)",
+        "seconds": 3.205953148,
+        "fraction_of_summed_kernel_time": 0.14392615268200182
+      },
+      {
+        "name": "sample_logits(Prec, Prec, int *, float *, float *, __nv_bfloat16 *, __nv_bfloat16 *, curandStatePhilox4_32_10 *, __nv_bfloat16 *, int)",
+        "seconds": 2.497816246,
+        "fraction_of_summed_kernel_time": 0.11213547603390636
+      },
+      {
+        "name": "void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_s161616gemm_bf16_16x16_128x2_nt_align8>(T1::Params)",
+        "seconds": 2.294855271,
+        "fraction_of_summed_kernel_time": 0.10302386680949796
+      },
+      {
+        "name": "void cutlass::Kernel2<cutlass_80_tensorop_bf16_s16816gemm_relu_bf16_64x64_32x6_tn_align8>(T1::Params)",
+        "seconds": 1.250159445,
+        "fraction_of_summed_kernel_time": 0.05612391412212761
+      },
+      {
+        "name": "void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_s161616gemm_bf16_16x16_128x1_tn_align8>(T1::Params)",
+        "seconds": 1.155993536,
+        "fraction_of_summed_kernel_time": 0.05189648584401059
+      },
+      {
+        "name": "void cutlass::Kernel2<cutlass_80_tensorop_bf16_s16816gemm_relu_bf16_64x64_32x6_nn_align8>(T1::Params)",
+        "seconds": 1.097419361,
+        "fraction_of_summed_kernel_time": 0.049266891690542845
+      },
+      {
+        "name": "ampere_bf16_s16816gemm_bf16_128x64_ldg8_f2f_stages_64x3_nt",
+        "seconds": 0.789279965,
+        "fraction_of_summed_kernel_time": 0.035433465028115584
+      },
+      {
+        "name": "nh_bias_relu_kernel(__nv_bfloat16 *, const __nv_bfloat16 *, int, int)",
+        "seconds": 0.675189076,
+        "fraction_of_summed_kernel_time": 0.030311536555741248
+      },
+      {
+        "name": "ampere_bf16_s1688gemm_bf16_128x128_ldg8_f2f_stages_32x1_nn",
+        "seconds": 0.531649178,
+        "fraction_of_summed_kernel_time": 0.023867541799175652
+      },
+      {
+        "name": "ampere_bf16_s1688gemm_bf16_128x64_sliced1x2_ldg8_f2f_nt",
+        "seconds": 0.525058412,
+        "fraction_of_summed_kernel_time": 0.023571659872704234
+      }
+    ],
+    "scope": "15-second warmed Nsight trace. CUDA correlation IDs associate kernels with existing NVTX inference/PPO enqueue ranges. GPU busy is union of kernel intervals, not occupancy or utilization of all SMs. Concurrent kernel-duration sums exceed wall time; profiles have overhead and are not clean throughput measurements."
+  }
+]

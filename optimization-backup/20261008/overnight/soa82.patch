@@ -1,0 +1,151 @@
+--- a/src/display.c
++++ b/src/display.c
+@@ -1506,21 +1506,20 @@
+ /* Glyph Buffering (3rd screen) =========================================== */
+ 
+ typedef struct {
+-    xchar new; /* perhaps move this bit into the rm structure. */
+-    int glyph;
+-} gbuf_entry;
+-
+-/* gbuf — per-env display buffer migrated to nle_ctx_t.
+- * ROWNO*COLNO entries; macro casts the flat allocation to a 2D pointer. */
+-/* slot 15: per-env glyph buffer (gbuf_entry is private to display.c) */
+-static void *
++    short glyph[ROWNO][COLNO];
++    xchar fresh[ROWNO][COLNO];
++} nle_glyph_buffer;
++typedef char nle_glyph_fits_short[(MAX_GLYPH < 32768) ? 1 : -1];
++
++static nle_glyph_buffer *
+ nle_gbuf_blob(void)
+ {
+     if (!nh_cur->nh_lazy[15])
+-        nh_cur->nh_lazy[15] = calloc(ROWNO * COLNO, sizeof(gbuf_entry));
+-    return nh_cur->nh_lazy[15];
+-}
+-#define gbuf       ((gbuf_entry (*)[COLNO]) nle_gbuf_blob())
++        nh_cur->nh_lazy[15] = calloc(1, sizeof(nle_glyph_buffer));
++    return (nle_glyph_buffer *) nh_cur->nh_lazy[15];
++}
++#define gbuf_glyph (nle_gbuf_blob()->glyph)
++#define gbuf_fresh (nle_gbuf_blob()->fresh)
+ #define gbuf_start (nh_cur->g_display_c_gbuf_start)
+ #define gbuf_stop  (nh_cur->g_display_c_gbuf_stop)
+ 
+@@ -1532,7 +1531,7 @@
+ register int x, y;
+ {
+     newsym(x,y);
+-    gbuf[y][x].new = 1;
++    gbuf_fresh[y][x] = 1;
+     if (gbuf_start[y] > x)
+         gbuf_start[y] = x;
+     if (gbuf_stop[y] < x)
+@@ -1612,9 +1611,9 @@
+         return;
+     }
+ 
+-    if (gbuf[y][x].glyph != glyph || iflags.use_background_glyph) {
+-        gbuf[y][x].glyph = glyph;
+-        gbuf[y][x].new = 1;
++    if (gbuf_glyph[y][x] != glyph || iflags.use_background_glyph) {
++        gbuf_glyph[y][x] = glyph;
++        gbuf_fresh[y][x] = 1;
+         if (gbuf_start[y] > x)
+             gbuf_start[y] = x;
+         if (gbuf_stop[y] < x)
+@@ -1646,23 +1645,15 @@
+ void
+ clear_glyph_buffer()
+ {
+-    register int x, y;
+-    register gbuf_entry *gptr;
+-    gbuf_entry nul_gbuf;
+-
+-    /* Lazy init for the per-env nul_gbuf payload.
+-     * Original was a static struct initializer using cmap_to_glyph(S_stone).
+-     * GLYPH_CMAP_OFF is always nonzero, so a 0 glyph means uninitialized. */
++    int x, y;
++    nle_glyph_buffer *buf = nle_gbuf_blob();
+     if (nh_cur->g_display_c_nul_gbuf_glyph == 0)
+         nh_cur->g_display_c_nul_gbuf_glyph = cmap_to_glyph(S_stone);
+-    nul_gbuf.new = (xchar) nh_cur->g_display_c_nul_gbuf_new;
+-    nul_gbuf.glyph = nh_cur->g_display_c_nul_gbuf_glyph;
+-    for (y = 0; y < ROWNO; y++) {
+-        gptr = &gbuf[y][0];
+-        for (x = COLNO; x; x--) {
+-            *gptr++ = nul_gbuf;
++    for (y = 0; y < ROWNO; y++)
++        for (x = 0; x < COLNO; x++) {
++            buf->glyph[y][x] = nh_cur->g_display_c_nul_gbuf_glyph;
++            buf->fresh[y][x] = nh_cur->g_display_c_nul_gbuf_new;
+         }
+-    }
+     reset_glyph_bbox();
+ }
+ 
+@@ -1676,8 +1667,8 @@
+     register int x;
+ 
+     for (x = start; x <= stop; x++)
+-        if (gbuf[y][x].glyph != cmap_to_glyph(S_stone))
+-            print_glyph(WIN_MAP, x, y, gbuf[y][x].glyph, get_bk_glyph(x, y));
++        if (gbuf_glyph[y][x] != cmap_to_glyph(S_stone))
++            print_glyph(WIN_MAP, x, y, gbuf_glyph[y][x], get_bk_glyph(x, y));
+ }
+ 
+ void
+@@ -1722,12 +1713,11 @@
+ #endif
+ 
+     for (y = 0; y < ROWNO; y++) {
+-        register gbuf_entry *gptr = &gbuf[y][x = gbuf_start[y]];
+-
+-        for (; x <= gbuf_stop[y]; gptr++, x++)
+-            if (gptr->new) {
+-                print_glyph(WIN_MAP, x, y, gptr->glyph, get_bk_glyph(x, y));
+-                gptr->new = 0;
++        nle_glyph_buffer *buf = nle_gbuf_blob();
++        for (x = gbuf_start[y]; x <= gbuf_stop[y]; x++)
++            if (buf->fresh[y][x]) {
++                print_glyph(WIN_MAP, x, y, buf->glyph[y][x], get_bk_glyph(x, y));
++                buf->fresh[y][x] = 0;
+             }
+     }
+ 
+@@ -1938,10 +1928,12 @@
+ void
+ nle_copy_glyphs(short *dst)
+ {
+-    int x, y;
+-    for (y = 0; y < ROWNO; y++)
+-        for (x = 1; x < COLNO; x++)
+-            *dst++ = (short) gbuf[y][x].glyph;
++    int y;
++    nle_glyph_buffer *buf = nle_gbuf_blob();
++    for (y = 0; y < ROWNO; y++) {
++        memcpy(dst, &buf->glyph[y][1], (COLNO - 1) * sizeof(short));
++        dst += COLNO - 1;
++    }
+ }
+ 
+ int
+@@ -1950,7 +1942,7 @@
+ {
+     if (x < 0 || y < 0 || x >= COLNO || y >= ROWNO)
+         return cmap_to_glyph(S_room); /* XXX */
+-    return gbuf[y][x].glyph;
++    return gbuf_glyph[y][x];
+ }
+ 
+ /*
+@@ -1974,7 +1966,7 @@
+     struct rm *lev = &levl[x][y];
+ 
+     if (iflags.use_background_glyph && lev->seenv != 0
+-        && gbuf[y][x].glyph != cmap_to_glyph(S_stone)) {
++        && gbuf_glyph[y][x] != cmap_to_glyph(S_stone)) {
+         switch (lev->typ) {
+         case SCORR:
+         case STONE:

@@ -1,0 +1,11 @@
+--- a/src/mon.c
++++ b/src/mon.c
+@@ -1402,7 +1402,7 @@
+                     || (m_at(x, ny) && m_at(nx, y) && worm_cross(x, y, nx, ny)
+                         && !m_at(nx, ny) && (nx != u.ux || ny != u.uy))))
+                 continue;
+-            if ((is_pool(nx, ny) == wantpool || poolok)
++            if ((poolok || is_pool(nx, ny) == wantpool)
+                 && (lavaok || !is_lava(nx, ny))) {
+                 int dispx, dispy;
+                 boolean monseeu =

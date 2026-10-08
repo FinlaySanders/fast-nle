@@ -1,0 +1,48 @@
+diff --git a/include/extern.h b/include/extern.h
+index d622a77b7..2015ca8bf 100644
+--- a/include/extern.h
++++ b/include/extern.h
+@@ -384,6 +384,7 @@ E void FDECL(flush_screen, (int));
+ E int FDECL(back_to_glyph, (XCHAR_P, XCHAR_P));
+ E int FDECL(zapdir_to_glyph, (int, int, int));
+ E int FDECL(glyph_at, (XCHAR_P, XCHAR_P));
++E void FDECL(nle_copy_glyphs, (short *));
+ E void NDECL(set_wall_state);
+ E void FDECL(unset_seenv, (struct rm *, int, int, int, int));
+ E int FDECL(warning_of, (struct monst *));
+diff --git a/src/display.c b/src/display.c
+index f5cff1453..8d89f3d33 100644
+--- a/src/display.c
++++ b/src/display.c
+@@ -1935,6 +1935,15 @@ int beam_type;
+  * the location.  This isn't necessarily the same as the glyph in the levl
+  * structure, so we must check the "third screen".
+  */
++void
++nle_copy_glyphs(short *dst)
++{
++    int x, y;
++    for (y = 0; y < ROWNO; y++)
++        for (x = 1; x < COLNO; x++)
++            *dst++ = (short) gbuf[y][x].glyph;
++}
++
+ int
+ glyph_at(x, y)
+ xchar x, y;
+diff --git a/win/rl/winrl.cc b/win/rl/winrl.cc
+index eeaf2f9bc..209973e84 100644
+--- a/win/rl/winrl.cc
++++ b/win/rl/winrl.cc
+@@ -504,8 +504,9 @@ NetHackRL::fill_obs(nle_obs *obs)
+     }
+     if (obs->glyphs) { // eager identity mapping: every cell reflects the discoveries list now, not at its next
+         // reprint. The screen buffer holds true glyphs; maybe_true_glyph hides the ones the player has not identified.
+-        for (int y = 0; y < ROWNO; y++) for (int x = 1; x < COLNO; x++)
+-            obs->glyphs[(size_t) y * (COLNO - 1) + (x - 1)] = maybe_true_glyph(glyph_at(x, y));
++        nle_copy_glyphs(obs->glyphs);
++        for (int i = 0; i < ROWNO * (COLNO - 1); i++)
++            obs->glyphs[i] = maybe_true_glyph(obs->glyphs[i]);
+     }
+     if (obs->glyphs && nle_underfoot_glyphs() && u.ux >= 1 && u.ux < COLNO
+         && u.uy >= 0 && u.uy < ROWNO) {

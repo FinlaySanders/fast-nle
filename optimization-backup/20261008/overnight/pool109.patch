@@ -1,0 +1,67 @@
+--- a/src/env_pool.h
++++ b/src/env_pool.h
+@@ -4,12 +4,26 @@
+ #include <stdlib.h>
+ #include <assert.h>
+ #include <sched.h>
++#include <time.h>
++#include <stdint.h>
++#include <string.h>
++typedef struct { uint64_t cost; int offset; } EPCost;
++static int ep_cost_order(const void* av, const void* bv) {
++    const EPCost* a = (const EPCost*)av; const EPCost* b = (const EPCost*)bv;
++    if (a->cost != b->cost) return a->cost > b->cost ? -1 : 1;
++    return a->offset - b->offset;
++}
++static uint64_t ep_now(void) { struct timespec t; clock_gettime(CLOCK_MONOTONIC, &t); return (uint64_t)t.tv_sec*1000000000ull+t.tv_nsec; }
+ 
+ typedef struct {
+     pthread_mutex_t mu;
+     pthread_cond_t quiet;
+     int active, readers, start, count, done;
+     int* next;
++    int capacity, sampled;
++    unsigned int round;
++    uint64_t* costs;
++    EPCost* order;
+ } EPRegion;
+ typedef struct EnvPool EnvPool;
+ typedef struct { EnvPool* pool; int id; } EPWorker;
+@@ -32,7 +46,10 @@
+             int n = __atomic_fetch_add(&r->next[home * 16], 1, __ATOMIC_RELAXED);
+             int offset = home + n * p->workers;
+             if (offset >= r->count) break;
++            offset = r->order[offset].offset;
++            uint64_t started = r->sampled ? ep_now() : 0;
+             p->step(p->context, r->start + offset);
++            if (r->sampled) r->costs[offset] = (r->costs[offset] + ep_now() - started) / 2;
+             __atomic_fetch_add(&r->done, 1, __ATOMIC_RELEASE);
+         }
+     }
+@@ -95,6 +112,18 @@
+     EPRegion* r = &p->region[buffer];
+     pthread_mutex_lock(&r->mu);
+     assert(!r->active && !r->readers);
++    if (count > r->capacity) {
++        free(r->costs); free(r->order);
++        r->costs = (uint64_t*)calloc(count, sizeof(*r->costs));
++        r->order = (EPCost*)calloc(count, sizeof(*r->order));
++        assert(r->costs && r->order); r->capacity = count;
++    }
++    r->sampled = !(r->round++ & 15u);
++    if (r->sampled || count != r->count || start != r->start) {
++        if (start != r->start && count) memset(r->costs, 0, count * sizeof(*r->costs));
++        for (int i = 0; i < count; i++) { r->order[i].cost = r->costs[i]; r->order[i].offset = i; }
++        if (count > 1) qsort(r->order, count, sizeof(*r->order), ep_cost_order);
++    }
+     r->start = start; r->count = count;
+     __atomic_store_n(&r->done, 0, __ATOMIC_RELAXED);
+     for (int w = 0; w < p->workers; w++) r->next[w * 16] = 0;
+@@ -122,6 +151,7 @@
+         pthread_mutex_destroy(&p->region[b].mu);
+         pthread_cond_destroy(&p->region[b].quiet);
+         free(p->region[b].next);
++        free(p->region[b].costs); free(p->region[b].order);
+     }
+     pthread_mutex_destroy(&p->mu); pthread_cond_destroy(&p->ready);
+     free(p->region); free(p->threads); free(p->args); free(p);

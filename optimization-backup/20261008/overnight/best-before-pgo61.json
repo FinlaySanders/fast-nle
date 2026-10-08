@@ -1,0 +1,87 @@
+{
+  "time": "2026-09-18T01:43:47.117485+00:00",
+  "candidate": "floor04+mask05+distant15+track40+pgo44",
+  "decision": "retained: repeated/heldout engine gain, complete replay/raw-observation/historical-view gates, rollout and loadedtraining checked",
+  "library": "/puffertank/experiments/nethack-overnight-20260917/pgo44/variant/libnethack.so",
+  "library_sha256": "4ccd71d7c73cdbb2cd82c8e833cc2146e11854843a1e19cd3c4edef2d7c2727a",
+  "patch": "/puffertank/experiments/nethack-overnight-20260917/retained-through-track40.patch",
+  "source_snapshot": "/puffertank/experiments/nethack-overnight-20260917/pgo44-source",
+  "build_recipe": "/puffertank/experiments/nethack-overnight-20260917/pgo44.py",
+  "fixed_policy_rollouts": {
+    "before": {
+      "seconds": 24.417700766,
+      "sps": 171773.09363379068,
+      "mean_turn": 28589.949375,
+      "gain_percent": 0.29843892632785973
+    },
+    "pgo20": {
+      "seconds": 21.522519112,
+      "sps": 194879.7897761625,
+      "mean_turn": 28589.949375,
+      "gain_percent": 13.79045623123709
+    },
+    "pgo44": {
+      "seconds": 21.316486833,
+      "sps": 196763.3800475418,
+      "mean_turn": 28589.949375,
+      "gain_percent": 14.890286011324383
+    },
+    "after": {
+      "seconds": 24.563444613999998,
+      "sps": 170753.90141370668,
+      "mean_turn": 28589.949375,
+      "gain_percent": -0.29666817966753634
+    },
+    "equivalence": {
+      "initial_rng_states_identical": true,
+      "pgo20_vs_original_observations": true,
+      "pgo44_vs_original_observations": true,
+      "closing_vs_opening_observations": true,
+      "rng_hashes": {
+        "before": "4321709e6b01c7a2c8642d768daaaa2894d5505b7a6d661edbc3c608aa3bc7d7",
+        "pgo20": "4321709e6b01c7a2c8642d768daaaa2894d5505b7a6d661edbc3c608aa3bc7d7",
+        "pgo44": "4321709e6b01c7a2c8642d768daaaa2894d5505b7a6d661edbc3c608aa3bc7d7",
+        "after": "4321709e6b01c7a2c8642d768daaaa2894d5505b7a6d661edbc3c608aa3bc7d7"
+      }
+    },
+    "caveat": "Timings comparable as fixed workload only if per-block observations and initial RNG states match; observation hashes are block-boundary checks, not full action-stream proof.",
+    "baseline_drift_percent": 0.5968778526557195
+  },
+  "heldout": {
+    "score": {
+      "verify": 13.867403,
+      "before": 11.67935,
+      "candidate": 11.442676,
+      "after": 11.710411,
+      "gain_percent": 2.2040692229684744,
+      "drift_percent": 0.26594801936752344
+    },
+    "depth": {
+      "verify": 5.221751,
+      "before": 2.21009,
+      "candidate": 2.182129,
+      "after": 2.192393,
+      "gain_percent": 0.8758648090924082,
+      "drift_percent": -0.8007366215855516
+    }
+  },
+  "training": {
+    "seconds": {
+      "baseline-before": 26.184596062,
+      "pgo44": 24.65295148,
+      "baseline-after": 26.363266229
+    },
+    "mean_turns": {
+      "baseline-before": 22733.674666666666,
+      "pgo44": 23137.65066666667,
+      "baseline-after": 23017.569333333333
+    },
+    "gain_percent": 6.575195131564837,
+    "drift_percent": 0.6823483798525709,
+    "measured_steps": 3932160,
+    "caveat": "Async loaded-training trajectories differ; this is a combined observation versus original, not a clean incremental cache gain."
+  },
+  "correctness": "Full selected32score and512depth traces; raw observation snapshots; historical15baselineexceptions unchanged; historicalview34goldens/status/interleaved/shuffled+26fuzz; 7.725M tracking/cache oracle; patchroundtrip; no writabledata symbol changes",
+  "caveat": "Combined14.89% fixedpolicyrollout gain; incremental0.97% overPGO20 modest versus0.60% control drift. Training6-7% combined does not establish incremental cache gain.",
+  "previous_best": "/puffertank/experiments/nethack-overnight-20260917/best-before-pgo44.json"
+}

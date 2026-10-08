@@ -453,8 +453,10 @@ long num;
     obj->nobj = otmp;
     /* Only set nexthere when on the floor, nexthere is also used */
     /* as a back pointer to the container object when contained. */
-    if (obj->where == OBJ_FLOOR)
+    if (obj->where == OBJ_FLOOR) {
         obj->nexthere = otmp;
+        nh_fobj_invalidate();
+    }
     copy_oextra(otmp, obj);
     if (has_omid(otmp))
         free_omid(otmp); /* only one association with m_id*/
@@ -586,6 +588,7 @@ struct obj *otmp;
         /* do nothing */
         break;
     case OBJ_INVENT:
+        nh_no_hero_gold = 0;
         otmp->nobj = obj->nobj;
         obj->nobj = otmp;
         extract_nobj(obj, &invent);
@@ -609,6 +612,7 @@ struct obj *otmp;
         otmp->oy = obj->oy;
         obj->nobj = otmp;
         obj->nexthere = otmp;
+        nh_fobj_invalidate();
         extract_nobj(obj, &fobj);
         extract_nexthere(obj, &level.objs[obj->ox][obj->oy]);
         break;
@@ -1791,6 +1795,7 @@ int x, y;
     /* add to floor chain */
     otmp->nobj = fobj;
     fobj = otmp;
+    nh_fobj_invalidate();
     if (otmp->timed)
         obj_timer_checks(otmp, x, y, 0);
 }
@@ -1924,6 +1929,7 @@ register struct obj *otmp;
     if (otmp->where != OBJ_FLOOR)
         panic("remove_object: obj not on floor");
     extract_nexthere(otmp, &level.objs[x][y]);
+    nh_fobj_invalidate();
     extract_nobj(otmp, &fobj);
     /* update vision iff this was the only boulder at its spot */
     if (otmp->otyp == BOULDER && !sobj_at(BOULDER, x, y))

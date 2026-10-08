@@ -1,0 +1,59 @@
+--- /puffertank/experiments/nethack-overnight-20260917/mask05-before/include/hack.h	2026-09-17 22:49:34.870501337 +0000
++++ /puffertank/experiments/nethack-overnight-20260917/engine-source/include/hack.h	2026-09-17 22:49:34.870583779 +0000
+@@ -598,7 +598,7 @@
+          if (set_typ_i_ >= 0 && set_typ_i_ < COLNO * ROWNO) \
+              (&nh_typ_plane[0][0])[set_typ_i_] = set_typ_v_; } while (0)
+ extern void NDECL(nh_typ_sync);
+-struct nh_fobj_cursor { unsigned long generation; int index, fallback; };
++struct nh_fobj_cursor { unsigned long generation; int index, fallback; unsigned int mask; int base, lx, hx, ly, hy; };
+ extern void NDECL(nh_fobj_invalidate);
+ extern struct obj *FDECL(nh_fobj_next, (struct nh_fobj_cursor *, struct obj *, int, int, int, int));
+ extern void FDECL(nh_typ_verify, (const char *));
+--- /puffertank/experiments/nethack-overnight-20260917/mask05-before/src/monmove.c	2026-09-17 22:49:34.870418385 +0000
++++ /puffertank/experiments/nethack-overnight-20260917/engine-source/src/monmove.c	2026-09-17 22:49:34.870732728 +0000
+@@ -804,6 +804,7 @@
+         if (!nh_fobj_valid) nh_fobj_build();
+         cursor->generation = nh_fobj_generation;
+         cursor->index = 0;
++        cursor->mask = 0;
+         cursor->fallback = nh_fobj_count < 0;
+     } else if (cursor->generation != nh_fobj_generation) {
+         cursor->fallback = 1;
+@@ -828,6 +829,15 @@
+     /* Reject eight coordinates at once; the first matching entry still wins. */
+     if (lx >= -32768 && hx <= 32767 && ly >= -32768 && hy <= 32767
+         && lx <= hx && ly <= hy) {
++        if (cursor->mask && cursor->lx == lx && cursor->hx == hx
++            && cursor->ly == ly && cursor->hy == hy) {
++            int bit = __builtin_ctz(cursor->mask);
++            int i = cursor->base + bit / 2;
++            cursor->mask &= ~(3U << bit);
++            cursor->index = i + 1;
++            return nh_fobj_ptr[i];
++        }
++        cursor->mask = 0;
+         __m128i xl = _mm_set1_epi16((short) lx), xh = _mm_set1_epi16((short) hx);
+         __m128i yl = _mm_set1_epi16((short) ly), yh = _mm_set1_epi16((short) hy);
+         while (cursor->index + 8 <= nh_fobj_count) {
+@@ -839,7 +849,12 @@
+                 _mm_or_si128(_mm_cmpgt_epi16(yl, y), _mm_cmpgt_epi16(y, yh)));
+             unsigned int mask = (~(unsigned int) _mm_movemask_epi8(reject)) & 65535U;
+             if (mask) {
+-                i += __builtin_ctz(mask) / 2;
++                int bit = __builtin_ctz(mask);
++                cursor->base = i;
++                cursor->mask = mask & ~(3U << bit);
++                cursor->lx = lx; cursor->hx = hx;
++                cursor->ly = ly; cursor->hy = hy;
++                i += bit / 2;
+                 cursor->index = i + 1;
+                 return nh_fobj_ptr[i];
+             }
+@@ -847,6 +862,7 @@
+         }
+     }
+ #endif
++    cursor->mask = 0;
+     while (cursor->index < nh_fobj_count) {
+         int i = cursor->index++;
+         if (nh_fobj_x[i] >= lx && nh_fobj_x[i] <= hx

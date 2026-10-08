@@ -1,0 +1,158 @@
+{
+  "input": "/puffertank/experiments/nethack-perf-20260917/expanded04-results.json",
+  "verification": [
+    {
+      "workload": "score",
+      "variant": "baseline",
+      "mode": "verify",
+      "rc": 0
+    },
+    {
+      "workload": "depth",
+      "variant": "candidate04",
+      "mode": "verify",
+      "rc": 0
+    },
+    {
+      "workload": "depth",
+      "variant": "candidate04",
+      "mode": "engine-verify",
+      "rc": 0
+    },
+    {
+      "workload": "score",
+      "variant": "candidate04",
+      "mode": "verify",
+      "rc": 0
+    },
+    {
+      "workload": "score",
+      "variant": "candidate04",
+      "mode": "engine-verify",
+      "rc": 0
+    }
+  ],
+  "incomplete_triplets": [],
+  "comparisons": {
+    "depth:baseline->candidate04": {
+      "completed_triplets": 3,
+      "median_throughput_change_percent": 5.376451559561968,
+      "min_ratio": 1.0507332315085869,
+      "max_ratio": 1.0558066255214074,
+      "baseline_drift_over_5_percent": false,
+      "triplets": [
+        {
+          "repeat": 0,
+          "throughput_ratio": 1.0507332315085869,
+          "baseline_drift_percent": -4.144567981639568,
+          "measured_seconds": [
+            3.563749,
+            3.321393,
+            3.416047
+          ],
+          "decisions": 1024000,
+          "keys": 2404560,
+          "maxrss_kb": [
+            613660,
+            614016,
+            613252
+          ]
+        },
+        {
+          "repeat": 1,
+          "throughput_ratio": 1.0537645155956197,
+          "baseline_drift_percent": -2.1903971954270185,
+          "measured_seconds": [
+            3.331131,
+            3.126551,
+            3.258166
+          ],
+          "decisions": 1024000,
+          "keys": 2404560,
+          "maxrss_kb": [
+            613560,
+            613712,
+            613188
+          ]
+        },
+        {
+          "repeat": 2,
+          "throughput_ratio": 1.0558066255214074,
+          "baseline_drift_percent": -0.36819235173874976,
+          "measured_seconds": [
+            3.337386,
+            3.155163,
+            3.325098
+          ],
+          "decisions": 1024000,
+          "keys": 2404560,
+          "maxrss_kb": [
+            613856,
+            613048,
+            613876
+          ]
+        }
+      ]
+    },
+    "score:baseline->candidate04": {
+      "completed_triplets": 3,
+      "median_throughput_change_percent": 3.4120599595027556,
+      "min_ratio": 0.9785944552259535,
+      "max_ratio": 1.0478155175446278,
+      "baseline_drift_over_5_percent": false,
+      "triplets": [
+        {
+          "repeat": 0,
+          "throughput_ratio": 0.9785944552259535,
+          "baseline_drift_percent": 0.7212384520699944,
+          "measured_seconds": [
+            14.066915,
+            14.426449,
+            14.168371
+          ],
+          "decisions": 1024000,
+          "keys": 2395062,
+          "maxrss_kb": [
+            568100,
+            567968,
+            567984
+          ]
+        },
+        {
+          "repeat": 1,
+          "throughput_ratio": 1.0341205995950276,
+          "baseline_drift_percent": -1.167198075230358,
+          "measured_seconds": [
+            14.274955,
+            13.723396,
+            14.108338
+          ],
+          "decisions": 1024000,
+          "keys": 2395062,
+          "maxrss_kb": [
+            568012,
+            568072,
+            568020
+          ]
+        },
+        {
+          "repeat": 2,
+          "throughput_ratio": 1.0478155175446278,
+          "baseline_drift_percent": -0.10132803470678242,
+          "measured_seconds": [
+            14.150082,
+            13.497522,
+            14.135744
+          ],
+          "decisions": 1024000,
+          "keys": 2395062,
+          "maxrss_kb": [
+            568400,
+            567980,
+            567932
+          ]
+        }
+      ]
+    }
+  }
+}

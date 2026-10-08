@@ -1,0 +1,12 @@
+--- a/src/monmove.c
++++ b/src/monmove.c
+@@ -345,7 +345,8 @@
+         seescaryy = u.uy;
+     }
+ 
+-    sawscary = onscary(seescaryx, seescaryy, mtmp);
++    sawscary = (*nearby || mtmp->isshk || mtmp->ispriest)
++        && onscary(seescaryx, seescaryy, mtmp);
+     if (*nearby && (sawscary
+                     || (flees_light(mtmp) && !bravegremlin)
+                     || (!mtmp->mpeaceful && in_your_sanctuary(mtmp, 0, 0)))) {

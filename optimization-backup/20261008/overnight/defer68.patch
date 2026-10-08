@@ -1,0 +1,19 @@
+--- a/src/mon.c
++++ b/src/mon.c
+@@ -1407,7 +1407,6 @@
+                 int dispx, dispy;
+                 boolean monseeu =
+                     (mon->mcansee && (!Invis || perceives(mdat)));
+-                boolean checkobj = OBJ_AT(nx, ny);
+ 
+                 /* Displacement also displaces the Elbereth/scare monster,
+                  * as long as you are visible.
+@@ -1471,7 +1470,7 @@
+                         info[cnt] |= ALLOW_SANCT;
+                     }
+                 }
+-                if (checkobj) {
++                if (OBJ_AT(nx, ny)) {
+                     /* one pass over the pile for both garlic and boulder
+                        (was two full sobj_at chain walks per candidate cell
+                        in the hottest steady-state function) */

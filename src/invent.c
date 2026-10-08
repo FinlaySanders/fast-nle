@@ -653,6 +653,7 @@ reorder_invent()
     struct obj *otmp, *prev, *next;
     boolean need_more_sorting;
 
+    nh_no_hero_gold = 0;
     do {
         /*
          * We expect at most one item to be out of order, so this
@@ -944,6 +945,7 @@ struct obj *obj;
     if (flags.invlet_constant || !prev) {
         obj->nobj = invent; /* insert at beginning */
         invent = obj;
+        nh_no_hero_gold = 0;
         if (flags.invlet_constant)
             reorder_invent();
     } else {
@@ -962,6 +964,7 @@ struct obj *obj;
         && (throwing_weapon(obj) || is_ammo(obj)))
         setuqwep(obj);
  added:
+    nh_no_hero_gold = 0;
     addinv_core2(obj);
     carry_obj_effects(obj); /* carrying affects the obj */
     update_inventory();
@@ -4022,6 +4025,7 @@ reassign()
         goldobj->invlet = GOLD_SYM;
         goldobj->nobj = invent;
         invent = goldobj;
+        nh_no_hero_gold = 0;
     }
     if (i >= 52)
         i = 52 - 1;
@@ -4276,6 +4280,7 @@ doorganize() /* inventory organizer by Del Lamb */
     obj->nobj = invent;
     obj->where = OBJ_INVENT;
     invent = obj;
+    nh_no_hero_gold = 0;
     reorder_invent();
     if (bumped) {
         /* splitting the 'from' stack is causing an incompatible
@@ -4285,6 +4290,7 @@ doorganize() /* inventory organizer by Del Lamb */
         bumped->nobj = invent;
         bumped->where = OBJ_INVENT;
         invent = bumped;
+        nh_no_hero_gold = 0;
         reorder_invent();
     }
 

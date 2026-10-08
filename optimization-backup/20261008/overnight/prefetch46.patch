@@ -1,0 +1,15 @@
+--- a/src/mon.c
++++ b/src/mon.c
+@@ -755,6 +755,12 @@
+             break;
+         }
+         nmtmp = mtmp->nmon;
++#if defined(__GNUC__)
++        if (nmtmp) {
++            __builtin_prefetch(nmtmp, 0, 3);
++            __builtin_prefetch((const char *) nmtmp + 64, 0, 3);
++        }
++#endif
+         /* one dead monster needs to perform a move after death: vault
+            guard whose temporary corridor is still on the map; live
+            guards who have led the hero back to civilization get moved

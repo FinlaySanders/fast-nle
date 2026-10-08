@@ -1,0 +1,10 @@
+{
+  "changed": [
+    "include/hack.h",
+    "include/nh_ctx_gen.h",
+    "tools/globals.def",
+    "src/monmove.c",
+    "src/mon.c"
+  ],
+  "unchanged": 637
+}

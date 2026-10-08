@@ -1,0 +1,27 @@
+diff --git a/win/rl/winrl.cc b/win/rl/winrl.cc
+index eeaf2f9bc..dc603f381 100644
+--- a/win/rl/winrl.cc
++++ b/win/rl/winrl.cc
+@@ -125,9 +125,7 @@ int
+ shuffled_glyph(int glyph)
+ {
+     if glyph_is_normal_object (glyph) {
+-        int obj = glyph_to_obj(glyph);
+-        if (!objects[obj].oc_name_known) return GLYPH_OBJ_OFF + gem_canon(objects[obj].oc_descr_idx);
+-        return GLYPH_OBJ_OFF + objects[obj].oc_descr_idx;
++        return GLYPH_OBJ_OFF + objects[glyph_to_obj(glyph)].oc_descr_idx;
+     }
+     return glyph;
+ }
+@@ -502,11 +500,6 @@ NetHackRL::fill_obs(nle_obs *obs)
+             dirty_rows_ = 0;
+         }
+     }
+-    if (obs->glyphs) { // eager identity mapping: every cell reflects the discoveries list now, not at its next
+-        // reprint. The screen buffer holds true glyphs; maybe_true_glyph hides the ones the player has not identified.
+-        for (int y = 0; y < ROWNO; y++) for (int x = 1; x < COLNO; x++)
+-            obs->glyphs[(size_t) y * (COLNO - 1) + (x - 1)] = maybe_true_glyph(glyph_at(x, y));
+-    }
+     if (obs->glyphs && nle_underfoot_glyphs() && u.ux >= 1 && u.ux < COLNO
+         && u.uy >= 0 && u.uy < ROWNO) {
+         // Hero tile shows what the hero stands on (top object, else terrain)

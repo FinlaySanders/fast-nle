@@ -1,0 +1,44 @@
+--- a/src/monmove.c
++++ b/src/monmove.c
+@@ -152,6 +152,12 @@
+     if (x == 0 && y == 0)
+         return TRUE;
+ 
++    return nh_onscary_tile(x, y, mtmp);
++}
++
++boolean
++nh_onscary_tile(int x, int y, struct monst *mtmp)
++{
+     /* should this still be true for defiled/molochian altars? */
+     if (IS_ALTAR(TYP_AT(x, y))
+         && (mtmp->data->mlet == S_VAMPIRE || is_vampshifter(mtmp)))
+--- a/src/mon.c
++++ b/src/mon.c
+@@ -1306,6 +1306,7 @@
+     boolean rockok = FALSE, treeok = FALSE, thrudoor;
+     int maxx, maxy;
+     boolean poisongas_ok, in_poisongas;
++    boolean can_scare = onscary(0, 0, mon);
+     NhRegion *gas_reg;
+     int gas_glyph = cmap_to_glyph(S_poisoncloud);
+ 
+@@ -1422,7 +1423,7 @@
+                 }
+ 
+                 info[cnt] = 0;
+-                if (onscary(dispx, dispy, mon)) {
++                if (can_scare && nh_onscary_tile(dispx, dispy, mon)) {
+                     if (!(flag & ALLOW_SSM))
+                         continue;
+                     info[cnt] |= ALLOW_SSM;
+--- a/include/extern.h
++++ b/include/extern.h
+@@ -1539,6 +1539,7 @@
+ E void FDECL(mon_regen, (struct monst *, BOOLEAN_P));
+ E int FDECL(dochugw, (struct monst *));
+ E boolean FDECL(onscary, (int, int, struct monst *));
++E boolean FDECL(nh_onscary_tile, (int, int, struct monst *));
+ E void FDECL(monflee, (struct monst *, int, BOOLEAN_P, BOOLEAN_P));
+ E void FDECL(mon_yells, (struct monst *, const char *));
+ E int FDECL(dochug, (struct monst *));

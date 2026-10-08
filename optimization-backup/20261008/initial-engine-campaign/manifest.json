@@ -1,0 +1,9 @@
+{
+  "start_utc": "2026-09-17T09:59:32Z",
+  "deadline_utc": "2026-09-17T17:59:32Z",
+  "engine": "e7f656856",
+  "puffer_head": "78f446fe",
+  "dirty_snapshot": "source",
+  "engine_sha256": "a3a4c32fc0c9107f748ccb8255d4901b85dd80beb9786fa851cd1f8f08f056a2",
+  "phase": "baseline checks and harness"
+}

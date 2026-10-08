@@ -1,0 +1,94 @@
+--- a/include/nh_ctx_gen.h
++++ b/include/nh_ctx_gen.h
+@@ -483,6 +483,9 @@
+     unsigned long g_nh_fobj_generation; /* global: nh_fobj_generation */
+     int g_nh_fobj_valid; /* global: nh_fobj_valid */
+     int g_nh_fobj_count; /* global: nh_fobj_count */
++    int g_nh_fobj_spatial; /* global: nh_fobj_spatial */
++    unsigned long long g_nh_fobj_px[COLNO+1][32]; /* global: nh_fobj_px */
++    unsigned long long g_nh_fobj_py[ROWNO+1][32]; /* global: nh_fobj_py */
+     short g_nh_fobj_x[2048]; /* global: nh_fobj_x */
+     short g_nh_fobj_y[2048]; /* global: nh_fobj_y */
+     struct obj * g_nh_fobj_ptr[2048]; /* global: nh_fobj_ptr */
+@@ -650,6 +653,9 @@
+ #define nh_fobj_generation (nh_cur->g_nh_fobj_generation)
+ #define nh_fobj_valid (nh_cur->g_nh_fobj_valid)
+ #define nh_fobj_count (nh_cur->g_nh_fobj_count)
++#define nh_fobj_spatial (nh_cur->g_nh_fobj_spatial)
++#define nh_fobj_px (nh_cur->g_nh_fobj_px)
++#define nh_fobj_py (nh_cur->g_nh_fobj_py)
+ #define nh_fobj_x (nh_cur->g_nh_fobj_x)
+ #define nh_fobj_y (nh_cur->g_nh_fobj_y)
+ #define nh_fobj_ptr (nh_cur->g_nh_fobj_ptr)
+--- a/src/monmove.c
++++ b/src/monmove.c
+@@ -786,12 +786,27 @@
+ nh_fobj_build(void)
+ {
+     struct obj *o;
+-    int n = 0;
++    int n = 0, c, word;
++    nh_fobj_spatial = 1;
++    memset(nh_fobj_px, 0, sizeof(nh_fobj_px));
++    memset(nh_fobj_py, 0, sizeof(nh_fobj_py));
+     for (o = fobj; o; o = o->nobj) {
+         if (n == 2048) { nh_fobj_count = -1; nh_fobj_valid = 1; return; }
+         nh_fobj_ptr[n] = o;
+         nh_fobj_x[n] = o->ox; nh_fobj_y[n] = o->oy;
++        if (o->ox >= 0 && o->ox < COLNO && o->oy >= 0 && o->oy < ROWNO) {
++            nh_fobj_px[o->ox + 1][n / 64] |= 1ULL << (n % 64);
++            nh_fobj_py[o->oy + 1][n / 64] |= 1ULL << (n % 64);
++        } else nh_fobj_spatial = 0;
+         n++;
++    }
++    if (nh_fobj_spatial) {
++        for (c = 1; c <= COLNO; c++)
++            for (word = 0; word < (n + 63) / 64; word++)
++                nh_fobj_px[c][word] |= nh_fobj_px[c - 1][word];
++        for (c = 1; c <= ROWNO; c++)
++            for (word = 0; word < (n + 63) / 64; word++)
++                nh_fobj_py[c][word] |= nh_fobj_py[c - 1][word];
+     }
+     nh_fobj_count = n; nh_fobj_valid = 1;
+ }
+@@ -824,6 +839,28 @@
+                 || nh_fobj_x[n] != o->ox || nh_fobj_y[n] != o->oy)
+                 panic("floor index mismatch at %d", n);
+         if (n != nh_fobj_count) panic("floor index count mismatch");
++    }
++#endif
++#if defined(__GNUC__)
++    if (nh_fobj_spatial) {
++        int xl = max(lx, 0), xh = min(hx, COLNO - 1);
++        int yl = max(ly, 0), yh = min(hy, ROWNO - 1);
++        if (xl > xh || yl > yh) return (struct obj *) 0;
++        cursor->mask = 0;
++        while (cursor->index < nh_fobj_count) {
++            int word = cursor->index / 64;
++            unsigned long long mask =
++                (nh_fobj_px[xh + 1][word] ^ nh_fobj_px[xl][word])
++                & (nh_fobj_py[yh + 1][word] ^ nh_fobj_py[yl][word]);
++            mask &= ~0ULL << (cursor->index % 64);
++            if (mask) {
++                int i = word * 64 + __builtin_ctzll(mask);
++                cursor->index = i + 1;
++                return nh_fobj_ptr[i];
++            }
++            cursor->index = (word + 1) * 64;
++        }
++        return (struct obj *) 0;
+     }
+ #endif
+ #ifdef __SSE2__
+--- a/tools/globals.def
++++ b/tools/globals.def
+@@ -574,6 +574,9 @@
+ global | cold | unsigned long | nh_fobj_generation | | 0
+ global | cold | int | nh_fobj_valid | | 0
+ global | cold | int | nh_fobj_count | | 0
++global | cold | int | nh_fobj_spatial | | 0
++global | cold | unsigned long long | nh_fobj_px | [COLNO+1][32] | 0
++global | cold | unsigned long long | nh_fobj_py | [ROWNO+1][32] | 0
+ global | cold | short | nh_fobj_x | [2048] | 0
+ global | cold | short | nh_fobj_y | [2048] | 0
+ global | cold | struct obj * | nh_fobj_ptr | [2048] | 0

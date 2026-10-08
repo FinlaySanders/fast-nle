@@ -1,0 +1,11 @@
+--- a/src/env_pool.h
++++ b/src/env_pool.h
+@@ -29,6 +29,8 @@
+     for (int k = 0; k < p->workers; k++) {
+         int home = (id + k) % p->workers;
+         for (;;) {
++            int seen = __atomic_load_n(&r->next[home * 16], __ATOMIC_RELAXED);
++            if (home + seen * p->workers >= r->count) break;
+             int n = __atomic_fetch_add(&r->next[home * 16], 1, __ATOMIC_RELAXED);
+             int offset = home + n * p->workers;
+             if (offset >= r->count) break;

@@ -125,6 +125,7 @@ find_lev_obj()
      * place the objects in the proper order.  Make all obj in chain
      * OBJ_FREE so place_object will work correctly.
      */
+    nh_fobj_invalidate();
     while ((otmp = fobj) != 0) {
         fobj = otmp->nobj;
         otmp->nobj = fobjtmp;
@@ -695,6 +696,7 @@ unsigned int *stuckid, *steedid;
     restore_timers(fd, RANGE_GLOBAL, FALSE, 0L);
     restore_light_sources(fd);
     invent = restobjchn(fd, FALSE, FALSE);
+    nh_no_hero_gold = 0;
 
     /* restore dangling (not on floor or in inventory) ball and/or chain */
     bc_obj = restobjchn(fd, FALSE, FALSE);
@@ -1264,6 +1266,7 @@ boolean ghostly;
         ftrap = trap;
     }
     dealloc_trap(trap);
+    nh_fobj_invalidate();
     fobj = restobjchn(fd, ghostly, FALSE);
     find_lev_obj();
     /* restobjchn()'s `frozen' argument probably ought to be a callback

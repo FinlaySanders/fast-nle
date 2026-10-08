@@ -1,3 +1,6 @@
+#ifdef __SSE2__
+#include <emmintrin.h>
+#endif
 /* Copyright (c) Facebook, Inc. and its affiliates. */
 #include <array>
 #include <cassert>
@@ -109,18 +112,14 @@ namespace nethack_rl
 // stones, amethyst/violet glass) are not shuffled, so the description slot would name the true type. Canonical twin =
 // the lowest index with that description in the class, the worthless glass for gems. Shuffled classes have unique
 // descriptions within the class, so this is the identity there.
+#include "appearance_canon.h"
+static_assert(sizeof(nle_appearance_canon) / sizeof(nle_appearance_canon[0]) == NUM_OBJECTS + 1,
+              "appearance table must match object definitions");
 static int gem_canon(int slot)
 {
-    static short canon[NUM_OBJECTS + 1]; static bool init = false;
-    if (!init) { init = true;
-        for (int i = 0; i <= NUM_OBJECTS; i++) canon[i] = i;
-        for (int i = 0; i < NUM_OBJECTS; i++) { if (!obj_descr[i].oc_descr || !obj_descr[i].oc_descr[0]) continue;
-            int best = -1;
-            for (int j = 0; j < NUM_OBJECTS; j++) { if (objects[j].oc_class != objects[i].oc_class || !obj_descr[j].oc_descr || strcmp(obj_descr[i].oc_descr, obj_descr[j].oc_descr)) continue;
-                if (best < 0) best = j; if (objects[j].oc_class == GEM_CLASS && obj_descr[j].oc_name && !strncmp(obj_descr[j].oc_name, "worthless", 9)) best = j; }
-            if (best >= 0) canon[i] = best; } }
-    return canon[slot];
+    return nle_appearance_canon[slot];
 }
+
 int
 shuffled_glyph(int glyph)
 {
@@ -504,8 +503,25 @@ NetHackRL::fill_obs(nle_obs *obs)
     }
     if (obs->glyphs) { // eager identity mapping: every cell reflects the discoveries list now, not at its next
         // reprint. The screen buffer holds true glyphs; maybe_true_glyph hides the ones the player has not identified.
-        for (int y = 0; y < ROWNO; y++) for (int x = 1; x < COLNO; x++)
-            obs->glyphs[(size_t) y * (COLNO - 1) + (x - 1)] = maybe_true_glyph(glyph_at(x, y));
+        nle_copy_glyphs(obs->glyphs);
+        int i = 0;
+#ifdef __SSE2__
+        const __m128i lo = _mm_set1_epi16(GLYPH_OBJ_OFF - 1);
+        const __m128i hi = _mm_set1_epi16(GLYPH_OBJ_OFF + NUM_OBJECTS);
+        for (; i + 8 <= ROWNO * (COLNO - 1); i += 8) {
+            const __m128i g = _mm_loadu_si128((const __m128i *) (obs->glyphs + i));
+            unsigned int mask = _mm_movemask_epi8(_mm_and_si128(
+                _mm_cmpgt_epi16(g, lo), _mm_cmpgt_epi16(hi, g)));
+            while (mask) {
+                unsigned int bit = __builtin_ctz(mask);
+                int j = i + bit / 2;
+                obs->glyphs[j] = maybe_true_glyph(obs->glyphs[j]);
+                mask &= ~(3U << (bit & ~1U));
+            }
+        }
+#endif
+        for (; i < ROWNO * (COLNO - 1); i++)
+            obs->glyphs[i] = maybe_true_glyph(obs->glyphs[i]);
     }
     if (obs->glyphs && nle_underfoot_glyphs() && u.ux >= 1 && u.ux < COLNO
         && u.uy >= 0 && u.uy < ROWNO) {

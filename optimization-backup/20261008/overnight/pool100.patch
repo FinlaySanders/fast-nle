@@ -1,0 +1,62 @@
+--- a/src/env_pool.h
++++ b/src/env_pool.h
+@@ -4,12 +4,15 @@
+ #include <stdlib.h>
+ #include <assert.h>
+ #include <sched.h>
++#include <time.h>
++#include <stdio.h>
+ 
+ typedef struct {
+     pthread_mutex_t mu;
+     pthread_cond_t quiet;
+     int active, readers, start, count, done;
+     int* next;
++    unsigned long long calls, measured, claim_ns, wait_ns, drain_ns, yields;
+ } EPRegion;
+ typedef struct EnvPool EnvPool;
+ typedef struct { EnvPool* pool; int id; } EPWorker;
+@@ -90,6 +93,11 @@
+ 
+ /* One submitting thread per region. Readers lease the region until all
+  * accesses to its generation's counters have finished. */
++static unsigned long long ep_now_ns(void) {
++    struct timespec ts; clock_gettime(CLOCK_MONOTONIC, &ts);
++    return (unsigned long long)ts.tv_sec * 1000000000ULL + ts.tv_nsec;
++}
++
+ static void ep_run(EnvPool* p, int buffer, int start, int count) {
+     assert(buffer >= 0 && buffer < p->buffers && count >= 0);
+     EPRegion* r = &p->region[buffer];
+@@ -103,12 +111,21 @@
+     pthread_mutex_lock(&p->mu);
+     p->epoch++; pthread_cond_broadcast(&p->ready);
+     pthread_mutex_unlock(&p->mu);
++    int capture = r->calls++ >= 8192;
++    unsigned long long t0 = capture ? ep_now_ns() : 0, spins = 0;
+     ep_claim(p, r, buffer % p->workers);
+-    while (__atomic_load_n(&r->done, __ATOMIC_ACQUIRE) < count) sched_yield();
++    unsigned long long t1 = capture ? ep_now_ns() : 0;
++    while (__atomic_load_n(&r->done, __ATOMIC_ACQUIRE) < count) { spins++; sched_yield(); }
++    unsigned long long t2 = capture ? ep_now_ns() : 0;
+     pthread_mutex_lock(&r->mu);
+     r->active = 0;
+     while (r->readers) pthread_cond_wait(&r->quiet, &r->mu);
+     pthread_mutex_unlock(&r->mu);
++    if (capture) {
++        unsigned long long t3 = ep_now_ns();
++        r->measured++; r->claim_ns += t1-t0; r->wait_ns += t2-t1;
++        r->drain_ns += t3-t2; r->yields += spins;
++    }
+ }
+ 
+ /* Submitters must be joined before destroying the pool or its environments. */
+@@ -119,6 +136,8 @@
+     for (int w = 0; w < p->workers; w++) pthread_join(p->threads[w], NULL);
+     for (int b = 0; b < p->buffers; b++) {
+         assert(!p->region[b].active && !p->region[b].readers);
++        EPRegion* r = &p->region[b];
++        fprintf(stderr, "POOL_WAIT buffer=%d calls=%llu measured=%llu claim_ns=%llu wait_ns=%llu drain_ns=%llu yields=%llu\n", b, r->calls, r->measured, r->claim_ns, r->wait_ns, r->drain_ns, r->yields);
+         pthread_mutex_destroy(&p->region[b].mu);
+         pthread_cond_destroy(&p->region[b].quiet);
+         free(p->region[b].next);

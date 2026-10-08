@@ -1,0 +1,27 @@
+[
+  {
+    "case": "valid_prefix",
+    "expected_accept": true,
+    "returncode": 0
+  },
+  {
+    "case": "corrupt_payload",
+    "expected_accept": false,
+    "returncode": 1
+  },
+  {
+    "case": "truncated_payload",
+    "expected_accept": false,
+    "returncode": 1
+  },
+  {
+    "case": "duplicate",
+    "expected_accept": false,
+    "returncode": 1
+  },
+  {
+    "case": "missing_first_event",
+    "expected_accept": false,
+    "returncode": 1
+  }
+]

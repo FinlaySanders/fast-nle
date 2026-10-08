@@ -1,0 +1,17 @@
+--- a/src/mthrowu.c
++++ b/src/mthrowu.c
+@@ -1106,6 +1106,14 @@
+                               && U_AP_TYPE != M_AP_MONSTER)))
+         return FALSE;
+ 
++    /* Preserve the direction outputs even for a rejected firing line. */
++    tbx = mtmp->mux - mtmp->mx;
++    tby = mtmp->muy - mtmp->my;
++    if ((!tbx && !tby)
++        || (tbx && tby && abs(tbx) != abs(tby))
++        || abs(tbx) >= BOLT_LIM || abs(tby) >= BOLT_LIM)
++        return FALSE;
++
+     ignore_boulders = (throws_rocks(mtmp->data)
+                        || m_carrying(mtmp, WAN_STRIKING));
+     return linedup(mtmp->mux, mtmp->muy, mtmp->mx, mtmp->my,

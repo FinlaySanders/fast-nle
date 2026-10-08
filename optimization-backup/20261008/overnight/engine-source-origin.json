@@ -1,0 +1,4 @@
+{
+  "source": "/puffertank/experiments/nethack-perf-20260917/engine-glyph-simd",
+  "scope": "candidate08 retained engine source; candidate14 build flags; all build directories excluded"
+}

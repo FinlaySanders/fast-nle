@@ -1,0 +1,11 @@
+--- a/src/monmove.c
++++ b/src/monmove.c
+@@ -1112,7 +1112,7 @@
+                  * searches_for_item().  We need to do this check in
+                  * mpickstuff() as well.
+                  */
+-                if (xx >= lmx && xx <= oomx && yy >= lmy && yy <= oomy) {
++                { /* nh_fobj_next already checked these live bounds. */
+                     /* don't get stuck circling around object that's
+                        underneath an immobile or hidden monster;
+                        paralysis victims excluded */

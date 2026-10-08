@@ -1,0 +1,20 @@
+--- a/src/mon.c
++++ b/src/mon.c
+@@ -1249,7 +1249,7 @@
+      *
+      * ...dragons, of course, can always carry gold pieces and gems somehow
+      */
+-    if (iquan > 1) {
++    if (iquan > 1 && (mdat->mflags1 & M1_NOHANDS)) {
+         boolean glomper = FALSE;
+ 
+         if (mtmp->data->mlet == S_DRAGON
+@@ -1261,7 +1261,7 @@
+                     glomper = TRUE;
+                     break;
+                 }
+-        if ((mtmp->data->mflags1 & M1_NOHANDS) && !glomper)
++        if (!glomper)
+             return 1;
+     }
+ 

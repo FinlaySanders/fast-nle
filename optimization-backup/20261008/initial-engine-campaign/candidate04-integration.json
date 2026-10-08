@@ -1,0 +1,383 @@
+[
+  {
+    "kind": "live-eval",
+    "workload": "depth",
+    "command": [
+      "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/source/puffer",
+      "eval",
+      "--headless",
+      "--env.dr=0",
+      "--env.num_agents=1",
+      "--env.num_bots=0",
+      "--env.gold_coef=0.0953414813",
+      "--env.exp_coef=9.99999975e-05",
+      "--env.descent_coef=0.807671428",
+      "--env.floor_coef=0.463313729",
+      "--env.xp_coef=0.0555660129",
+      "--env.scout_coef=0.0192291923",
+      "--env.death_penalty=-0.580139101",
+      "--env.mask_search20=1",
+      "--env.mask_run=1",
+      "--env.multi_role=1",
+      "--env.score_coef=0",
+      "--policy.hidden_size=512",
+      "--policy.num_layers=3",
+      "--base.load_model_path=/puffertank/experiments/depth4b-20260916/checkpoints/nethack/depth4b_s901/0000003999989760.bin",
+      "--base.eval_agents=8",
+      "--base.eval_episodes=16",
+      "--base.seed=7",
+      "--vec.num_threads=4",
+      "--vec.num_buffers=1",
+      "--base.async=0"
+    ],
+    "files": [
+      {
+        "path": "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/candidate-live/traces/env00000.trace",
+        "sha256": "7602a5c4ada19022740ff8f0d5a5befd8f4694d4a4ef6ec21b2ae40d1fbc4558",
+        "bytes": 752536
+      },
+      {
+        "path": "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/candidate-live/traces/env00001.trace",
+        "sha256": "7a4fba597b8a052e19f7cc71a376510721b8bb1f6005a606b567e6a46c04d40b",
+        "bytes": 790168
+      },
+      {
+        "path": "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/candidate-live/traces/env00002.trace",
+        "sha256": "bed116b02438f74a348537e9904b358f2c34690bf6f48a72d22ab954b06a9e8e",
+        "bytes": 768902
+      },
+      {
+        "path": "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/candidate-live/traces/env00003.trace",
+        "sha256": "b5e90bb3f2f92feb0a89780889fc844749e0741be7c145b6adf53d3df549f289",
+        "bytes": 823866
+      },
+      {
+        "path": "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/candidate-live/traces/env00004.trace",
+        "sha256": "2a7fd890c3e038b268863492dad06f94b05d0e215e2d3228bc98227778a33519",
+        "bytes": 763792
+      },
+      {
+        "path": "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/candidate-live/traces/env00005.trace",
+        "sha256": "b09cb06adff7e477fc4b44145f4f3c067fd158520324e4cb7b9a9b16a180cf57",
+        "bytes": 784267
+      },
+      {
+        "path": "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/candidate-live/traces/env00006.trace",
+        "sha256": "2cc175d31f4d8ef4760a2d72dba15e9ec595f7d8d9789f75e7e8d0929ee9b2bc",
+        "bytes": 782748
+      },
+      {
+        "path": "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/candidate-live/traces/env00007.trace",
+        "sha256": "8d9ef7116019a9e9fda7d024e5c82fef18324100ed742b59d87a3e7ce3d81b50",
+        "bytes": 733181
+      },
+      {
+        "path": "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/candidate-live/observations/env00000.obs",
+        "sha256": "a9c3a4de3a741174e6b18649d46517f515199b61d41639ff542e12d7120f4c71",
+        "bytes": 93709735
+      },
+      {
+        "path": "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/candidate-live/observations/env00001.obs",
+        "sha256": "384e8634c3bf2f9c361e4dc134f2680f1165cc4bfd9c9f44f6663a6a67521dc4",
+        "bytes": 106350631
+      },
+      {
+        "path": "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/candidate-live/observations/env00002.obs",
+        "sha256": "c53b82cfd7b2916fa8810f1012024196721eafcbe79a9d1c1f1d58a55d8c9419",
+        "bytes": 99196688
+      },
+      {
+        "path": "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/candidate-live/observations/env00003.obs",
+        "sha256": "07b7a6cb75e31b7f3e4587e8bebc75b11d5cf21425ccdb4e745980510e53c7e6",
+        "bytes": 95603483
+      },
+      {
+        "path": "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/candidate-live/observations/env00004.obs",
+        "sha256": "1111e859acb0a9e210c09a6cc7ff9d31ef88f28b9334773cf9be3eeb482635ea",
+        "bytes": 97486123
+      },
+      {
+        "path": "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/candidate-live/observations/env00005.obs",
+        "sha256": "6824fdf4303d93578702a16039f6cef4a6d2df1dd9fd3dd2010df6e44afc1399",
+        "bytes": 93342512
+      },
+      {
+        "path": "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/candidate-live/observations/env00006.obs",
+        "sha256": "7264dea74d1a43aaa5735ef3d8afcea55d069004c2a99a41f39ec57fe8dabd81",
+        "bytes": 103842021
+      },
+      {
+        "path": "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/candidate-live/observations/env00007.obs",
+        "sha256": "389d6aa331f5179c15bed274ab2f64ae5009756928379f7c4a038d67e5da6c2a",
+        "bytes": 98236786
+      }
+    ]
+  },
+  {
+    "kind": "live-eval",
+    "workload": "score",
+    "command": [
+      "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/source/puffer",
+      "eval",
+      "--headless",
+      "--base.load_model_path=/puffertank/pufferlib/resources/nethack/fixwt4b_s705.bin",
+      "--policy.hidden_size=1024",
+      "--policy.num_layers=4",
+      "--env.multi_role=1",
+      "--env.mask_search20=0",
+      "--env.mask_run=0",
+      "--base.seed=7",
+      "--base.async=0",
+      "--vec.num_buffers=1",
+      "--base.eval_agents=8",
+      "--base.eval_episodes=16",
+      "--vec.num_threads=4"
+    ],
+    "files": [
+      {
+        "path": "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/candidate-live/traces/env00000.trace",
+        "sha256": "2453af43c641ddaa3b386d2a2ae06839b48997aeb74228efc74efe76f378be0e",
+        "bytes": 1460857
+      },
+      {
+        "path": "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/candidate-live/traces/env00001.trace",
+        "sha256": "af5e785f1f9008660f5777f172e7512426f5d7e140c28b9212992d55b9b36801",
+        "bytes": 1490883
+      },
+      {
+        "path": "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/candidate-live/traces/env00002.trace",
+        "sha256": "c767259877194ec272c40a32e6fd861c4ec3d1e2468c15b82271b94c2e30f301",
+        "bytes": 1456932
+      },
+      {
+        "path": "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/candidate-live/traces/env00003.trace",
+        "sha256": "954acb892947fc645e28342cc8f71eedfc298d08840ee13af4e2393761b8e140",
+        "bytes": 1482672
+      },
+      {
+        "path": "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/candidate-live/traces/env00004.trace",
+        "sha256": "d74c50d51ede11c696ec888a59a649b3b5dee2ff0a45cc29e3d662110b4dccc2",
+        "bytes": 1389281
+      },
+      {
+        "path": "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/candidate-live/traces/env00005.trace",
+        "sha256": "ab9f3cc38493d694bb82d13d9bad82d079c4d66ab11e437130f0827853f6047b",
+        "bytes": 1448001
+      },
+      {
+        "path": "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/candidate-live/traces/env00006.trace",
+        "sha256": "2a2ea6ada7cf405b1ac4e0fb89bcca11971ac99aaa50bb9a43f151da22c6e52c",
+        "bytes": 1465766
+      },
+      {
+        "path": "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/candidate-live/traces/env00007.trace",
+        "sha256": "b6309f726b42ec262165df6d28e730366249dc83b108f7813498651ce07b21d9",
+        "bytes": 1501375
+      },
+      {
+        "path": "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/candidate-live/observations/env00000.obs",
+        "sha256": "2d055f9114bacb8ae9c8997e1123816f6d0af8ef1cea840106dba916812d9319",
+        "bytes": 204193609
+      },
+      {
+        "path": "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/candidate-live/observations/env00001.obs",
+        "sha256": "77e7731775f86dd7e45565e00ac9d59821920a38fb97cab032f24dafbb8d40b1",
+        "bytes": 214263977
+      },
+      {
+        "path": "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/candidate-live/observations/env00002.obs",
+        "sha256": "2ad9ca9636a8c12b800c36e72866eaad8ed3c6c9bc1b4de3f2e34f3359f09669",
+        "bytes": 202878449
+      },
+      {
+        "path": "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/candidate-live/observations/env00003.obs",
+        "sha256": "11abe5d3fc9e6514a70cad7b64baeb536d53edd7b9b522229961dea278535049",
+        "bytes": 200492373
+      },
+      {
+        "path": "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/candidate-live/observations/env00004.obs",
+        "sha256": "0bd8543e62a31dd21a5c6adc85b4c3e65f7125cdbdaace27a1b45d3faa5124fc",
+        "bytes": 202206778
+      },
+      {
+        "path": "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/candidate-live/observations/env00005.obs",
+        "sha256": "ea9c01a0ecf707c92ebb63d3c9f3b1a3d52b3697b475177443822ee4b5332152",
+        "bytes": 199877066
+      },
+      {
+        "path": "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/candidate-live/observations/env00006.obs",
+        "sha256": "b35c440fe21e7e76d345605e361c79e35f8f1767d86850598c95ea2ba298c028",
+        "bytes": 205842256
+      },
+      {
+        "path": "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/candidate-live/observations/env00007.obs",
+        "sha256": "548c4b11e149f425cd27ce4e79dfd11fb6fe7fb072d511d0cede9aa1d1c9edfa",
+        "bytes": 206772262
+      }
+    ]
+  },
+  {
+    "kind": "short-training",
+    "variant": "baseline",
+    "command": [
+      "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/source/puffer",
+      "train",
+      "--headless",
+      "--base.env_name=nethack",
+      "--base.gpu_offset=0",
+      "--base.profile=False",
+      "--base.checkpoint_dir=checkpoints",
+      "--base.log_dir=logs",
+      "--base.checkpoint_interval=250",
+      "--base.eval_episodes=64",
+      "--base.eval_agents=64",
+      "--base.load_model_path=None",
+      "--base.load_enemy_model_path=None",
+      "--base.result_fd=0",
+      "--base.cudagraphs=1",
+      "--base.reset_every_horizon=0",
+      "--base.async=1",
+      "--vec.total_agents=256",
+      "--vec.num_buffers=4",
+      "--vec.num_threads=24",
+      "--vec.num_policies=1",
+      "--vec.hist_policy_hidden_size=0",
+      "--vec.hist_policy_num_layers=0",
+      "--vec.hist_policy_percent=0",
+      "--env.dr=0",
+      "--env.num_agents=1",
+      "--env.num_bots=0",
+      "--env.gold_coef=0.0953414813",
+      "--env.exp_coef=9.99999975e-05",
+      "--env.descent_coef=0.807671428",
+      "--env.floor_coef=0.463313729",
+      "--env.xp_coef=0.0555660129",
+      "--env.scout_coef=0.0192291923",
+      "--env.death_penalty=-0.580139101",
+      "--env.mask_search20=1",
+      "--env.mask_run=1",
+      "--env.multi_role=1",
+      "--env.score_coef=0",
+      "--policy.hidden_size=512",
+      "--policy.num_layers=3",
+      "--train.gpus=1",
+      "--train.learning_rate=0.000608655275",
+      "--train.anneal_lr=1",
+      "--train.min_lr_ratio=0.0",
+      "--train.gamma=0.998621047",
+      "--train.gae_lambda=0.536597371",
+      "--train.replay_ratio=1.91373289",
+      "--train.clip_coef=0.175347924",
+      "--train.vf_coef=1.45746601",
+      "--train.vf_clip_coef=0.00999999978",
+      "--train.max_grad_norm=1.23201728",
+      "--train.ent_coef=0.00844300818",
+      "--train.anneal_ent_coef=0",
+      "--train.min_ent_coef_ratio=0.1",
+      "--train.momentum=0.984448254",
+      "--train.minibatch_size=4096",
+      "--train.horizon=256",
+      "--train.vtrace=0",
+      "--train.vtrace_rho_clip=1.0",
+      "--train.vtrace_c_clip=1.0",
+      "--train.verb_eps=0.005",
+      "--train.verb_eps_anneal_start=0.4",
+      "--train.verb_eps_anneal_end=1.0",
+      "--selfplay.enabled=0",
+      "--train.total_timesteps=524288",
+      "--base.seed=900",
+      "--base.run_id=perf_smoke",
+      "--base.eval_episodes=8",
+      "--base.eval_agents=8",
+      "--base.load_model_path=/puffertank/experiments/depth4b-20260916/checkpoints/nethack/depth4b_s901/0000003999989760.bin",
+      "--base.checkpoint_dir=/puffertank/experiments/nethack-perf-20260917/training-smoke-baseline/checkpoints",
+      "--base.log_dir=/puffertank/experiments/nethack-perf-20260917/training-smoke-baseline/logs"
+    ],
+    "checkpoint": "/puffertank/experiments/nethack-perf-20260917/training-smoke-baseline/checkpoints/nethack/perf_smoke/0000000000524288.bin",
+    "sha256": "ff6d1f450533159dcd32a6de95ae8d600943dfa40c74385b35987781c1125b52",
+    "checkpoint_step": 524288,
+    "returncode": 0
+  },
+  {
+    "kind": "short-training",
+    "variant": "candidate04",
+    "command": [
+      "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/source/puffer",
+      "train",
+      "--headless",
+      "--base.env_name=nethack",
+      "--base.gpu_offset=0",
+      "--base.profile=False",
+      "--base.checkpoint_dir=checkpoints",
+      "--base.log_dir=logs",
+      "--base.checkpoint_interval=250",
+      "--base.eval_episodes=64",
+      "--base.eval_agents=64",
+      "--base.load_model_path=None",
+      "--base.load_enemy_model_path=None",
+      "--base.result_fd=0",
+      "--base.cudagraphs=1",
+      "--base.reset_every_horizon=0",
+      "--base.async=1",
+      "--vec.total_agents=256",
+      "--vec.num_buffers=4",
+      "--vec.num_threads=24",
+      "--vec.num_policies=1",
+      "--vec.hist_policy_hidden_size=0",
+      "--vec.hist_policy_num_layers=0",
+      "--vec.hist_policy_percent=0",
+      "--env.dr=0",
+      "--env.num_agents=1",
+      "--env.num_bots=0",
+      "--env.gold_coef=0.0953414813",
+      "--env.exp_coef=9.99999975e-05",
+      "--env.descent_coef=0.807671428",
+      "--env.floor_coef=0.463313729",
+      "--env.xp_coef=0.0555660129",
+      "--env.scout_coef=0.0192291923",
+      "--env.death_penalty=-0.580139101",
+      "--env.mask_search20=1",
+      "--env.mask_run=1",
+      "--env.multi_role=1",
+      "--env.score_coef=0",
+      "--policy.hidden_size=512",
+      "--policy.num_layers=3",
+      "--train.gpus=1",
+      "--train.learning_rate=0.000608655275",
+      "--train.anneal_lr=1",
+      "--train.min_lr_ratio=0.0",
+      "--train.gamma=0.998621047",
+      "--train.gae_lambda=0.536597371",
+      "--train.replay_ratio=1.91373289",
+      "--train.clip_coef=0.175347924",
+      "--train.vf_coef=1.45746601",
+      "--train.vf_clip_coef=0.00999999978",
+      "--train.max_grad_norm=1.23201728",
+      "--train.ent_coef=0.00844300818",
+      "--train.anneal_ent_coef=0",
+      "--train.min_ent_coef_ratio=0.1",
+      "--train.momentum=0.984448254",
+      "--train.minibatch_size=4096",
+      "--train.horizon=256",
+      "--train.vtrace=0",
+      "--train.vtrace_rho_clip=1.0",
+      "--train.vtrace_c_clip=1.0",
+      "--train.verb_eps=0.005",
+      "--train.verb_eps_anneal_start=0.4",
+      "--train.verb_eps_anneal_end=1.0",
+      "--selfplay.enabled=0",
+      "--train.total_timesteps=524288",
+      "--base.seed=900",
+      "--base.run_id=perf_smoke",
+      "--base.eval_episodes=8",
+      "--base.eval_agents=8",
+      "--base.load_model_path=/puffertank/experiments/depth4b-20260916/checkpoints/nethack/depth4b_s901/0000003999989760.bin",
+      "--base.checkpoint_dir=/puffertank/experiments/nethack-perf-20260917/training-smoke-candidate04/checkpoints",
+      "--base.log_dir=/puffertank/experiments/nethack-perf-20260917/training-smoke-candidate04/logs"
+    ],
+    "checkpoint": "/puffertank/experiments/nethack-perf-20260917/training-smoke-candidate04/checkpoints/nethack/perf_smoke/0000000000524288.bin",
+    "sha256": "8c375387a9a310af41343c0ae6b33734f335336a79efb28c3d0718ab207c4922",
+    "checkpoint_step": 524288,
+    "returncode": 0
+  }
+]

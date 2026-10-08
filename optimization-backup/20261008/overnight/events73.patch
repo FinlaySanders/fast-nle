@@ -1,0 +1,57 @@
+--- a/src/pufferl.cu
++++ b/src/pufferl.cu
+@@ -1162,6 +1162,7 @@
+     float* my_accum = &vec->accum[buf * NUM_PROF];
+     struct timespec t0, t1;
+     float ms = 0.0f;
++    const bool bench_timing = getenv("PUF_BENCH_NO_TIMING_EVENTS") == NULL;
+     while (true) {
+         while (__atomic_load_n(state, __ATOMIC_SEQ_CST) != BUF_RUNNING) {
+             if (__atomic_load_n(&vec->shutdown, __ATOMIC_SEQ_CST)) {
+@@ -1179,22 +1180,22 @@
+         }
+         int h2d_pending = 0;
+         for (int t = 0; t < horizon; t++) {
+-            cudaEventRecord(ev[MODEL_START], stream);
++            if (bench_timing) cudaEventRecord(ev[MODEL_START], stream);
+             pufferl_forward(pufferl, buf, t, stream);
+-            cudaEventRecord(ev[MODEL_END], stream);
++            if (bench_timing) cudaEventRecord(ev[MODEL_END], stream);
+             cudaMemcpyAsync(
+                 &vec->actions[agent_start * NUM_ATNS],
+                 &pufferl->env.actions.data[agent_start * NUM_ATNS],
+                 apb * NUM_ATNS * sizeof(float),
+                 cudaMemcpyDeviceToHost, stream);
+-            cudaEventRecord(ev[COPY_END], stream);
++            if (bench_timing) cudaEventRecord(ev[COPY_END], stream);
+             cudaStreamSynchronize(stream);
+-            cudaEventElapsedTime(&ms, ev[MODEL_START], ev[MODEL_END]);
++            if (bench_timing) cudaEventElapsedTime(&ms, ev[MODEL_START], ev[MODEL_END]);
+             my_accum[PROF_MODEL] += ms;
+-            cudaEventElapsedTime(&ms, ev[MODEL_END], ev[COPY_END]);
++            if (bench_timing) cudaEventElapsedTime(&ms, ev[MODEL_END], ev[COPY_END]);
+             my_accum[PROF_COPY] += ms;
+             if (h2d_pending) {
+-                cudaEventElapsedTime(&ms, ev[H2D_START], ev[H2D_END]);
++                if (bench_timing) cudaEventElapsedTime(&ms, ev[H2D_START], ev[H2D_END]);
+                 my_accum[PROF_COPY] += ms;
+                 h2d_pending = 0;
+             }
+@@ -1234,14 +1235,14 @@
+             clock_gettime(CLOCK_MONOTONIC, &t1);
+             my_accum[PROF_ENV] += (t1.tv_sec - t0.tv_sec) * 1000.0f
+                 + (t1.tv_nsec - t0.tv_nsec) / 1e6f;
+-            cudaEventRecord(ev[H2D_START], stream);
++            if (bench_timing) cudaEventRecord(ev[H2D_START], stream);
+             cpu_upload(pufferl, agent_start, apb, stream);
+-            cudaEventRecord(ev[H2D_END], stream);
++            if (bench_timing) cudaEventRecord(ev[H2D_END], stream);
+             h2d_pending = 1;
+         }
+         cudaStreamSynchronize(stream);
+         if (h2d_pending) {
+-            cudaEventElapsedTime(&ms, ev[H2D_START], ev[H2D_END]);
++            if (bench_timing) cudaEventElapsedTime(&ms, ev[H2D_START], ev[H2D_END]);
+             my_accum[PROF_COPY] += ms;
+         }
+         __atomic_store_n(state, BUF_WAITING, __ATOMIC_SEQ_CST);

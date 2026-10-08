@@ -598,6 +598,9 @@ is_moat(int x, int y)
          if (set_typ_i_ >= 0 && set_typ_i_ < COLNO * ROWNO) \
              (&nh_typ_plane[0][0])[set_typ_i_] = set_typ_v_; } while (0)
 extern void NDECL(nh_typ_sync);
+struct nh_fobj_cursor { unsigned long generation; int index, fallback; unsigned int mask; int base, lx, hx, ly, hy; };
+extern void NDECL(nh_fobj_invalidate);
+extern struct obj *FDECL(nh_fobj_next, (struct nh_fobj_cursor *, struct obj *, int, int, int, int));
 extern void FDECL(nh_typ_verify, (const char *));
 
 static inline boolean

@@ -1,0 +1,140 @@
+{
+  "time": "2026-09-17T15:56:48.585085+00:00",
+  "files": {
+    "engine.patch": {
+      "source": "/puffertank/experiments/nethack-perf-20260917/patch-review/candidate08.patch",
+      "bytes": 19402,
+      "sha256": "22efca953ab957332234f024d49e78740608540a5c401fa76acfa6cffde57f55"
+    },
+    "engine-source-proof.json": {
+      "source": "/puffertank/experiments/nethack-perf-20260917/patch-review/candidate08-proof.json",
+      "bytes": 1571,
+      "sha256": "3186e7b3ac74d67bcc6b91394da04f34e912a9a496db206c95f57d59b19a247f"
+    },
+    "depth-work-stealing.patch": {
+      "source": "/puffertank/experiments/nethack-perf-20260917/patch-review/depth-ws.patch",
+      "bytes": 1660,
+      "sha256": "5fe4bd3798f9034b5c27fa1810c23a9e07f333cd26a4fc7472f05c409d858a1a"
+    },
+    "score-work-stealing.patch": {
+      "source": "/puffertank/experiments/nethack-perf-20260917/patch-review/score-ws.patch",
+      "bytes": 1660,
+      "sha256": "7d49f87a00d42be75c02a5e12fe019c0d90273575e2ec88e423cbc4473793317"
+    },
+    "scheduler-manifest.json": {
+      "source": "/puffertank/experiments/nethack-perf-20260917/tight-loop/campaign2h/retained-scheduler-manifest.json",
+      "bytes": 1214,
+      "sha256": "718542a7619f8db41ff12a34a8d8b4648471ded6ecd5c1984bdbcce748077a58"
+    },
+    "libnethack.so": {
+      "source": "/puffertank/experiments/nethack-perf-20260917/variants/candidate14-lto-local/libnethack.so",
+      "bytes": 4470272,
+      "sha256": "70fe544048cd5f9e159d98be3222f35536e508299228e88f61a3c10c968bc403"
+    },
+    "REPORT.md": {
+      "source": "/puffertank/experiments/nethack-perf-20260917/tight-loop/campaign2h/REPORT.md",
+      "bytes": 9261,
+      "sha256": "1bb8a489f98111014e8641014ca3426189d27903669fbe437b9be1bb3ffabf8b"
+    },
+    "BUILD.md": {
+      "source": "/puffertank/experiments/nethack-perf-20260917/tight-loop/campaign2h/BUILD.md",
+      "bytes": 3000,
+      "sha256": "4fdc567ffd91248a77c81edaf642f552683a78805473c38d0f2e85af7bde9ee6"
+    },
+    "TRAINING_PROFILE.md": {
+      "source": "/puffertank/experiments/nethack-perf-20260917/tight-loop/campaign2h/TRAINING_PROFILE.md",
+      "bytes": 3701,
+      "sha256": "262a64f3b7e682983e098dbfc8b0fdf24a6c8fadca243be8320193375ff814e7"
+    },
+    "training-profile-summary.json": {
+      "source": "/puffertank/experiments/nethack-perf-20260917/tight-loop/campaign2h/training-profile/summary.json",
+      "bytes": 6493,
+      "sha256": "e392691c0f534a46506252a0b147ea1a671f71940e77456d37780cb75827d036"
+    },
+    "training-profile-validation.json": {
+      "source": "/puffertank/experiments/nethack-perf-20260917/tight-loop/campaign2h/training-profile/validated.json",
+      "bytes": 772,
+      "sha256": "96aa79e9fd243409ad87f24a919990ec7488f30deb305f9b3af9a4c6a07006ca"
+    },
+    "analyze_training_profile.py": {
+      "source": "/puffertank/experiments/nethack-perf-20260917/tight-loop/campaign2h/analyze_training_profile.py",
+      "bytes": 2833,
+      "sha256": "7831eec6840b807e7091b4e5bd22cd3263cb2de23b361e61bf956225e8e43faf"
+    },
+    "audit_lto14.py": {
+      "source": "/puffertank/experiments/nethack-perf-20260917/tight-loop/campaign2h/audit_lto14.py",
+      "bytes": 1839,
+      "sha256": "37f470a92023a2b3f34ef95a7e31fbfa267181a58686aba1f0bc90ace13725d8"
+    },
+    "combined512-summary.json": {
+      "source": "/puffertank/experiments/nethack-perf-20260917/tight-loop/campaign2h/combined512-summary.json",
+      "bytes": 2455,
+      "sha256": "70850eeb499966b127f87a7ffe420a098a1bbef612872a949dcc46287c40aca8"
+    },
+    "training-combined-summary.json": {
+      "source": "/puffertank/experiments/nethack-perf-20260917/tight-loop/campaign2h/training-combined-summary.json",
+      "bytes": 4021,
+      "sha256": "c1bd6580169b1d8273370f069e837021a2f79f361d6401d3b4dead5a517bcdf2"
+    },
+    "hardware-libraries.json": {
+      "source": "/puffertank/experiments/nethack-perf-20260917/tight-loop/campaign2h/final-hardware-libraries.json",
+      "bytes": 6017,
+      "sha256": "bef74887c9a0b9e91bcedcee099a7466f9672195f276b4a0eba3cd70b306b741"
+    },
+    "preservation.json": {
+      "source": "/puffertank/experiments/nethack-perf-20260917/tight-loop/campaign2h/final-preservation.json",
+      "bytes": 743,
+      "sha256": "2cf8ee942d58541a04372c2044908416ed21e87d5a0e5361e9863abd8bff3a06"
+    },
+    "compiler-manifest.json": {
+      "source": "/puffertank/experiments/nethack-perf-20260917/tight-loop/campaign2h/candidate14-manifest.json",
+      "bytes": 691,
+      "sha256": "5186d8d0691393005d4905fa4cab33515eca5b05256718dd3ec76002838d8a91"
+    },
+    "compiler-global-audit.json": {
+      "source": "/puffertank/experiments/nethack-perf-20260917/tight-loop/campaign2h/lto-global-audit/proof.json",
+      "bytes": 2660,
+      "sha256": "9323503b970cf817035541003f556ab4e364dd804992c190cc653c3fd8148436"
+    },
+    "original-global-checker-failure.log": {
+      "source": "/puffertank/experiments/nethack-perf-20260917/tight-loop/campaign2h/validation14/globals.log",
+      "bytes": 873,
+      "sha256": "44d7bd2790e42371c6fa5dc4677fce2d70e47ac1f7ba69fa5612061e6e200335"
+    },
+    "validation-results.json": {
+      "source": "/puffertank/experiments/nethack-perf-20260917/tight-loop/campaign2h/validation14-audited/results.json",
+      "bytes": 72472,
+      "sha256": "9f52e3eed84abe50a40e217e20efcd696fe7fd9de840900e548594361517f3d1"
+    },
+    "historical-view-results.json": {
+      "source": "/puffertank/experiments/nethack-perf-20260917/tight-loop/campaign2h/historical14/results.json",
+      "bytes": 21127,
+      "sha256": "1b1569bf89a3b49fb208aa319dc2f5fb1a4780d096678e32a12523116db63306"
+    },
+    "native-combined-results.json": {
+      "source": "/puffertank/experiments/nethack-perf-20260917/tight-loop/campaign2h/native-combined/results.json",
+      "bytes": 15182,
+      "sha256": "026fd84fd5c7f67818f296694727fefdca9acc718ed1fd162517eec79660bdff"
+    },
+    "cursor-results.json": {
+      "source": "/puffertank/experiments/nethack-perf-20260917/tight-loop/campaign2h/cursor14-results.json",
+      "bytes": 1035,
+      "sha256": "f160c7619ddfebd283a0e51b56274d7f95369603c57d39543c767bef49026ece"
+    },
+    "combined512.py": {
+      "source": "/puffertank/experiments/nethack-perf-20260917/tight-loop/campaign2h/combined512.py",
+      "bytes": 1427,
+      "sha256": "45662c8143647c07a27acedbb3ffb63a4c935872080363ff58cf6b6eed89b407"
+    },
+    "train_combined.py": {
+      "source": "/puffertank/experiments/nethack-perf-20260917/tight-loop/campaign2h/train_combined.py",
+      "bytes": 3328,
+      "sha256": "9113749b2f15254d569dec8f99dc7d51935767affbe17a98793e4a40e35bf1df"
+    },
+    "COMPLETION_CHECKLIST.md": {
+      "source": "/puffertank/experiments/nethack-perf-20260917/tight-loop/campaign2h/COMPLETION_CHECKLIST.md",
+      "bytes": 2304,
+      "sha256": "2d628711fc55d36f5a303346b70c5acf2ad8dc515442aeb7f693c74f9d434e9b"
+    }
+  }
+}

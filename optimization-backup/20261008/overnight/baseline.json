@@ -1,0 +1,7 @@
+{
+  "/puffertank/experiments/nethack-workspace-safe-20260917/source/puffer_safe": "69bf116b007c4e2ae976aa6f3ae4081fe86aadbb0e080a3765dcd84125a179af",
+  "/puffertank/experiments/nethack-perf-20260917/variants/candidate14-lto-local/libnethack.so": "70fe544048cd5f9e159d98be3222f35536e508299228e88f61a3c10c968bc403",
+  "/puffertank/pufferlib/resources/nethack/fixwt4b_s705.bin": "6541c5212ae4aae45e3c419bec2bf150883c457188117743d546cfb1d62a2718",
+  "stash": "ee048d8bede49a2e658b9ba840104921135b34ea",
+  "pr_commit": "a8ad64480f28790711549342ca55e463d628615c"
+}

@@ -569,3 +569,15 @@ options.c | cold | char | mapped_menu_cmds | [33] | 0   # MAX_MENU_MAPPED_CMDS+1
 files.c | cold | boolean | chosen_symset_start | | 0
 files.c | cold | boolean | chosen_symset_end | | 0
 dlb.c | cold | boolean | initialized | | 0
+
+# Ordered floor-object search cache. Cold section avoids shifting hot state.
+global | cold | unsigned long | nh_fobj_generation | | 0
+global | cold | int | nh_fobj_valid | | 0
+global | cold | int | nh_fobj_count | | 0
+global | cold | short | nh_fobj_x | [2048] | 0
+global | cold | short | nh_fobj_y | [2048] | 0
+global | cold | struct obj * | nh_fobj_ptr | [2048] | 0
+
+global | cold | unsigned char | nh_track_near | [COLNO][ROWNO] | 0
+
+global | cold | unsigned char | nh_no_hero_gold | | 0

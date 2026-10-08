@@ -1,0 +1,7 @@
+{
+  "cases": 4096,
+  "grid_cells": 1659,
+  "exact_memory_and_ordered_tokens": true,
+  "source": "pack32-oracle.c",
+  "note": "Actual scalar and candidate scan blocks extracted from harness headers; deterministic random signed16 glyphs, arbitrary remembered objects, allterrain/allmonster modes,hero positions,256caps"
+}

@@ -1,0 +1,12 @@
+{
+  "pid": 750188,
+  "workload": "score full baseline augmentation",
+  "environment": {
+    "LD_LIBRARY_PATH": "/puffertank/experiments/nethack-perf-20260917/engine-baseline/build",
+    "NH_DISC_SWAP": "0",
+    "NETHACKDIR": "/puffertank/experiments/nethack-perf-20260917/dat",
+    "NH_PERF_AUGMENT": "/puffertank/experiments/nethack-perf-20260917/score-record-v2"
+  },
+  "NH_ZT_MASK_absent_means": 0,
+  "note": "Captured from live verification process; original full depth already passed under equivalent wrapper settings."
+}

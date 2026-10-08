@@ -1,0 +1,60 @@
+--- a/src/display.c
++++ b/src/display.c
+@@ -1614,6 +1614,7 @@
+ 
+     if (gbuf[y][x].glyph != glyph || iflags.use_background_glyph) {
+         gbuf[y][x].glyph = glyph;
++        nh_glyph_plane[y * (COLNO - 1) + x - 1] = (short) glyph;
+         gbuf[y][x].new = 1;
+         if (gbuf_start[y] > x)
+             gbuf_start[y] = x;
+@@ -1663,6 +1664,8 @@
+             *gptr++ = nul_gbuf;
+         }
+     }
++    for (y = 0; y < ROWNO * (COLNO - 1); y++)
++        nh_glyph_plane[y] = (short) nul_gbuf.glyph;
+     reset_glyph_bbox();
+ }
+ 
+@@ -1938,10 +1941,14 @@
+ void
+ nle_copy_glyphs(short *dst)
+ {
++#ifdef NLE_GLYPH_VERIFY
+     int x, y;
+     for (y = 0; y < ROWNO; y++)
+         for (x = 1; x < COLNO; x++)
+-            *dst++ = (short) gbuf[y][x].glyph;
++            if (nh_glyph_plane[y * (COLNO - 1) + x - 1] != (short) gbuf[y][x].glyph)
++                panic("glyph plane mismatch at %d,%d", x, y);
++#endif
++    memcpy(dst, nh_glyph_plane, sizeof nh_glyph_plane);
+ }
+ 
+ int
+--- a/tools/globals.def
++++ b/tools/globals.def
+@@ -579,3 +579,5 @@
+ global | cold | struct obj * | nh_fobj_ptr | [2048] | 0
+ 
+ global | cold | unsigned char | nh_track_near | [COLNO][ROWNO] | 0
++
++global | cold | short | nh_glyph_plane | [ROWNO * (COLNO - 1)] | 0
+--- a/include/nh_ctx_gen.h
++++ b/include/nh_ctx_gen.h
+@@ -487,6 +487,7 @@
+     short g_nh_fobj_y[2048]; /* global: nh_fobj_y */
+     struct obj * g_nh_fobj_ptr[2048]; /* global: nh_fobj_ptr */
+     unsigned char g_nh_track_near[COLNO][ROWNO]; /* global: nh_track_near */
++    short g_nh_glyph_plane[ROWNO * (COLNO - 1)]; /* global: nh_glyph_plane */
+     /* lazily-allocated per-env blobs whose types are private to one
+      * .c file (e.g. options.c boolopt copy); freed by nh_ctx_free.
+      * Slot assignments are documented at the allocation sites. */
+@@ -655,5 +656,6 @@
+ #define nh_fobj_y (nh_cur->g_nh_fobj_y)
+ #define nh_fobj_ptr (nh_cur->g_nh_fobj_ptr)
+ #define nh_track_near (nh_cur->g_nh_track_near)
++#define nh_glyph_plane (nh_cur->g_nh_glyph_plane)
+ 
+ #endif /* NH_CTX_GEN_H */

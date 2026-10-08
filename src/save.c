@@ -711,6 +711,7 @@ int mode;
                 level.monsters[x][y] = 0;
         fmon = 0;
         ftrap = 0;
+        nh_fobj_invalidate();
         fobj = level.buriedobjlist = billobjs = 0;
         /* level.bonesinfo = 0; -- handled by savecemetery() */
     }
@@ -1667,6 +1668,7 @@ freedynamicdata()
        fill, so golden hashes are unaffected. */
     (void) memset((genericptr_t) level.objs, 0, sizeof(level.objs));
     (void) memset((genericptr_t) level.monsters, 0, sizeof(level.monsters));
+    nh_fobj_invalidate();
     fobj = (struct obj *) 0;
     fmon = (struct monst *) 0;
 

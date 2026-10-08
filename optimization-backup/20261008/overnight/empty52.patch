@@ -1,0 +1,20 @@
+--- a/src/monmove.c
++++ b/src/monmove.c
+@@ -1058,7 +1058,7 @@
+              * better to do than pick the arrows up.
+              */
+             register int pctload =
+-                (curr_mon_load(mtmp) * 100) / max_mon_load(mtmp);
++                (mtmp->minvent ? (curr_mon_load(mtmp) * 100) / max_mon_load(mtmp) : 0);
+ 
+             /* look for gold or jewels nearby */
+             likegold = (likes_gold(ptr) && pctload < 95);
+@@ -1542,7 +1542,7 @@
+             /* recompute the likes tests, in case we polymorphed
+              * or if the "likegold" case got taken above */
+             if (setlikes) {
+-                int pctload = (curr_mon_load(mtmp) * 100) / max_mon_load(mtmp);
++                int pctload = (mtmp->minvent ? (curr_mon_load(mtmp) * 100) / max_mon_load(mtmp) : 0);
+ 
+                 /* look for gold or jewels nearby */
+                 likegold = (likes_gold(ptr) && pctload < 95);

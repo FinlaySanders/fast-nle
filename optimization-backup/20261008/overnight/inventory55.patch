@@ -1,0 +1,21 @@
+--- a/win/rl/winrl.cc
++++ b/win/rl/winrl.cc
+@@ -701,11 +701,16 @@
+             st[6] =
+                 (otmp->dknown && objects[otmp->otyp].oc_name_known) ? 1 : 0;
+             st[7] = 0;
++            if (obs->inv_true_glyphs)
++                obs->inv_true_glyphs[i] = st[6] ? GLYPH_OBJ_OFF + otmp->otyp : NO_GLYPH;
+         }
+         std::memset(obs->inv_state + i * NLE_INV_STATE_FIELDS, 0,
+                     (NLE_INVENTORY_SIZE - i) * NLE_INV_STATE_FIELDS);
+-    }
+-    if (obs->inv_true_glyphs && !nle_partial) {
++        if (obs->inv_true_glyphs)
++            std::fill(obs->inv_true_glyphs + i,
++                      obs->inv_true_glyphs + NLE_INVENTORY_SIZE, NO_GLYPH);
++    }
++    if (obs->inv_true_glyphs && !nle_partial && !obs->inv_state) {
+         /* True type only once discovered AND this instance was seen
+            (matches the xname display rule via st[6] above). Flag reads
+            only; no RNG. */

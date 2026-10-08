@@ -1,0 +1,8 @@
+{
+  "original": "/puffertank/experiments/nethack-perf-20260917/score-record/env00167.trace",
+  "complete": "/puffertank/experiments/nethack-perf-20260917/score167-v2/env00167.trace",
+  "unchanged_events": 1208430,
+  "added_refreshes": 96,
+  "original_sha256": "625d6bf4b7d6e50cfef9e129ce649027b636ddde9be7a564d41e153ed234f0e4",
+  "complete_sha256": "70508e5f7439624eb397edd1d83f9a4209129552993f58a4687fd2ba4283d72a"
+}

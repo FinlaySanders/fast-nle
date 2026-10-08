@@ -69,8 +69,21 @@ struct obj *
 findgold(chain)
 register struct obj *chain;
 {
+    boolean hero_chain = (chain == invent);
+    if (hero_chain && nh_no_hero_gold) {
+#ifdef NLE_GOLD_VERIFY
+        struct obj *check = chain;
+        while (check && check->otyp != GOLD_PIECE)
+            check = check->nobj;
+        if (check)
+            panic("stale hero gold absence");
+#endif
+        return (struct obj *) 0;
+    }
     while (chain && chain->otyp != GOLD_PIECE)
         chain = chain->nobj;
+    if (hero_chain && !chain)
+        nh_no_hero_gold = 1;
     return chain;
 }
 

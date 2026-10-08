@@ -1,0 +1,19 @@
+--- a/src/env_pool.h
++++ b/src/env_pool.h
+@@ -104,7 +104,15 @@
+     p->epoch++; pthread_cond_broadcast(&p->ready);
+     pthread_mutex_unlock(&p->mu);
+     ep_claim(p, r, buffer % p->workers);
+-    while (__atomic_load_n(&r->done, __ATOMIC_ACQUIRE) < count) sched_yield();
++    unsigned int spins = 0;
++    while (__atomic_load_n(&r->done, __ATOMIC_ACQUIRE) < count) {
++#if defined(__x86_64__) || defined(__i386__)
++        if (++spins < 64) __asm__ __volatile__("pause");
++        else { spins = 0; sched_yield(); }
++#else
++        sched_yield();
++#endif
++    }
+     pthread_mutex_lock(&r->mu);
+     r->active = 0;
+     while (r->readers) pthread_cond_wait(&r->quiet, &r->mu);

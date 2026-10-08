@@ -1,0 +1,1745 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index d80ab0f65..eaa5fec78 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -166,11 +166,13 @@ option(NLE_TLS_INITIAL_EXEC
+ # libnethack library
+ if(EMSCRIPTEN)
+   add_library(nethack STATIC ${NETHACK_SRC} src/nle_fcontext_emscripten.c)
++  target_compile_definitions(nethack PRIVATE NH_ARENA)
+   set_target_properties(nethack PROPERTIES CXX_STANDARD 14)
+   target_include_directories(nethack PUBLIC ${deboost_context_SOURCE_DIR}/include)
+   add_dependencies(nethack util dat)
+ else()
+   add_library(nethack SHARED ${NETHACK_SRC})
++  target_compile_definitions(nethack PRIVATE NH_ARENA)
+   if(NLE_TLS_INITIAL_EXEC)
+     target_compile_definitions(nethack PRIVATE NH_TLS_INITIAL_EXEC)
+   endif()
+diff --git a/include/extern.h b/include/extern.h
+index d622a77b7..748e4b17c 100644
+--- a/include/extern.h
++++ b/include/extern.h
+@@ -1426,6 +1426,12 @@ E int FDECL(undead_to_corpse, (int));
+ E int FDECL(genus, (int, int));
+ E int FDECL(pm_to_cham, (int));
+ E int FDECL(minliquid, (struct monst *));
++/* NLE: on a dry, non-fountain cell minliquid() returns 0 for every
++   non-eel without side effects; decide that inline (exact, same tests). */
++#define NH_MINLIQUID(m) \
++    ((!is_pool((m)->mx, (m)->my) && !is_lava((m)->mx, (m)->my)            \
++      && !IS_FOUNTAIN(TYP_AT((m)->mx, (m)->my)) && (m)->data->mlet != S_EEL) \
++         ? 0 : minliquid(m))
+ E int NDECL(movemon);
+ E int FDECL(meatmetal, (struct monst *));
+ E int FDECL(meatobj, (struct monst *));
+@@ -1538,6 +1544,17 @@ E boolean FDECL(monhaskey, (struct monst *, BOOLEAN_P));
+ E void FDECL(mon_regen, (struct monst *, BOOLEAN_P));
+ E int FDECL(dochugw, (struct monst *));
+ E boolean FDECL(onscary, (int, int, struct monst *));
++/* NLE: onscary() can only be TRUE for the <0,0> probe, an altar, a
++   scare-monster pile, or the hero's (displaced) square; test the cell
++   inline and skip the call for every other cell (exact: same predicates
++   as the head of onscary(), all side-effect free). */
++#define NH_ONSCARY(x, y, m) \
++    ((!((x) == 0 && (y) == 0) && (x) >= 0 && (x) < COLNO && (y) >= 0    \
++      && (y) < ROWNO && !IS_ALTAR(TYP_AT((x), (y)))                     \
++      && !(nh_pile_plane[(x)][(y)] & NH_PB_SCARE)                       \
++      && !((u.ux == (x) && u.uy == (y))                                 \
++           || (Displaced && (m)->mux == (x) && (m)->muy == (y))))       \
++         ? FALSE : onscary((x), (y), (m)))
+ E void FDECL(monflee, (struct monst *, int, BOOLEAN_P, BOOLEAN_P));
+ E void FDECL(mon_yells, (struct monst *, const char *));
+ E int FDECL(dochug, (struct monst *));
+@@ -2128,6 +2145,7 @@ E boolean FDECL(m_in_out_region, (struct monst *, XCHAR_P, XCHAR_P));
+ E void NDECL(update_player_regions);
+ E void FDECL(update_monster_region, (struct monst *));
+ E NhRegion *FDECL(visible_region_at, (XCHAR_P, XCHAR_P));
++E boolean FDECL(any_visible_region_glyph, (int));
+ E void FDECL(show_region, (NhRegion *, XCHAR_P, XCHAR_P));
+ E void FDECL(save_regions, (int, int));
+ E void FDECL(rest_regions, (int, BOOLEAN_P));
+diff --git a/include/global.h b/include/global.h
+index a2b70d258..0336e23ee 100644
+--- a/include/global.h
++++ b/include/global.h
+@@ -288,6 +288,16 @@ extern char *FDECL(nhdupstr, (const char *, const char *, int));
+ #else /* !MONITOR_HEAP */
+ extern long *FDECL(alloc, (unsigned int));  /* alloc.c */
+ extern char *FDECL(dupstr, (const char *)); /* ditto */
++#ifdef NH_ARENA
++/* fast-nle: per-game arena behind alloc(); free() of an arena block returns
++   it to the game's free list, anything else reaches libc (nh_arena.c) */
++#ifdef __cplusplus
++extern "C" void nh_arena_free_hook(void *);
++#else
++extern void nh_arena_free_hook(void *);
++#endif
++#define free(a) nh_arena_free_hook(a)
++#endif
+ #endif
+ 
+ /* Used for consistency checks of various data files; declare it here so
+@@ -326,6 +336,7 @@ struct savefile_info {
+ /* size of terminal screen is (at least) (ROWNO+3) by COLNO */
+ #define COLNO 80
+ #define ROWNO 21
++#define NH_FOBJ_CAP 4096 /* fast-nle: compact floor-object index capacity */
+ 
+ #define MAXNROFROOMS 40 /* max number of rooms per level */
+ #define MAX_SUBROOMS 24 /* max # of subrooms in a given room */
+diff --git a/include/hack.h b/include/hack.h
+index 92dfccb1a..4b725ae58 100644
+--- a/include/hack.h
++++ b/include/hack.h
+@@ -598,6 +598,52 @@ is_moat(int x, int y)
+          if (set_typ_i_ >= 0 && set_typ_i_ < COLNO * ROWNO) \
+              (&nh_typ_plane[0][0])[set_typ_i_] = set_typ_v_; } while (0)
+ extern void NDECL(nh_typ_sync);
++/* fast-nle: per-cell lookup planes for the monster-AI hot loops (traps,
++   engravings, pile summary bits) plus a compact floor-object index. All
++   write-through at the mutation sites, rebuilt at level entry, exact-
++   compared against the lists under NLE_PLANE_VERIFY. See src/nhplanes.c. */
++#define NH_PB_BOULDER 1u
++#define NH_PB_SCARE 2u
++#define NH_PB_GARLIC 4u
++#define NH_PB_CURSED 8u
++extern void NDECL(nh_planes_sync);
++extern void NDECL(nh_planes_clear);
++extern void FDECL(nh_planes_verify, (const char *));
++extern void FDECL(nh_pile_recompute, (int, int));
++extern void FDECL(nh_pile_touch_obj, (struct obj *));
++extern void FDECL(nh_trap_plane_fix, (int, int));
++extern void FDECL(nh_engr_plane_fix, (int, int));
++extern void NDECL(nh_engr_plane_sync);
++extern void FDECL(nh_engr_plane_verify, (const char *));
++extern void NDECL(nh_fobj_rebuild);
++#define nh_fobj_dirty() (nh_fobj_n = -1)
++#if defined(NH_CTX_GEN_H) && !defined(LEV_LEX_C) && !defined(MAKEDEFS_C)
++/* next floor object, in fobj order, whose cell lies inside the window
++   [lx..hx]x[ly..hy]; *it is the index cursor (start at 0, prev NULL). The
++   compact index carries the coords, so objects outside the window are
++   skipped without touching them. Falls back to the plain list walk when
++   the index overflowed. */
++static inline struct obj *
++nh_fobj_next_in(int *it, struct obj *prev, int lx, int hx, int ly, int hy)
++{
++    if (nh_fobj_n == -1)
++        nh_fobj_rebuild();
++    if (nh_fobj_n < 0) {
++        struct obj *o = prev ? prev->nobj : fobj;
++        for (; o; o = o->nobj)
++            if (o->ox >= lx && o->ox <= hx && o->oy >= ly && o->oy <= hy)
++                return o;
++        return (struct obj *) 0;
++    }
++    while (*it < nh_fobj_n) {
++        int x = nh_fobj_xy[*it] >> 8, y = nh_fobj_xy[*it] & 0xff;
++        (*it)++;
++        if (x >= lx && x <= hx && y >= ly && y <= hy)
++            return nh_fobj_ptr[*it - 1];
++    }
++    return (struct obj *) 0;
++}
++#endif
+ extern void FDECL(nh_typ_verify, (const char *));
+ 
+ static inline boolean
+diff --git a/include/nh_arena.h b/include/nh_arena.h
+new file mode 100644
+index 000000000..f43868661
+--- /dev/null
++++ b/include/nh_arena.h
+@@ -0,0 +1,22 @@
++/* fast-nle: per-game allocator behind alloc()/free(). Each game owns one
++   lazily-touched 64 MB reservation with 16-byte size classes and per-class
++   free lists, so a game's monsters, objects, engravings and timers sit in
++   its own region instead of scattered across the process heap. Pointer
++   values never reach game logic (goldens replay identically under ASLR),
++   payloads are zeroed on every hand-out, and anything the arena does not
++   own or cannot serve falls through to libc unchanged. */
++#ifndef NH_ARENA_H
++#define NH_ARENA_H
++#include <stddef.h>
++#ifdef __cplusplus
++extern "C" {
++#endif
++typedef struct nh_arena nh_arena;
++nh_arena *nh_arena_new(void);
++void nh_arena_destroy(nh_arena *);
++void *nh_arena_alloc_hook(unsigned int);
++void nh_arena_free_hook(void *);
++#ifdef __cplusplus
++}
++#endif
++#endif
+diff --git a/include/nh_ctx_files/track_c.h b/include/nh_ctx_files/track_c.h
+index 61d3859aa..2a27807ef 100644
+--- a/include/nh_ctx_files/track_c.h
++++ b/include/nh_ctx_files/track_c.h
+@@ -7,4 +7,6 @@
+ #define utcnt (nh_cur->g_track_c_utcnt)
+ #define utpnt (nh_cur->g_track_c_utpnt)
+ #define utrack (nh_cur->g_track_c_utrack)
++#define nh_track_cnt (nh_cur->g_track_c_nh_track_cnt)
++#define nh_track_bits (nh_cur->g_track_c_nh_track_bits)
+ #endif /* NH_CTX_FILE_TRACK_C_H */
+diff --git a/include/nh_ctx_gen.h b/include/nh_ctx_gen.h
+index 5d0e29972..09d7de7cc 100644
+--- a/include/nh_ctx_gen.h
++++ b/include/nh_ctx_gen.h
+@@ -8,10 +8,18 @@ struct nh_ctx {
+     /* hot: touched every step; keep packed at the front so the
+      * per-step working set spans the fewest cache lines. */
+     /* --- hot --- */
++    unsigned char g_track_c_nh_track_cnt[COLNO][ROWNO]; /* track.c: nh_track_cnt */
++    unsigned int g_track_c_nh_track_bits[COLNO]; /* track.c: nh_track_bits */
+     long g_moves; /* global: moves */
+     long g_monstermoves; /* global: monstermoves */
+     int g_multi; /* global: multi */
+     schar g_nh_typ_plane[COLNO][ROWNO]; /* global: nh_typ_plane */
++    struct trap * g_nh_trap_plane[COLNO][ROWNO]; /* global: nh_trap_plane */
++    struct engr * g_nh_engr_plane[COLNO][ROWNO]; /* global: nh_engr_plane */
++    unsigned char g_nh_pile_plane[COLNO][ROWNO]; /* global: nh_pile_plane */
++    int g_nh_fobj_n; /* global: nh_fobj_n */
++    unsigned short g_nh_fobj_xy[NH_FOBJ_CAP]; /* global: nh_fobj_xy */
++    struct obj * g_nh_fobj_ptr[NH_FOBJ_CAP]; /* global: nh_fobj_ptr */
+     boolean g_vision_full_recalc; /* global: vision_full_recalc */
+     char ** g_viz_array; /* global: viz_array */
+     struct sinfo g_program_state; /* global: program_state */
+@@ -511,6 +519,12 @@ void nh_ctx_fixup(struct nh_ctx *);
+ #define monstermoves (nh_cur->g_monstermoves)
+ #define multi (nh_cur->g_multi)
+ #define nh_typ_plane (nh_cur->g_nh_typ_plane)
++#define nh_trap_plane (nh_cur->g_nh_trap_plane)
++#define nh_engr_plane (nh_cur->g_nh_engr_plane)
++#define nh_pile_plane (nh_cur->g_nh_pile_plane)
++#define nh_fobj_n (nh_cur->g_nh_fobj_n)
++#define nh_fobj_xy (nh_cur->g_nh_fobj_xy)
++#define nh_fobj_ptr (nh_cur->g_nh_fobj_ptr)
+ #define vision_full_recalc (nh_cur->g_vision_full_recalc)
+ #define viz_array (nh_cur->g_viz_array)
+ #define program_state (nh_cur->g_program_state)
+diff --git a/include/nletypes.h b/include/nletypes.h
+index ef2c603da..248fa8e8f 100644
+--- a/include/nletypes.h
++++ b/include/nletypes.h
+@@ -196,6 +196,7 @@ typedef struct nle_globals {
+      * Gates byte emission only — tty window STATE updates (curx/cury,
+      * topline wrap driving --More-- pacing) always run. */
+     char tty_emit;
++    void *arena; /* fast-nle: per-game allocator behind alloc()/free() (nh_arena.c) */
+ } nle_ctx_t;
+ 
+ /* (nle_settings moved above nle_ctx_t — it is a member now) */
+diff --git a/include/you.h b/include/you.h
+index abd005cd4..0e80917c4 100644
+--- a/include/you.h
++++ b/include/you.h
+@@ -394,6 +394,11 @@ struct you {
+     xchar skill_record[P_SKILL_LIMIT]; /* skill advancements */
+     struct skills weapon_skills[P_NUM_SKILLS];
+     boolean twoweap;         /* KMH -- Using two-weapon combat */
++    /* public-obs export: the engraving the hero last wrote, at (bx,by), has not been read or felt since.
++       While the hero is blind there, the engraving flag reports 1 (present, text unknown), not the RNG truth:
++       sighted, a look reads it at zero cost, so the truth is public; blind, it is not. */
++    xchar nle_engr_blind, nle_engr_bx, nle_engr_by;
++    xchar nle_engr_last, nle_engr_wiped; /* last value read/felt there (0/1/2), and a hero wipe since */
+ 
+ }; /* end of `struct you' */
+ 
+diff --git a/src/alloc.c b/src/alloc.c
+index c6944aba4..35ed00175 100644
+--- a/src/alloc.c
++++ b/src/alloc.c
+@@ -43,6 +43,14 @@ register unsigned int lth;
+ #else
+     register genericptr_t ptr;
+ 
++#ifdef NH_ARENA
++    {
++        extern void *nh_arena_alloc_hook(unsigned int);
++        ptr = nh_arena_alloc_hook(lth);
++        if (ptr)
++            return (long *) ptr;
++    }
++#endif
+     ptr = malloc(lth);
+ #ifndef MONITOR_HEAP
+     if (!ptr)
+diff --git a/src/do_name.c b/src/do_name.c
+index 01d32e510..4f6c2f187 100644
+--- a/src/do_name.c
++++ b/src/do_name.c
+@@ -700,10 +700,13 @@ const char *goal;
+        steps.  Answer immediately instead: abort when allowed (callers treat
+        it as ESC; controlled teleport falls back to the uncontrolled roll),
+        else the hero's own square. */
++    { static int normal = -1; if (normal < 0) normal = getenv("NLE_GETPOS_NORMAL") != NULL; /* harness/probe use: real cursor prompt */
++      if (!normal) {
+     if (!force) return -1;
+     ccp->x = u.ux;
+     ccp->y = u.uy;
+     return 0;
++      } }
+ 
+     for (i = 0; i < SIZE(pick_chars_def); i++)
+         pick_chars[i] = Cmd.spkeys[pick_chars_def[i].nhkf];
+diff --git a/src/dogmove.c b/src/dogmove.c
+index 0ef93c9e5..d08c43576 100644
+--- a/src/dogmove.c
++++ b/src/dogmove.c
+@@ -139,6 +139,9 @@ int x, y;
+ {
+     struct obj *otmp;
+ 
++    if (x >= 0 && x < COLNO && y >= 0 && y < ROWNO
++        && !(nh_pile_plane[x][y] & NH_PB_CURSED))
++        return FALSE;
+     for (otmp = level.objs[x][y]; otmp; otmp = otmp->nexthere)
+         if (otmp->cursed)
+             return TRUE;
+@@ -524,7 +527,11 @@ int after, udist, whappr;
+             max_y = ROWNO - 1;
+ 
+         /* nearby food is the first choice, then other objects */
+-        for (obj = fobj; obj; obj = obj->nobj) {
++        {
++        int fi_ = 0;
++
++        for (obj = nh_fobj_next_in(&fi_, (struct obj *) 0, min_x, max_x, min_y, max_y);
++             obj; obj = nh_fobj_next_in(&fi_, obj, min_x, max_x, min_y, max_y)) {
+             nx = obj->ox;
+             ny = obj->oy;
+             if (nx >= min_x && nx <= max_x && ny >= min_y && ny <= max_y) {
+@@ -558,6 +565,7 @@ int after, udist, whappr;
+                 }
+             }
+         }
++        }
+     }
+ 
+     /* follow player if appropriate */
+diff --git a/src/engrave.c b/src/engrave.c
+index 67babf72f..06f7c4183 100644
+--- a/src/engrave.c
++++ b/src/engrave.c
+@@ -247,14 +247,10 @@ struct engr *
+ engr_at(x, y)
+ xchar x, y;
+ {
+-    register struct engr *ep = head_engr;
+-
+-    while (ep) {
+-        if (x == ep->engr_x && y == ep->engr_y)
+-            return ep;
+-        ep = ep->nxt_engr;
+-    }
+-    return (struct engr *) 0;
++    /* fast-nle: per-cell plane, mirrors the head_engr walk (src/nhplanes.c) */
++    if (x < 0 || x >= COLNO || y < 0 || y >= ROWNO)
++        return (struct engr *) 0;
++    return nh_engr_plane[x][y];
+ }
+ 
+ /* Decide whether a particular string is engraved at a specified
+@@ -284,6 +280,7 @@ void
+ u_wipe_engr(cnt)
+ int cnt;
+ {
++    if (u.ux == u.nle_engr_bx && u.uy == u.nle_engr_by) u.nle_engr_wiped = 1; /* the hero knows it may have smudged it */
+     if (can_reach_floor(TRUE))
+         wipe_engr_at(u.ux, u.uy, cnt, FALSE);
+ }
+@@ -369,6 +366,7 @@ int x, y;
+ 
+         if (sensed) {
+             char *et, buf[BUFSZ];
++            u.nle_engr_bx = x; u.nle_engr_by = y; u.nle_engr_blind = 0; u.nle_engr_wiped = 0; u.nle_engr_last = sengr_at("Elbereth", x, y, TRUE) ? 2 : 1; /* read or felt: known */
+             int maxelen = (int) (sizeof buf
+                                  /* sizeof "literal" counts terminating \0 */
+                                  - sizeof "You feel the words: \"\".");
+@@ -405,6 +403,7 @@ xchar e_type;
+     head_engr = ep;
+     ep->engr_x = x;
+     ep->engr_y = y;
++    nh_engr_plane_fix(x, y);
+     ep->engr_txt = (char *) (ep + 1);
+     Strcpy(ep->engr_txt, s);
+     /* engraving Elbereth shows wisdom */
+@@ -415,6 +414,52 @@ xchar e_type;
+     ep->engr_lth = smem;
+ }
+ 
++/* fast-nle: per-cell engraving plane (head_engr is private to this file).
++   Plane entry = first engraving in head_engr order at (x,y), exactly what
++   the old engr_at() walk returned. */
++void
++nh_engr_plane_fix(int x, int y)
++{
++    struct engr *ep;
++
++    if (x < 0 || x >= COLNO || y < 0 || y >= ROWNO)
++        return;
++    for (ep = head_engr; ep; ep = ep->nxt_engr)
++        if (ep->engr_x == x && ep->engr_y == y)
++            break;
++    nh_engr_plane[x][y] = ep;
++}
++
++void
++nh_engr_plane_sync(void)
++{
++    struct engr *ep;
++
++    (void) memset((genericptr_t) nh_engr_plane, 0, sizeof nh_engr_plane);
++    for (ep = head_engr; ep; ep = ep->nxt_engr)
++        if (ep->engr_x >= 0 && ep->engr_x < COLNO && ep->engr_y >= 0
++            && ep->engr_y < ROWNO && !nh_engr_plane[ep->engr_x][ep->engr_y])
++            nh_engr_plane[ep->engr_x][ep->engr_y] = ep;
++}
++
++void
++nh_engr_plane_verify(const char *where)
++{
++    struct engr *ep;
++    int x, y;
++    struct engr *ee[COLNO][ROWNO]; /* stack: verify must not touch the allocator */
++
++    (void) memset((genericptr_t) ee, 0, sizeof ee);
++    for (ep = head_engr; ep; ep = ep->nxt_engr)
++        if (ep->engr_x >= 0 && ep->engr_x < COLNO && ep->engr_y >= 0
++            && ep->engr_y < ROWNO && !ee[ep->engr_x][ep->engr_y])
++            ee[ep->engr_x][ep->engr_y] = ep;
++    for (x = 0; x < COLNO; x++)
++        for (y = 0; y < ROWNO; y++)
++            if (nh_engr_plane[x][y] != ee[x][y])
++                { fprintf(stderr, "PLANE: engr desync (%d,%d) [%s]\n", x, y, where); panic("engr plane desync [%s]", where); }
++}
++
+ /* delete any engraving at location <x,y> */
+ void
+ del_engr_at(x, y)
+@@ -910,6 +955,7 @@ doengrave()
+     /* Something has changed the engraving here */
+     if (*buf) {
+         make_engr_at(u.ux, u.uy, buf, moves, type);
++        u.nle_engr_blind = 1; u.nle_engr_bx = u.ux; u.nle_engr_by = u.uy; u.nle_engr_last = 1; u.nle_engr_wiped = 0; /* unread since written */
+         if (!Blind)
+             pline_The("engraving now reads: \"%s\".", buf);
+         ptext = FALSE;
+@@ -1156,6 +1202,7 @@ doengrave()
+     (void) strncat(buf, ebuf, BUFSZ - (int) strlen(buf) - 1);
+     /* Put the engraving onto the map */
+     make_engr_at(u.ux, u.uy, buf, moves - multi, type);
++    u.nle_engr_blind = 1; u.nle_engr_bx = u.ux; u.nle_engr_by = u.uy; u.nle_engr_last = 1; u.nle_engr_wiped = 0; /* unread since written */
+ 
+     if (post_engr_text[0])
+         pline("%s", post_engr_text);
+@@ -1263,6 +1310,7 @@ register struct engr *ep;
+             return;
+         }
+     }
++    nh_engr_plane_fix(ep->engr_x, ep->engr_y);
+     dealloc_engr(ep);
+ }
+ 
+@@ -1280,8 +1328,14 @@ struct engr *ep;
+         ty = rn2(ROWNO);
+     } while (engr_at(tx, ty) || !goodpos(tx, ty, (struct monst *) 0, 0));
+ 
+-    ep->engr_x = tx;
+-    ep->engr_y = ty;
++    {
++        int oex = ep->engr_x, oey = ep->engr_y;
++
++        ep->engr_x = tx;
++        ep->engr_y = ty;
++        nh_engr_plane_fix(oex, oey);
++        nh_engr_plane_fix(tx, ty);
++    }
+ }
+ 
+ /* Create a headstone at the given location.
+diff --git a/src/invent.c b/src/invent.c
+index 3d6b66dfb..16cb9fbb4 100644
+--- a/src/invent.c
++++ b/src/invent.c
+@@ -1226,6 +1226,17 @@ int x, y;
+ {
+     register struct obj *otmp;
+ 
++    /* fast-nle: pile summary bits answer the common negative without a
++       walk (boulder/scare-scroll/garlic queries from the monster AI) */
++    if (x >= 0 && x < COLNO && y >= 0 && y < ROWNO) {
++        unsigned char b = nh_pile_plane[x][y];
++
++        if ((otyp == BOULDER && !(b & NH_PB_BOULDER))
++            || (otyp == SCR_SCARE_MONSTER && !(b & NH_PB_SCARE))
++            || (otyp == CLOVE_OF_GARLIC && !(b & NH_PB_GARLIC)))
++            return (struct obj *) 0;
++    }
++
+     for (otmp = level.objs[x][y]; otmp; otmp = otmp->nexthere)
+         if (otmp->otyp == otyp)
+             break;
+diff --git a/src/mklev.c b/src/mklev.c
+index 552fdaa32..e011cce11 100644
+--- a/src/mklev.c
++++ b/src/mklev.c
+@@ -648,6 +648,7 @@ clear_level_structures()
+     level.objlist = (struct obj *) 0;
+     level.buriedobjlist = (struct obj *) 0;
+     level.monlist = (struct monst *) 0;
++    nh_planes_clear();
+     level.damagelist = (struct damage *) 0;
+     level.bonesinfo = (struct cemetery *) 0;
+ 
+@@ -688,6 +689,7 @@ clear_level_structures()
+     made_branch = FALSE;
+     clear_regions();
+     nh_typ_sync();
++    nh_planes_sync();
+ }
+ 
+ /* Added for NLE. */
+diff --git a/src/mkmaze.c b/src/mkmaze.c
+index 91fd91a7d..61ea60743 100644
+--- a/src/mkmaze.c
++++ b/src/mkmaze.c
+@@ -1982,8 +1982,14 @@ boolean ini;
+             case CONS_TRAP: {
+                 struct trap *btrap = (struct trap *) cons->list;
+ 
+-                btrap->tx = cons->x;
+-                btrap->ty = cons->y;
++                {
++                    int otx = btrap->tx, oty = btrap->ty;
++
++                    btrap->tx = cons->x;
++                    btrap->ty = cons->y;
++                    nh_trap_plane_fix(otx, oty);
++                    nh_trap_plane_fix(btrap->tx, btrap->ty);
++                }
+                 break;
+             }
+ 
+diff --git a/src/mkobj.c b/src/mkobj.c
+index 876980368..e687ab94a 100644
+--- a/src/mkobj.c
++++ b/src/mkobj.c
+@@ -453,8 +453,11 @@ long num;
+     obj->nobj = otmp;
+     /* Only set nexthere when on the floor, nexthere is also used */
+     /* as a back pointer to the container object when contained. */
+-    if (obj->where == OBJ_FLOOR)
++    if (obj->where == OBJ_FLOOR) {
+         obj->nexthere = otmp;
++        nh_fobj_dirty(); /* chain edit bypasses place_object */
++        nh_pile_recompute(obj->ox, obj->oy);
++    }
+     copy_oextra(otmp, obj);
+     if (has_omid(otmp))
+         free_omid(otmp); /* only one association with m_id*/
+@@ -611,6 +614,8 @@ struct obj *otmp;
+         obj->nexthere = otmp;
+         extract_nobj(obj, &fobj);
+         extract_nexthere(obj, &level.objs[obj->ox][obj->oy]);
++        nh_fobj_dirty(); /* in-place swap bypasses place/remove */
++        nh_pile_recompute(otmp->ox, otmp->oy);
+         break;
+     default:
+         panic("replace_object: obj position");
+@@ -1280,6 +1285,7 @@ register struct obj *otmp;
+     if (otmp->lamplit)
+         old_light = arti_light_radius(otmp);
+     otmp->cursed = 0;
++    nh_pile_touch_obj(otmp);
+     otmp->blessed = 1;
+     if (carried(otmp) && confers_luck(otmp))
+         set_moreluck();
+@@ -1323,6 +1329,7 @@ register struct obj *otmp;
+     already_cursed = otmp->cursed;
+     otmp->blessed = 0;
+     otmp->cursed = 1;
++    nh_pile_touch_obj(otmp);
+     /* welded two-handed weapon interferes with some armor removal */
+     if (otmp == uwep && bimanual(uwep))
+         reset_remarm();
+@@ -1358,6 +1365,7 @@ register struct obj *otmp;
+     if (otmp->lamplit)
+         old_light = arti_light_radius(otmp);
+     otmp->cursed = 0;
++    nh_pile_touch_obj(otmp);
+     if (carried(otmp) && confers_luck(otmp))
+         set_moreluck();
+     else if (otmp->otyp == BAG_OF_HOLDING)
+@@ -1791,6 +1799,8 @@ int x, y;
+     /* add to floor chain */
+     otmp->nobj = fobj;
+     fobj = otmp;
++    nh_pile_recompute(x, y);
++    nh_fobj_dirty();
+     if (otmp->timed)
+         obj_timer_checks(otmp, x, y, 0);
+ }
+@@ -1925,6 +1935,8 @@ register struct obj *otmp;
+         panic("remove_object: obj not on floor");
+     extract_nexthere(otmp, &level.objs[x][y]);
+     extract_nobj(otmp, &fobj);
++    nh_pile_recompute(x, y);
++    nh_fobj_dirty();
+     /* update vision iff this was the only boulder at its spot */
+     if (otmp->otyp == BOULDER && !sobj_at(BOULDER, x, y))
+         unblock_point(x, y); /* vision */
+diff --git a/src/mon.c b/src/mon.c
+index 12de4705f..d446d7125 100644
+--- a/src/mon.c
++++ b/src/mon.c
+@@ -505,6 +505,18 @@ int minliquid(mtmp) register struct monst *mtmp;
+               && !(is_flyer(mtmp->data) || is_floater(mtmp->data)));
+     infountain = IS_FOUNTAIN(TYP_AT(mtmp->mx, mtmp->my));
+ 
++    /* NLE: dry, non-fountain cell -- every branch below needs inpool,
++       inlava or infountain except the out-of-water eel case, which is
++       the final else; same statements, same RNG, taken directly. */
++    if (!inpool && !inlava && !infountain) {
++        if (mtmp->data->mlet == S_EEL && !Is_waterlevel(&u.uz)) {
++            if (mtmp->mhp > 1 && rn2(mtmp->mhp) > rn2(8))
++                mtmp->mhp--;
++            monflee(mtmp, 2, FALSE, FALSE);
++        }
++        return 0;
++    }
++
+     /* Flying and levitation keeps our steed out of the liquid
+        (but not water-walking or swimming; note: if hero is in a
+        water location on the Plane of Water, flight and levitating
+@@ -691,7 +703,7 @@ mcalcdistress()
+         if (mtmp->data->mmove == 0) {
+             if (vision_full_recalc)
+                 vision_recalc(0);
+-            if (minliquid(mtmp))
++            if (NH_MINLIQUID(mtmp))
+                 continue;
+         }
+ 
+@@ -704,7 +716,8 @@ mcalcdistress()
+                 mtmp, (canspotmon(mtmp) || (u.uswallow && mtmp == u.ustuck))
+                           ? SHIFT_MSG
+                           : 0);
+-        were_change(mtmp);
++        if (is_were(mtmp->data)) /* NLE: same first test as were_change() */
++            were_change(mtmp);
+ 
+         /* gradually time out temporary problems */
+         if (mtmp->mblinded && !--mtmp->mblinded)
+@@ -787,7 +800,7 @@ movemon()
+         if (context.bypasses)
+             clear_bypasses();
+         clear_splitobjs();
+-        if (minliquid(mtmp))
++        if (NH_MINLIQUID(mtmp))
+             continue;
+ 
+         /* after losing equipment, try to put on replacement */
+@@ -1306,6 +1319,8 @@ long flag;
+     boolean rockok = FALSE, treeok = FALSE, thrudoor;
+     int maxx, maxy;
+     boolean poisongas_ok, in_poisongas;
++    int any_gas_region;
++    boolean monseeu_h, displaced_h; /* NLE: hoisted per-monster invariants */
+     NhRegion *gas_reg;
+     int gas_glyph = cmap_to_glyph(S_poisoncloud);
+ 
+@@ -1330,6 +1345,16 @@ long flag;
+          || resists_poison(mon));
+     in_poisongas = ((gas_reg = visible_region_at(x, y)) != 0
+                     && gas_reg->glyph == gas_glyph);
++    /* NLE: the per-cell gas test below can only succeed if some visible
++       region on the level is a gas cloud; decide that once per call instead
++       of scanning the region list for each of the 8 candidate cells. Exact:
++       when no such region exists, visible_region_at() can never return one
++       whose glyph is gas_glyph, so the clause is false for every cell. */
++    any_gas_region = any_visible_region_glyph(gas_glyph);
++    /* NLE: per-monster invariants, were recomputed for every candidate
++       cell (Invis/perceives/Displaced are property lookups) */
++    monseeu_h = (mon->mcansee && (!Invis || perceives(mdat)));
++    displaced_h = Displaced ? TRUE : FALSE;
+ 
+     if (flag & ALLOW_DIG) {
+         struct obj *mw_tmp;
+@@ -1353,6 +1378,37 @@ long flag;
+             thrudoor = TRUE;
+     }
+ 
++#ifdef NH_MFNDPOS_PROBE
++    {
++        /* how often would an exact cross-turn cache hit? hash every input
++           the loop reads for the 9 cells + hero/monster state; compare
++           with this monster's previous call. Debug build only. */
++        static unsigned long long probe_last[4096]; static int probe_calls, probe_hits;
++        unsigned long long h = 1469598103934665603ULL;
++#define PH(v) (h = (h ^ (unsigned long long) (v)) * 1099511628211ULL)
++        int px, py;
++        PH(x); PH(y); PH(u.ux); PH(u.uy); PH(flag); PH(mon->mux); PH(mon->muy);
++        PH(mon->mcansee); PH(mon->mconf); PH(mon->mtrapseen); PH((long) mdat);
++        PH(Invis); PH(Displaced);
++        for (px = x - 1; px <= x + 1; px++)
++            for (py = y - 1; py <= y + 1; py++) {
++                if (px < 0 || px >= COLNO || py < 0 || py >= ROWNO) continue;
++                PH(TYP_AT(px, py)); PH(levl[px][py].doormask); PH(levl[px][py].wall_info);
++                PH((long) level.monsters[px][py]); PH((long) nh_trap_plane[px][py]);
++                PH(nh_pile_plane[px][py]); PH((long) OBJ_AT(px, py));
++                if (level.monsters[px][py]) { PH(level.monsters[px][py]->mtame); PH(level.monsters[px][py]->mpeaceful); PH((long) level.monsters[px][py]->data); }
++            }
++        {
++            unsigned idx = (unsigned) (((unsigned long) mon >> 4) & 4095);
++            probe_calls++;
++            if (probe_last[idx] == h) probe_hits++;
++            probe_last[idx] = h;
++            if (probe_calls % 100000 == 0)
++                fprintf(stderr, "MFNDPOS_PROBE calls=%d hits=%d (%.1f%%)\n", probe_calls, probe_hits, 100.0 * probe_hits / probe_calls);
++        }
++#undef PH
++    }
++#endif
+ nexttry: /* eels prefer the water, but if there is no water nearby,
+             they will crawl over land */
+     if (mon->mconf) {
+@@ -1386,7 +1442,7 @@ nexttry: /* eels prefer the water, but if there is no water nearby,
+                 && !thrudoor)
+                 continue;
+             /* avoid poison gas? */
+-            if (!poisongas_ok && !in_poisongas
++            if (!poisongas_ok && !in_poisongas && any_gas_region
+                 && (gas_reg = visible_region_at(nx, ny)) != 0
+                 && gas_reg->glyph == gas_glyph)
+                 continue;
+@@ -1405,14 +1461,13 @@ nexttry: /* eels prefer the water, but if there is no water nearby,
+             if ((is_pool(nx, ny) == wantpool || poolok)
+                 && (lavaok || !is_lava(nx, ny))) {
+                 int dispx, dispy;
+-                boolean monseeu =
+-                    (mon->mcansee && (!Invis || perceives(mdat)));
++                boolean monseeu = monseeu_h;
+                 boolean checkobj = OBJ_AT(nx, ny);
+ 
+                 /* Displacement also displaces the Elbereth/scare monster,
+                  * as long as you are visible.
+                  */
+-                if (Displaced && monseeu && mon->mux == nx
++                if (displaced_h && monseeu && mon->mux == nx
+                     && mon->muy == ny) {
+                     dispx = u.ux;
+                     dispy = u.uy;
+@@ -1422,7 +1477,7 @@ nexttry: /* eels prefer the water, but if there is no water nearby,
+                 }
+ 
+                 info[cnt] = 0;
+-                if (onscary(dispx, dispy, mon)) {
++                if (NH_ONSCARY(dispx, dispy, mon)) {
+                     if (!(flag & ALLOW_SSM))
+                         continue;
+                     info[cnt] |= ALLOW_SSM;
+@@ -1475,14 +1530,9 @@ nexttry: /* eels prefer the water, but if there is no water nearby,
+                     /* one pass over the pile for both garlic and boulder
+                        (was two full sobj_at chain walks per candidate cell
+                        in the hottest steady-state function) */
+-                    register struct obj *po;
+-                    boolean garlic = FALSE, boulder = FALSE;
+-                    for (po = level.objs[nx][ny]; po; po = po->nexthere) {
+-                        if (po->otyp == CLOVE_OF_GARLIC)
+-                            garlic = TRUE;
+-                        else if (po->otyp == BOULDER)
+-                            boulder = TRUE;
+-                    }
++                    unsigned char pb = nh_pile_plane[nx][ny];
++                    boolean garlic = (pb & NH_PB_GARLIC) != 0,
++                            boulder = (pb & NH_PB_BOULDER) != 0;
+                     if (garlic) {
+                         if (flag & NOGARLIC)
+                             continue;
+@@ -2871,7 +2921,7 @@ boolean via_attack;
+         /* only hypocritical if monster is vulnerable to Elbereth (or
+            peaceful--not vulnerable but attacking it is hypocritical) */
+         && (onscary(u.ux, u.uy, mtmp) || mtmp->mpeaceful)) {
+-        You_feel("like a hypocrite.");
++        You_feel("like a hypocrite."); u.nle_engr_last = 0; u.nle_engr_blind = 0; /* the message says the engraving is gone: public knowledge */
+         /* AIS: Yes, I know alignment penalties and bonuses aren't balanced
+            at the moment. This is about correct relative to other "small"
+            penalties; it should be fairly large, as attacking while standing
+diff --git a/src/monmove.c b/src/monmove.c
+index 923f630f5..f426a7aff 100644
+--- a/src/monmove.c
++++ b/src/monmove.c
+@@ -124,7 +124,7 @@ register struct monst *mtmp;
+         /* can see it now, or sense it and would normally see it */
+         && (canseemon(mtmp) || (sensemon(mtmp) && couldsee(x, y)))
+         && mtmp->mcanmove && !noattacks(mtmp->data)
+-        && !onscary(u.ux, u.uy, mtmp))
++        && !NH_ONSCARY(u.ux, u.uy, mtmp))
+         stop_occupation();
+ 
+     return rd;
+@@ -135,6 +135,17 @@ onscary(x, y, mtmp)
+ int x, y;
+ struct monst *mtmp;
+ {
++    /* NLE: cell-first exact fast path. Every TRUE below needs the cell to
++       be the musical <0,0> probe, an altar, a scare-monster pile, or the
++       hero's square (or displaced image) with an engraving; any other cell
++       is FALSE for every monster, so test the cell before the monster.
++       All clauses are pure predicates; result identical, no side effects. */
++    if (!(x == 0 && y == 0) && x >= 0 && x < COLNO && y >= 0 && y < ROWNO
++        && !IS_ALTAR(TYP_AT(x, y)) && !(nh_pile_plane[x][y] & NH_PB_SCARE)
++        && !((u.ux == x && u.uy == y)
++             || (Displaced && mtmp->mux == x && mtmp->muy == y)))
++        return FALSE;
++
+     /* creatures who are directly resistant to magical scaring:
+      * Rodney, lawful minions, Angels, the Riders, shopkeepers
+      * inside their own shop, priests inside their own temple */
+@@ -156,7 +167,9 @@ struct monst *mtmp;
+ 
+     /* the scare monster scroll doesn't have any of the below
+      * restrictions, being its own source of power */
+-    if (sobj_at(SCR_SCARE_MONSTER, x, y))
++    /* NLE: pile-plane bit is a necessary condition for a scare scroll here;
++       skip the pile walk when it is clear (exact, same contract as mfndpos) */
++    if ((nh_pile_plane[x][y] & NH_PB_SCARE) && sobj_at(SCR_SCARE_MONSTER, x, y))
+         return TRUE;
+ 
+     /*
+@@ -342,7 +355,7 @@ int *inrange, *nearby, *scared;
+         seescaryy = u.uy;
+     }
+ 
+-    sawscary = onscary(seescaryx, seescaryy, mtmp);
++    sawscary = onscary(seescaryx, seescaryy, mtmp); /* hero square: no inline test */
+     if (*nearby && (sawscary
+                     || (flees_light(mtmp) && !bravegremlin)
+                     || (!mtmp->mpeaceful && in_your_sanctuary(mtmp, 0, 0)))) {
+@@ -991,7 +1004,11 @@ register int after;
+             oomy = min(ROWNO - 1, omy + minr);
+             lmx = max(1, omx - minr);
+             lmy = max(0, omy - minr);
+-            for (otmp = fobj; otmp; otmp = otmp->nobj) {
++            {
++            int fi_ = 0;
++
++            for (otmp = nh_fobj_next_in(&fi_, (struct obj *) 0, lmx, oomx, lmy, oomy);
++                 otmp; otmp = nh_fobj_next_in(&fi_, otmp, lmx, oomx, lmy, oomy)) {
+                 /* monsters may pick rocks up, but won't go out of their way
+                    to grab them; this might hamper sling wielders, but it cuts
+                    down on move overhead by filtering out most common item */
+@@ -1042,7 +1059,7 @@ register int after;
+                             && (!is_unicorn(ptr)
+                                 || objects[otmp->otyp].oc_material == GEMSTONE)
+                             /* Don't get stuck circling an Elbereth */
+-                            && !onscary(xx, yy, mtmp)) {
++                            && !NH_ONSCARY(xx, yy, mtmp)) {
+                             minr = distmin(omx, omy, xx, yy);
+                             oomx = min(COLNO - 1, omx + minr);
+                             oomy = min(ROWNO - 1, omy + minr);
+@@ -1058,6 +1075,7 @@ register int after;
+                     }
+                 }
+             }
++            }
+         } else if (likegold) {
+             /* don't try to pick up anything else, but use the same loop */
+             uses_items = 0;
+@@ -1132,8 +1150,16 @@ register int after;
+                 if (!(info[i] & NOTONL))
+                     avoid = TRUE;
+         }
+-        better_with_displacing =
+-            should_displace(mtmp, poss, info, cnt, gx, gy);
++        /* NLE: should_displace() can only return TRUE if some candidate
++           carries ALLOW_MDISP; skip its dist2 loop otherwise (exact). */
++        {
++            register int di;
++            long anydisp = 0L;
++            for (di = 0; di < cnt; di++)
++                anydisp |= info[di];
++            better_with_displacing = (anydisp & ALLOW_MDISP)
++                ? should_displace(mtmp, poss, info, cnt, gx, gy) : FALSE;
++        }
+         for (i = 0; i < cnt; i++) {
+             if (avoid && (info[i] & NOTONL))
+                 continue;
+@@ -1539,7 +1565,9 @@ register struct monst *mtmp;
+ {
+     boolean notseen, gotu;
+     register int disp, mx = mtmp->mux, my = mtmp->muy;
+-    long umoney = money_cnt(invent);
++    /* NLE: the inventory gold count is only consulted for xorns below; walking
++       invent for every monster every turn is pure overhead (exact: money_cnt is
++       a side-effect-free function of invent, evaluated at the same point). */
+ 
+     /*
+      * do cheapest and/or most likely tests first
+@@ -1559,7 +1587,7 @@ register struct monst *mtmp;
+     if (notseen || Underwater) {
+         /* Xorns can smell quantities of valuable metal
+             like that in solid gold coins, treat as seen */
+-        if ((mtmp->data == &mons[PM_XORN]) && umoney && !Underwater)
++        if ((mtmp->data == &mons[PM_XORN]) && money_cnt(invent) && !Underwater)
+             disp = 0;
+         else
+             disp = 1;
+diff --git a/src/nh_arena.c b/src/nh_arena.c
+new file mode 100644
+index 000000000..5a1f73a0e
+--- /dev/null
++++ b/src/nh_arena.c
+@@ -0,0 +1,102 @@
++#include <stdlib.h>
++#include <string.h>
++#include <stdint.h>
++#include <sys/mman.h>
++#include "hack.h"
++#include "nle.h"
++#include "nh_arena.h"
++#undef free
++#undef settings
++
++#define NH_ARENA_RESERVE ((size_t) 64 << 20)
++#define NH_ARENA_MAXCLS 64 /* 16..1024 byte payloads */
++
++struct nh_arena {
++    char *base;
++    size_t cap, used;
++    void *fl[NH_ARENA_MAXCLS + 1];
++};
++typedef struct { uint32_t cls; uint32_t magic; uint64_t pad; } nh_hdr; /* 16 bytes */
++
++nh_arena *
++nh_arena_new(void)
++{
++    nh_arena *a = (nh_arena *) calloc(1, sizeof *a);
++    if (!a)
++        return NULL;
++    a->base = (char *) mmap(NULL, NH_ARENA_RESERVE, PROT_READ | PROT_WRITE,
++                            MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
++    if (a->base == MAP_FAILED) {
++        (free)(a);
++        return NULL;
++    }
++    a->cap = NH_ARENA_RESERVE;
++    return a;
++}
++
++void
++nh_arena_destroy(nh_arena *a)
++{
++    if (!a)
++        return;
++    munmap(a->base, a->cap);
++    (free)(a);
++}
++
++static inline int
++nh_arena_owns(const nh_arena *a, const void *p)
++{
++    return (const char *) p >= a->base && (const char *) p < a->base + a->cap;
++}
++
++static void *
++nh_arena_alloc(nh_arena *a, size_t lth)
++{
++    size_t cls = (lth + 15) >> 4;
++    nh_hdr *h;
++    if (cls == 0)
++        cls = 1;
++    if (cls > NH_ARENA_MAXCLS)
++        return NULL; /* big blocks stay on libc */
++    if (a->fl[cls]) {
++        void *p = a->fl[cls];
++        a->fl[cls] = *(void **) p;
++        memset(p, 0, cls << 4);
++        return p;
++    }
++    {
++        size_t need = 16 + (cls << 4);
++        if (a->used + need > a->cap)
++            return NULL; /* reservation exhausted: libc from here on */
++        h = (nh_hdr *) (a->base + a->used);
++        a->used += need;
++        h->cls = (uint32_t) cls;
++        h->magic = 0xA11Cu;
++        return h + 1; /* fresh pages are zero */
++    }
++}
++
++static void
++nh_arena_dealloc(nh_arena *a, void *p)
++{
++    nh_hdr *h = (nh_hdr *) p - 1;
++    *(void **) p = a->fl[h->cls];
++    a->fl[h->cls] = p;
++}
++
++void *
++nh_arena_alloc_hook(unsigned int lth)
++{
++    nle_ctx_t *c = current_nle_ctx;
++    return (c && c->arena) ? nh_arena_alloc((nh_arena *) c->arena, lth) : NULL;
++}
++
++void
++nh_arena_free_hook(void *p)
++{
++    nle_ctx_t *c = current_nle_ctx;
++    if (p && c && c->arena && nh_arena_owns((nh_arena *) c->arena, p))
++        nh_arena_dealloc((nh_arena *) c->arena, p);
++    else
++        (free)(p);
++}
+diff --git a/src/nhplanes.c b/src/nhplanes.c
+new file mode 100644
+index 000000000..dbbfc4e6c
+--- /dev/null
++++ b/src/nhplanes.c
+@@ -0,0 +1,153 @@
++/* fast-nle: per-cell lookup planes + compact floor-object index.
++ *
++ * The monster-AI hot loops (mfndpos, m_move's item search, onscary,
++ * dog_goal, wipe_engr_at) each walked a level-wide list per candidate cell
++ * or per monster per turn: the trap list (t_at), the engraving list
++ * (engr_at), the object pile at a cell (sobj_at, cursed_object_at) and the
++ * whole floor-object chain (fobj). Under a trained policy those walks were
++ * over half of an env step and grew with the number of monsters, drops and
++ * engravings. Each plane mirrors one list exactly and is maintained
++ * write-through at every mutation site (see the nh_*_fix / nh_pile_*
++ * calls), rebuilt at level entry next to nh_typ_sync(), and hard-compared
++ * against the lists at every obs fill under NLE_PLANE_VERIFY. No RNG, no
++ * behavior change: every consumer gets the answer the walk gave.
++ * The engraving plane lives in engrave.c (head_engr is private there). */
++#include "hack.h"
++
++static unsigned char
++nh_pile_bits_of(struct obj *o)
++{
++    unsigned char b = 0;
++
++    if (o->otyp == BOULDER)
++        b |= NH_PB_BOULDER;
++    else if (o->otyp == SCR_SCARE_MONSTER)
++        b |= NH_PB_SCARE;
++    else if (o->otyp == CLOVE_OF_GARLIC)
++        b |= NH_PB_GARLIC;
++    if (o->cursed)
++        b |= NH_PB_CURSED;
++    return b;
++}
++
++void
++nh_pile_recompute(int x, int y)
++{
++    struct obj *o;
++    unsigned char b = 0;
++
++    if (x < 0 || x >= COLNO || y < 0 || y >= ROWNO)
++        return;
++    for (o = level.objs[x][y]; o; o = o->nexthere)
++        b |= nh_pile_bits_of(o);
++    nh_pile_plane[x][y] = b;
++}
++
++void
++nh_pile_touch_obj(struct obj *o)
++{
++    if (o && o->where == OBJ_FLOOR)
++        nh_pile_recompute(o->ox, o->oy);
++}
++
++/* first trap in ftrap order at (x,y), exactly what t_at() walked to */
++void
++nh_trap_plane_fix(int x, int y)
++{
++    struct trap *t;
++
++    if (x < 0 || x >= COLNO || y < 0 || y >= ROWNO)
++        return;
++    for (t = ftrap; t; t = t->ntrap)
++        if (t->tx == x && t->ty == y)
++            break;
++    nh_trap_plane[x][y] = t;
++}
++
++void
++nh_fobj_rebuild(void)
++{
++    struct obj *o;
++    int n = 0;
++
++    for (o = fobj; o; o = o->nobj) {
++        if (n >= NH_FOBJ_CAP) {
++            nh_fobj_n = -2; /* too many: consumers walk fobj directly */
++            return;
++        }
++        nh_fobj_xy[n] = (unsigned short) (((o->ox & 0xff) << 8) | (o->oy & 0xff));
++        nh_fobj_ptr[n] = o;
++        n++;
++    }
++    nh_fobj_n = n;
++}
++
++/* the level's lists are being freed or replaced: drop every plane entry so
++   no consumer can dereference a freed trap/engraving before the next sync
++   (level generation calls t_at() long before vision_reset) */
++void
++nh_planes_clear(void)
++{
++    (void) memset((genericptr_t) nh_trap_plane, 0, sizeof nh_trap_plane);
++    (void) memset((genericptr_t) nh_engr_plane, 0, sizeof nh_engr_plane);
++    (void) memset((genericptr_t) nh_pile_plane, 0, sizeof nh_pile_plane);
++    nh_fobj_n = -1;
++}
++
++/* full rebuild; called wherever nh_typ_sync() is (level creation, entry,
++   restore) -- after monsters, objects, traps and engravings are in place */
++void
++nh_planes_sync(void)
++{
++    int x, y;
++    struct trap *t;
++
++
++    (void) memset((genericptr_t) nh_trap_plane, 0, sizeof nh_trap_plane);
++    for (t = ftrap; t; t = t->ntrap)
++        if (t->tx >= 0 && t->tx < COLNO && t->ty >= 0 && t->ty < ROWNO
++            && !nh_trap_plane[t->tx][t->ty])
++            nh_trap_plane[t->tx][t->ty] = t;
++    nh_engr_plane_sync();
++    for (x = 0; x < COLNO; x++)
++        for (y = 0; y < ROWNO; y++)
++            nh_pile_recompute(x, y);
++    nh_fobj_n = -1;
++}
++
++void
++nh_planes_verify(const char *where)
++{
++    int x, y, n;
++    struct trap *t;
++    struct obj *o;
++    struct trap *et[COLNO][ROWNO]; /* stack: verify must not touch the allocator */
++
++    (void) memset((genericptr_t) et, 0, sizeof et);
++    for (t = ftrap; t; t = t->ntrap)
++        if (t->tx >= 0 && t->tx < COLNO && t->ty >= 0 && t->ty < ROWNO
++            && !et[t->tx][t->ty])
++            et[t->tx][t->ty] = t;
++    for (x = 0; x < COLNO; x++)
++        for (y = 0; y < ROWNO; y++) {
++            unsigned char b = 0;
++
++            if (nh_trap_plane[x][y] != et[x][y])
++                { fprintf(stderr, "PLANE: trap desync (%d,%d) [%s]\n", x, y, where); panic("trap plane desync (%d,%d) [%s]", x, y, where); }
++            for (o = level.objs[x][y]; o; o = o->nexthere)
++                b |= nh_pile_bits_of(o);
++            if (nh_pile_plane[x][y] != b)
++                { fprintf(stderr, "PLANE: pile desync (%d,%d) plane=%d real=%d [%s]\n", x, y, nh_pile_plane[x][y], b, where); panic("pile plane desync [%s]", where); }
++        }
++    nh_engr_plane_verify(where);
++    if (nh_fobj_n >= 0) {
++        for (n = 0, o = fobj; o; o = o->nobj, n++) {
++            if (n >= nh_fobj_n || nh_fobj_ptr[n] != o
++                || nh_fobj_xy[n]
++                       != (unsigned short) (((o->ox & 0xff) << 8) | (o->oy & 0xff)))
++                { fprintf(stderr, "PLANE: fobj index desync at %d of %d [%s]\n", n, nh_fobj_n, where); panic("fobj index desync [%s]", where); }
++        }
++        if (n != nh_fobj_n)
++            { fprintf(stderr, "PLANE: fobj count desync %d vs %d [%s]\n", n, nh_fobj_n, where); panic("fobj count desync [%s]", where); }
++    }
++}
+diff --git a/src/nle.c b/src/nle.c
+index 34921b7e9..4bc99ede6 100644
+--- a/src/nle.c
++++ b/src/nle.c
+@@ -15,6 +15,7 @@
+ #include "dlb.h"
+ 
+ #include "nle.h"
++#include "nh_arena.h"
+ #include "nlernd.h"
+ 
+ #ifdef NLE_BZ2_TTYRECS
+@@ -154,6 +155,9 @@ init_nle(FILE *ttyrec, nle_obs *obs)
+      * statics; garbage here becomes garbage in the misc[] observation and
+      * in winrl branches. */
+     nle_ctx_t *nle = calloc(1, sizeof(nle_ctx_t));
++#ifdef NH_ARENA
++    nle->arena = nh_arena_new();
++#endif
+ 
+     /* fast-nle: allocate this env's migrated game state and anchor the
+      * context pointer before any game code can run. */
+@@ -780,7 +784,21 @@ nle_weight(nle_ctx_t *nle, int *wt, int *cap)
+ 
+     nh_cur = (struct nh_ctx *) nle->nh;
+     *cap = weight_cap();
+-    *wt = inv_weight() + *cap;   /* inv_weight() returns carried - cap */
++    {   /* public-obs convention: what a player can total from the inventory text --
++           containers count empty (contents unseen), partly eaten food counts half */
++        long w = 0;
++        struct obj *otmp;
++        for (otmp = invent; otmp; otmp = otmp->nobj) {
++            long q = otmp->quan, base;
++            if (otmp->oclass == COIN_CLASS) { w += (q + 50L) / 100L; continue; }
++            if (otmp->otyp == CORPSE && otmp->corpsenm >= 0) base = mons[otmp->corpsenm].cwt;
++            else base = objects[otmp->otyp].oc_weight;
++            base *= q;
++            if (otmp->oeaten) base /= 2;
++            w += base;
++        }
++        *wt = (int) w;
++    }
+     nh_cur = saved;
+ }
+ 
+@@ -1268,9 +1286,16 @@ nle_end(nle_ctx_t *nle)
+         tmt_close(nle->vterminal);
+ 
+     destroy_fcontext_stack(&nle->stack);
++    /* nh_ctx_free releases the context's heap members: with the arena it must
++       run while this env is still current (arena blocks route back to it,
++       libc blocks to libc); only then drop the arena and the anchors */
++    nh_ctx_free((struct nh_ctx *) nle->nh);
+     nh_cur = (struct nh_ctx *) 0;
++#ifdef NH_ARENA
++    nh_arena_destroy((nh_arena *) nle->arena); /* everything alloc()ed by this game */
++    nle->arena = (void *) 0;
++#endif
+     current_nle_ctx = (nle_ctx_t *) 0;
+-    nh_ctx_free((struct nh_ctx *) nle->nh);
+     free(nle);
+ }
+ 
+diff --git a/src/region.c b/src/region.c
+index 7303d38af..61f0ec657 100644
+--- a/src/region.c
++++ b/src/region.c
+@@ -606,6 +606,21 @@ struct monst *mon;
+  * Check if a spot is under a visible region (eg: gas cloud).
+  * Returns NULL if not, otherwise returns region.
+  */
++/* NLE: does any visible, non-expired region carry this glyph?  Lets callers
++   skip per-cell visible_region_at() scans when the answer is no (exact). */
++boolean
++any_visible_region_glyph(glyph)
++int glyph;
++{
++    register int i;
++
++    for (i = 0; i < n_regions; i++)
++        if (regions[i]->visible && regions[i]->ttl != -2L
++            && regions[i]->glyph == glyph)
++            return TRUE;
++    return FALSE;
++}
++
+ NhRegion *
+ visible_region_at(x, y)
+ xchar x, y;
+diff --git a/src/restore.c b/src/restore.c
+index 53f8d198b..164b87604 100644
+--- a/src/restore.c
++++ b/src/restore.c
+@@ -121,6 +121,7 @@ find_lev_obj()
+     for (x = 0; x < COLNO; x++)
+         for (y = 0; y < ROWNO; y++)
+             level.objs[x][y] = (struct obj *) 0;
++    nh_planes_clear();
+ 
+     /*
+      * Reverse the entire fobj chain, which is necessary so that we can
+@@ -1273,6 +1274,7 @@ boolean ghostly;
+     level.buriedobjlist = restobjchn(fd, ghostly, FALSE);
+     billobjs = restobjchn(fd, ghostly, FALSE);
+     rest_engravings(fd);
++    nh_planes_sync(); /* traps, objects, engravings now restored */
+ 
+     /* reset level.monsters for new level */
+     for (x = 0; x < COLNO; x++)
+diff --git a/src/save.c b/src/save.c
+index 8f53b3458..494249b9e 100644
+--- a/src/save.c
++++ b/src/save.c
+@@ -717,6 +717,8 @@ int mode;
+         /* level.bonesinfo = 0; -- handled by savecemetery() */
+     }
+     save_engravings(fd, mode);
++    if (release_data(mode))
++        nh_planes_clear(); /* traps/engravings/objects just freed */
+     savedamage(fd, mode); /* pending shop wall and/or floor repair */
+     save_regions(fd, mode);
+     if (mode != FREE_SAVE)
+@@ -1671,6 +1673,7 @@ freedynamicdata()
+     (void) memset((genericptr_t) level.monsters, 0, sizeof(level.monsters));
+     fobj = (struct obj *) 0;
+     fmon = (struct monst *) 0;
++    nh_planes_clear();
+ 
+     /* game-state data [ought to reorganize savegamestate() to handle this] */
+     free_killers();
+diff --git a/src/track.c b/src/track.c
+index 5b802a294..ee20a3d7d 100644
+--- a/src/track.c
++++ b/src/track.c
+@@ -13,18 +13,29 @@ void
+ initrack()
+ {
+     utcnt = utpnt = 0;
++    (void) memset((genericptr_t) nh_track_cnt, 0, sizeof nh_track_cnt);
++    (void) memset((genericptr_t) nh_track_bits, 0, sizeof nh_track_bits);
+ }
+ 
+ /* add to track */
+ void
+ settrack()
+ {
++    /* NLE: nh_track_cnt[x][y] = number of live ring entries at that cell,
++       so gettrack() can reject cells with no entry in their 3x3 block. */
++    if (utcnt == UTSZ) { /* ring full: the slot being reused is live */
++        coord *old = &utrack[utpnt == UTSZ ? 0 : utpnt];
++        if (nh_track_cnt[old->x][old->y] && !--nh_track_cnt[old->x][old->y])
++            nh_track_bits[old->x] &= ~(1u << old->y);
++    }
+     if (utcnt < UTSZ)
+         utcnt++;
+     if (utpnt == UTSZ)
+         utpnt = 0;
+     utrack[utpnt].x = u.ux;
+     utrack[utpnt].y = u.uy;
++    nh_track_cnt[u.ux][u.uy]++;
++    nh_track_bits[u.ux] |= 1u << u.uy; /* column mask: bit y = some entry at (x,y) */
+     utpnt++;
+ }
+ 
+@@ -34,6 +45,20 @@ register int x, y;
+ {
+     register int cnt, ndist;
+     register coord *tc;
++
++    /* NLE: the loop below returns non-null only for an entry with
++       distmin <= 1, i.e. inside the 3x3 block around (x,y); if no live
++       entry lies there the answer is null without scanning (exact). */
++    if (isok(x, y)) {
++        unsigned cols = nh_track_bits[x];
++        if (x > 0)
++            cols |= nh_track_bits[x - 1];
++        if (x < COLNO - 1)
++            cols |= nh_track_bits[x + 1];
++        /* rows y-1..y+1; y == 0 shifts to bits 0..1 (bit -1 does not exist) */
++        if (!(cols & ((y > 0) ? (7u << (y - 1)) : 3u)))
++            return (coord *) 0;
++    }
+     cnt = utcnt;
+     for (tc = &utrack[utpnt]; cnt--;) {
+         if (tc == utrack)
+diff --git a/src/trap.c b/src/trap.c
+index f37793662..1a441036c 100644
+--- a/src/trap.c
++++ b/src/trap.c
+@@ -441,6 +441,7 @@ int x, y, typ;
+     if (!oldplace) {
+         ttmp->ntrap = ftrap;
+         ftrap = ttmp;
++        nh_trap_plane_fix(x, y);
+     } else {
+         /* oldplace;
+            it shouldn't be possible to override a sokoban pit or hole
+@@ -1106,8 +1107,8 @@ unsigned trflags;
+                   body_part(FOOT));
+             {
+                 /* fast-nle: sequence rng draws (arg eval order unspecified) */
+-                long side = rn2(2) ? RIGHT_SIDE : LEFT_SIDE;
+                 int dur = rn1(10, 10);
++                long side = rn2(2) ? RIGHT_SIDE : LEFT_SIDE;
+ 
+                 set_wounded_legs(side, dur);
+             }
+@@ -3521,6 +3522,7 @@ struct obj *obj;
+             }
+         }
+         obj->otyp = SCR_BLANK_PAPER;
++        nh_pile_touch_obj(obj);
+         obj->spe = 0;
+         obj->dknown = 0;
+     } else
+@@ -3612,6 +3614,7 @@ boolean force;
+             pline("Your %s %s.", ostr, vtense(ostr, "fade"));
+ 
+         obj->otyp = SCR_BLANK_PAPER;
++        nh_pile_touch_obj(obj);
+         obj->dknown = 0;
+         obj->spe = 0;
+         if (carried(obj))
+@@ -3633,6 +3636,7 @@ boolean force;
+         }
+ 
+         obj->otyp = SPE_BLANK_PAPER;
++        nh_pile_touch_obj(obj);
+         obj->dknown = 0;
+         if (carried(obj))
+             update_inventory();
+@@ -3679,6 +3683,7 @@ boolean force;
+                 pline("Your %s %s further.", ostr, vtense(ostr, "dilute"));
+ 
+             obj->otyp = POT_WATER;
++            nh_pile_touch_obj(obj);
+             obj->dknown = 0;
+             obj->blessed = obj->cursed = 0;
+             obj->odiluted = 0;
+@@ -5019,14 +5024,10 @@ struct trap *
+ t_at(x, y)
+ register int x, y;
+ {
+-    register struct trap *trap = ftrap;
+-
+-    while (trap) {
+-        if (trap->tx == x && trap->ty == y)
+-            return trap;
+-        trap = trap->ntrap;
+-    }
+-    return (struct trap *) 0;
++    /* fast-nle: per-cell plane, mirrors the ftrap walk (src/nhplanes.c) */
++    if (x < 0 || x >= COLNO || y < 0 || y >= ROWNO)
++        return (struct trap *) 0;
++    return nh_trap_plane[x][y];
+ }
+ 
+ void
+@@ -5046,6 +5047,7 @@ register struct trap *trap;
+             panic("deltrap: no preceding trap!");
+         ttmp->ntrap = trap->ntrap;
+     }
++    nh_trap_plane_fix(trap->tx, trap->ty);
+     if (Sokoban && (trap->ttyp == PIT || trap->ttyp == HOLE))
+         maybe_finish_sokoban();
+     dealloc_trap(trap);
+diff --git a/src/vision.c b/src/vision.c
+index ee9c6bc3e..5dc37e10f 100644
+--- a/src/vision.c
++++ b/src/vision.c
+@@ -208,6 +208,7 @@ void
+ vision_reset()
+ {
+     nh_typ_sync();
++    nh_planes_sync();
+     int y;
+     register int x, i, dig_left, block;
+     register struct rm *lev;
+diff --git a/src/zap.c b/src/zap.c
+index e3fa65e8f..8548e68d8 100644
+--- a/src/zap.c
++++ b/src/zap.c
+@@ -1064,6 +1064,7 @@ register struct obj *obj;
+         case SCROLL_CLASS:
+             costly_alteration(obj, COST_CANCEL);
+             obj->otyp = SCR_BLANK_PAPER;
++            nh_pile_touch_obj(obj);
+             obj->spe = 0;
+             break;
+         case SPBOOK_CLASS:
+@@ -1071,6 +1072,7 @@ register struct obj *obj;
+                 && otyp != SPE_BOOK_OF_THE_DEAD) {
+                 costly_alteration(obj, COST_CANCEL);
+                 obj->otyp = SPE_BLANK_PAPER;
++                nh_pile_touch_obj(obj);
+             }
+             break;
+         case POTION_CLASS:
+@@ -1084,8 +1086,10 @@ register struct obj *obj;
+                    whereas see invisible tastes like "enchanted" fruit
+                    juice, it similarly cancels */
+                 obj->otyp = POT_FRUIT_JUICE;
++                nh_pile_touch_obj(obj);
+             } else {
+                 obj->otyp = POT_WATER;
++                nh_pile_touch_obj(obj);
+                 obj->odiluted = 0; /* same as any other water */
+             }
+             break;
+@@ -4747,6 +4751,7 @@ register struct obj *obj; /* no texts here! */
+ 
+     obj->otyp = ROCK;
+     obj->oclass = GEM_CLASS;
++    nh_pile_touch_obj(obj);
+     obj->quan = (long) rn1(60, 7);
+     obj->owt = weight(obj);
+     obj->dknown = obj->bknown = obj->rknown = 0;
+diff --git a/tests/replay_golden.c b/tests/replay_golden.c
+index 32001224d..5991edaca 100644
+--- a/tests/replay_golden.c
++++ b/tests/replay_golden.c
+@@ -245,6 +245,8 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
+     unsigned long core = 0, disp = 0, lgen = 0;
+     int have_seeds = 0, have_options = 0, have_lgen = 0;
+     uint64_t init_hash = 0;
++    unsigned long time_seed_v = 0;
++    int have_time_seed = 0, true_glyphs = 0;
+     int have_init = 0;
+ 
+     /* Observation buffers: exactly the keys the recorder bound; all other
+@@ -338,6 +340,12 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
+             have_options = 1;
+         } else if (strncmp(line, "meta fix_moon_phase=1", 21) == 0) {
+             settings.fix_moon_phase = true;
++        } else if (strncmp(line, "meta time_seed=", 15) == 0) {
++            have_time_seed = (sscanf(line, "meta time_seed=%lu", &time_seed_v) == 1);
++        } else if (strncmp(line, "meta underfoot_glyphs=1", 23) == 0) {
++            settings.underfoot_glyphs = 1;
++        } else if (strncmp(line, "meta true_glyphs=1", 18) == 0) {
++            true_glyphs = 1;
+         } else if (strncmp(line, "init ", 5) == 0) {
+             if (!have_seeds || !have_options) {
+                 fprintf(stderr, "%s: init before required meta\n", golden_path);
+@@ -361,6 +369,14 @@ replay_one(const char *dlpath, const char *nhdat_dir, const char *golden_path)
+                 settings.time_seed = core + 1;
+                 settings.time_seed_is_set = true;
+             }
++            if (have_time_seed) { /* policy-driven goldens: env's own time seed */
++                settings.time_seed = time_seed_v;
++                settings.time_seed_is_set = true;
++            }
++            if (true_glyphs)
++                setenv("NLE_TRUE_GLYPHS", "1", 1);
++            else
++                unsetenv("NLE_TRUE_GLYPHS");
+ 
+             nle = lib_start(&obs, NULL, &settings);
+             if (!nle) {
+diff --git a/tests/replay_multi.c b/tests/replay_multi.c
+index b74357ea2..41e79bd17 100644
+--- a/tests/replay_multi.c
++++ b/tests/replay_multi.c
+@@ -51,6 +51,8 @@ struct golden {
+     int have_lgen;
+     char options[32768];
+     int fix_moon_phase;
++    unsigned long time_seed;
++    int have_time_seed, underfoot_glyphs, true_glyphs;
+     uint64_t init_hash;
+     int n_steps;
+     int *actions;      /* heap: MAX_STEPS entries (AutoAscend runs are long) */
+@@ -84,6 +86,12 @@ parse_golden(const char *path, struct golden *g)
+             snprintf(g->options, sizeof(g->options), "%s", opts);
+         } else if (strncmp(line, "meta fix_moon_phase=1", 21) == 0) {
+             g->fix_moon_phase = 1;
++        } else if (strncmp(line, "meta time_seed=", 15) == 0) {
++            g->have_time_seed = (sscanf(line, "meta time_seed=%lu", &g->time_seed) == 1);
++        } else if (strncmp(line, "meta underfoot_glyphs=1", 23) == 0) {
++            g->underfoot_glyphs = 1;
++        } else if (strncmp(line, "meta true_glyphs=1", 18) == 0) {
++            g->true_glyphs = 1;
+         } else if (strncmp(line, "init ", 5) == 0) {
+             g->init_hash = strtoull(line + 5, NULL, 16);
+         } else if (strncmp(line, "step ", 5) == 0) {
+@@ -218,6 +226,15 @@ env_exec(struct env *e, enum env_op op)
+             e->settings.time_seed = e->g->core + 1;
+             e->settings.time_seed_is_set = true;
+         }
++        if (e->g->have_time_seed) {
++            e->settings.time_seed = e->g->time_seed;
++            e->settings.time_seed_is_set = true;
++        }
++        e->settings.underfoot_glyphs = e->g->underfoot_glyphs;
++        if (e->g->true_glyphs)
++            setenv("NLE_TRUE_GLYPHS", "1", 1);
++        else
++            unsetenv("NLE_TRUE_GLYPHS");
+         e->nle = lib_start(&e->obs, NULL, &e->settings);
+         h = env_hash(e);
+         if (h != e->g->init_hash) {
+diff --git a/tools/globals.def b/tools/globals.def
+index 80b318fa0..204e2c8b2 100644
+--- a/tools/globals.def
++++ b/tools/globals.def
+@@ -38,6 +38,8 @@
+ track.c | cold | int   | utcnt  |      | 0
+ track.c | cold | int   | utpnt  |      | 0
+ track.c | cold | coord | utrack | [50] | 0
++track.c | hot | unsigned char | nh_track_cnt | [COLNO][ROWNO] | 0
++track.c | hot | unsigned int | nh_track_bits | [COLNO] | 0
+ 
+ # ---------------------------------------------------------------------------
+ # decl.c — the central globals file. Heat: step-hot scalars/pointers first;
+@@ -47,6 +49,12 @@ global | hot | long | moves | | 1
+ global | hot | long | monstermoves | | 1
+ global | hot | int | multi | | 0
+ global | hot | schar | nh_typ_plane | [COLNO][ROWNO] | 0
++global | hot | struct trap * | nh_trap_plane | [COLNO][ROWNO] | 0
++global | hot | struct engr * | nh_engr_plane | [COLNO][ROWNO] | 0
++global | hot | unsigned char | nh_pile_plane | [COLNO][ROWNO] | 0
++global | hot | int | nh_fobj_n | | 0
++global | hot | unsigned short | nh_fobj_xy | [NH_FOBJ_CAP] | 0
++global | hot | struct obj * | nh_fobj_ptr | [NH_FOBJ_CAP] | 0
+ global | hot | boolean | vision_full_recalc | | 0
+ global | hot | char ** | viz_array | | 0
+ global | hot | struct sinfo | program_state | | 0
+diff --git a/win/rl/winrl.cc b/win/rl/winrl.cc
+index 545cefcb0..e5b2e43e0 100644
+--- a/win/rl/winrl.cc
++++ b/win/rl/winrl.cc
+@@ -74,6 +74,9 @@ extern "C" {
+ extern void *nle_yield(boolean);
+ extern nle_obs *nle_get_obs();
+ extern int nle_underfoot_glyphs();
++// public-observation export (NLE_ABL bitmask, default all on; 0 restores the engine-truth export): 1 = ring
++// chargeability hidden for unidentified rings, 2 = blind underfoot glyph = display memory, 4 = trapped-container bit hidden
++static int nle_abl() { static int v = -1; if (v < 0) { const char* e = getenv("NLE_ABL"); v = e ? atoi(e) : 15; } return v; } // 15: leaks off + eager identity (every cell reflects the discoveries list at each fill)
+ }
+ 
+ /* Initial value of glyph_ buffer. Cf. display.c. */
+@@ -100,11 +103,35 @@ namespace nethack_rl
+ // glyphs (c.f. o_init.c).  In practice this means:
+ //   BEFORE: looking up objclass on a glyph gives CORRECT name INCORRECT descr
+ //   AFTER: looking up objclass on a glyph gives INCORRECT name CORRECT descr
++// Gems and glass share descriptions ("violet": amethyst and worthless violet glass) and are not shuffled, so the
++// appearance glyph of an unidentified gem would name the true type. Public form: the canonical twin of the description
++// (the worthless glass if there is one, else the lowest index), which is what "a violet gem" tells the player.
++// Keyed by the DESCRIPTION SLOT (oc_descr_idx), using the static description table obj_descr[]: gems are shuffled among
++// themselves too, so the description currently attached to an object is not the object's own table entry.
++// Every class: twins that share a description (bag of holding/tricks "bag", tin/magic whistle, tallow/wax candle, the gray
++// stones, amethyst/violet glass) are not shuffled, so the description slot would name the true type. Canonical twin =
++// the lowest index with that description in the class, the worthless glass for gems. Shuffled classes have unique
++// descriptions within the class, so this is the identity there.
++static int gem_canon(int slot)
++{
++    static short canon[NUM_OBJECTS + 1]; static bool init = false;
++    if (!init) { init = true;
++        for (int i = 0; i <= NUM_OBJECTS; i++) canon[i] = i;
++        for (int i = 0; i < NUM_OBJECTS; i++) { if (!obj_descr[i].oc_descr || !obj_descr[i].oc_descr[0]) continue;
++            int best = -1;
++            for (int j = 0; j < NUM_OBJECTS; j++) { if (objects[j].oc_class != objects[i].oc_class || !obj_descr[j].oc_descr || strcmp(obj_descr[i].oc_descr, obj_descr[j].oc_descr)) continue;
++                if (best < 0) best = j; if (objects[j].oc_class == GEM_CLASS && obj_descr[j].oc_name && !strncmp(obj_descr[j].oc_name, "worthless", 9)) best = j; }
++            if (best >= 0) canon[i] = best; } }
++    return canon[slot];
++}
+ int
+ shuffled_glyph(int glyph)
+ {
+     if glyph_is_normal_object (glyph) {
+-        return GLYPH_OBJ_OFF + objects[glyph_to_obj(glyph)].oc_descr_idx;
++        int obj = glyph_to_obj(glyph);
++        { static int gem_true = -1; if (gem_true < 0) gem_true = getenv("NLE_GEM_TRUE") != NULL; // NLE_GEM_TRUE=1: old behaviour (true gem type), attribution only
++          if (!gem_true && !objects[obj].oc_name_known) return GLYPH_OBJ_OFF + gem_canon(objects[obj].oc_descr_idx); }
++        return GLYPH_OBJ_OFF + objects[obj].oc_descr_idx;
+     }
+     return glyph;
+ }
+@@ -350,9 +377,14 @@ NetHackRL::fill_obs(nle_obs *obs)
+     {
+         static int verify = -1;
+         if (verify < 0)
+-            verify = getenv("NLE_TYP_VERIFY") ? 1 : 0;
+-        if (verify && program_state.in_moveloop && !program_state.gameover)
+-            nh_typ_verify("fill_obs");
++            verify = (getenv("NLE_TYP_VERIFY") ? 1 : 0)
++                     | (getenv("NLE_PLANE_VERIFY") ? 2 : 0);
++        if (verify && program_state.in_moveloop && !program_state.gameover) {
++            if (verify & 1)
++                nh_typ_verify("fill_obs");
++            if (verify & 2)
++                nh_planes_verify("fill_obs");
++        }
+     }
+     if (obs->prog_state) {
+         obs->prog_state[0] = program_state.gameover;
+@@ -382,13 +414,27 @@ NetHackRL::fill_obs(nle_obs *obs)
+         obs->internal[2] = in_getlin;
+         obs->internal[3] = xwaitingforspace;
+         obs->internal[4] = stairs_down;
+-        obs->internal[5] = u.ublesscnt; /* prayer cooldown (was core seed) */
++        obs->internal[5] = 0; /* was prayer cooldown (u.ublesscnt): a hidden counter with no public signal,
++                                 unread by the policy, removed from the export 2026-09-10 */
+         /* engraving underfoot: 2 = active Elbereth, 1 = other (was: dead 0
+          * since fork — the obs feature read constant zero). Bit 2 = engulfed,
+          * consumed env-side for legality masking, stripped before the obs. */
+-        obs->internal[6] = (sengr_at("Elbereth", u.ux, u.uy, TRUE) ? 2
+-                         : (engr_at(u.ux, u.uy) ? 1 : 0))
+-                         | (u.uswallow ? 4 : 0);
++        {
++            int eb = sengr_at("Elbereth", u.ux, u.uy, TRUE) ? 2 : (engr_at(u.ux, u.uy) ? 1 : 0);
++            // Blind: the flag is what the hero last knew about the engraving on this square (read, felt or written),
++            // unread-since-written or wiped-since-read capped at 1, and nothing at all on a square it never read there.
++            // Sighted, a look reads the floor at zero cost, so the truth is public.
++            // Hallucination conceals exactly as blindness does. The "sighted" branch below rests on a look being free, but a
++            // look while hallucinating names what it finds with random_obj_to_glyph and so DRAWS from the display RNG -- a
++            // reconstruction cannot spend those draws without desyncing, so the truth is not publicly recoverable here.
++            if (Blind || Hallucination) {
++                if (u.ux == u.nle_engr_bx && u.uy == u.nle_engr_by) { eb = u.nle_engr_blind ? 1 : u.nle_engr_last; if (u.nle_engr_wiped && eb > 1) eb = 1; }
++                else eb = 0;
++            } else { // sighted: the truth is public (a look reads the floor), so it is also what the hero will remember once blinded here
++                u.nle_engr_bx = u.ux; u.nle_engr_by = u.uy; u.nle_engr_last = eb; u.nle_engr_blind = 0; u.nle_engr_wiped = 0;
++            }
++            obs->internal[6] = eb | (u.uswallow ? 4 : 0);
++        }
+         obs->internal[7] = u.uhunger;
+         obs->internal[8] =
+             u.urexp; /* score (careful! check botl_score() and end.c) */
+@@ -460,14 +506,30 @@ NetHackRL::fill_obs(nle_obs *obs)
+             dirty_rows_ = 0;
+         }
+     }
++    if (obs->glyphs && (nle_abl() & 8)) { // eager identity mapping: every cell reflects the discoveries list now, not at its next
++        // reprint. The screen buffer holds true glyphs; maybe_true_glyph hides the ones the player has not identified.
++        for (int y = 0; y < ROWNO; y++) for (int x = 1; x < COLNO; x++)
++            obs->glyphs[(size_t) y * (COLNO - 1) + (x - 1)] = maybe_true_glyph(glyph_at(x, y));
++    }
+     if (obs->glyphs && nle_underfoot_glyphs() && u.ux >= 1 && u.ux < COLNO
+         && u.uy >= 0 && u.uy < ROWNO) {
+         // Hero tile shows what the hero stands on (top object, else terrain)
+         // instead of the hero glyph. Patched into obs->glyphs only, after the
+         // dirty-row copy so it always wins; recomputed every fill.
+-        struct obj *under = vobj_at(u.ux, u.uy);
+-        int g = under ? obj_to_glyph(under, rn2_on_display_rng)
+-                      : back_to_glyph(u.ux, u.uy);
++        // Conceal-first, and note the ORDER matters: obj_to_glyph() resolves to random_obj_to_glyph() while hallucinating,
++        // which DRAWS from the display RNG. Evaluating it before the conceal checks made this observation channel consume
++        // randomness every frame a hallucinating hero stood on an object -- unreproducible from outside, so a replay drifts
++        // for the rest of the game. Hallucination now conceals exactly as blindness does: a hallucinating hero cannot
++        // identify what is underfoot any more than a blind one can, and the screen glyph needs no draw.
++        int g;
++        if (u.uswallow) {
++            g = glyph_at(u.ux, u.uy); // engulfed: nothing under the hero can be inspected from inside
++        } else if ((nle_abl() & 2) && (Blind || Hallucination)) {
++            g = glyph_at(u.ux, u.uy); // the screen buffer at the hero's square = the hero glyph (stock shows the same)
++        } else {
++            struct obj *under = vobj_at(u.ux, u.uy);
++            g = under ? obj_to_glyph(under, rn2_on_display_rng) : back_to_glyph(u.ux, u.uy);
++        }
+         obs->glyphs[(size_t) u.uy * (COLNO - 1) + (u.ux - 1)] =
+             maybe_true_glyph(g);
+     }
+@@ -598,6 +660,7 @@ fill_message:
+                 || is_weptool(otmp) || objects[otmp->otyp].oc_charged;
+             st[1] =
+                 (otmp->known && shows_spe) ? otmp->spe : (signed char) -128;
++            if ((nle_abl() & 1) && otmp->oclass == RING_CLASS && !(otmp->dknown && objects[otmp->otyp].oc_name_known)) st[1] = 0;
+             st[2] = otmp->quan > 127 ? 127 : (signed char) otmp->quan;
+             /* erosion bits are overloaded storage on other classes
+                (orotten food, odiluted potions, norevive corpses) and doname
+@@ -617,12 +680,16 @@ fill_message:
+                                    | ((otmp->owornmask & W_WEP) ? 2 : 0)
+                                    | ((otmp->owornmask & W_SWAPWEP) ? 4 : 0)
+                                    | ((otmp->owornmask & W_QUIVER) ? 8 : 0)
+-                                   | (otmp->opoisoned ? 16 : 0)
++                                   | ((otmp->opoisoned && !((nle_abl() & 4) && Is_container(otmp))) ? 16 : 0)
+                                    | (otmp->greased ? 32 : 0)
+                                    | ((erodible && otmp->rknown
+                                        && otmp->oerodeproof)
+                                           ? 64
+                                           : 0));
++            // REVERTED 2026-09-11: dropping dknown here gave no clear parity gain (rate 76.9% -> 77.4%, inside corpus
++            // noise, and a fork change re-rolls the corpus so before/after are not strictly comparable) AND it ADDS information
++            // to the agent, flagging types known for instances never seen. Wrong direction for a record claim; the ~22 affected
++            // games stay as a known underivable residual instead.
+             st[6] =
+                 (otmp->dknown && objects[otmp->otyp].oc_name_known) ? 1 : 0;
+             st[7] = 0;

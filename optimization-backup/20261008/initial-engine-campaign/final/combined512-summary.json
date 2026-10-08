@@ -1,0 +1,72 @@
+[
+  {
+    "workload": "depth",
+    "arms": [
+      {
+        "phase": "before",
+        "seconds": 30.366524,
+        "decisions": 10240000,
+        "keys": 24390564,
+        "turn_advances": 9246154,
+        "sps": 337213.44,
+        "warm_state": "WARM_STATE active=512 mean_turn=997.71 max_turn=6179 over1k=221 over10k=0 depth8=191"
+      },
+      {
+        "phase": "candidate",
+        "seconds": 24.76874,
+        "decisions": 10240000,
+        "keys": 24390564,
+        "turn_advances": 9246154,
+        "sps": 413424.34,
+        "warm_state": "WARM_STATE active=512 mean_turn=997.71 max_turn=6179 over1k=221 over10k=0 depth8=191"
+      },
+      {
+        "phase": "after",
+        "seconds": 30.378836,
+        "decisions": 10240000,
+        "keys": 24390564,
+        "turn_advances": 9246154,
+        "sps": 337076.77,
+        "warm_state": "WARM_STATE active=512 mean_turn=997.71 max_turn=6179 over1k=221 over10k=0 depth8=191"
+      }
+    ],
+    "throughput_gain_percent": 22.625050769639454,
+    "baseline_drift_percent": 0.040544647125240196,
+    "scope": "Frozen original production engine/static versus candidate14/work stealing; 512 streams,8physical cores,20K warm+20K measured decisions per stream"
+  },
+  {
+    "workload": "score",
+    "arms": [
+      {
+        "phase": "before",
+        "seconds": 147.672386,
+        "decisions": 10240000,
+        "keys": 23556640,
+        "turn_advances": 69609415,
+        "sps": 69342.69,
+        "warm_state": "WARM_STATE active=512 mean_turn=27715.27 max_turn=150611 over1k=496 over10k=373 depth8=2"
+      },
+      {
+        "phase": "candidate",
+        "seconds": 105.433184,
+        "decisions": 10240000,
+        "keys": 23556640,
+        "turn_advances": 69609415,
+        "sps": 97123.12,
+        "warm_state": "WARM_STATE active=512 mean_turn=27715.27 max_turn=150611 over1k=496 over10k=373 depth8=2"
+      },
+      {
+        "phase": "after",
+        "seconds": 147.060189,
+        "decisions": 10240000,
+        "keys": 23556640,
+        "turn_advances": 69609415,
+        "sps": 69631.35,
+        "warm_state": "WARM_STATE active=512 mean_turn=27715.27 max_turn=150611 over1k=496 over10k=373 depth8=2"
+      }
+    ],
+    "throughput_gain_percent": 39.77220634824042,
+    "baseline_drift_percent": -0.41456430452744275,
+    "scope": "Frozen original production engine/static versus candidate14/work stealing; 512 streams,8physical cores,20K warm+20K measured decisions per stream"
+  }
+]

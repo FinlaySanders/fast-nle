@@ -1,0 +1,30 @@
+{
+  "time": "2026-09-17T15:54:15.421728+00:00",
+  "checked_files": 624,
+  "recordings": [
+    {
+      "workload": "depth",
+      "files": 512,
+      "changed": [],
+      "scope": "original indexed size and modification time before two-hour goal start; replay gates separately check semantics"
+    },
+    {
+      "workload": "score",
+      "files": 512,
+      "changed": [],
+      "scope": "original indexed size and modification time before two-hour goal start; replay gates separately check semantics"
+    }
+  ],
+  "mismatches": [],
+  "production_diff_matches": true,
+  "stock_tracked_status": {
+    "rc": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  "production_engine_tracked_status": {
+    "rc": 0,
+    "stdout": "",
+    "stderr": ""
+  }
+}

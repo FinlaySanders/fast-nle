@@ -1,0 +1,17 @@
+{
+  "path": "/puffertank/experiments/nethack-perf-20260917/score-record/env00468.trace",
+  "episode": {
+    "score": 288300,
+    "turn": 220085,
+    "depth": 3,
+    "xp": 13,
+    "how": 0,
+    "length": 33614,
+    "start_offset": 10869273,
+    "end_offset": 15662838,
+    "start_decision": 73602,
+    "end_decision": 107216
+  },
+  "warmup": 106192,
+  "measure": 512
+}

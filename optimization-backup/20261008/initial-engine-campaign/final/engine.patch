@@ -1,0 +1,484 @@
+diff --git a/include/extern.h b/include/extern.h
+index d622a77b7..2015ca8bf 100644
+--- a/include/extern.h
++++ b/include/extern.h
+@@ -384,6 +384,7 @@ E void FDECL(flush_screen, (int));
+ E int FDECL(back_to_glyph, (XCHAR_P, XCHAR_P));
+ E int FDECL(zapdir_to_glyph, (int, int, int));
+ E int FDECL(glyph_at, (XCHAR_P, XCHAR_P));
++E void FDECL(nle_copy_glyphs, (short *));
+ E void NDECL(set_wall_state);
+ E void FDECL(unset_seenv, (struct rm *, int, int, int, int));
+ E int FDECL(warning_of, (struct monst *));
+diff --git a/include/hack.h b/include/hack.h
+index 92dfccb1a..0d454046d 100644
+--- a/include/hack.h
++++ b/include/hack.h
+@@ -598,6 +598,9 @@ is_moat(int x, int y)
+          if (set_typ_i_ >= 0 && set_typ_i_ < COLNO * ROWNO) \
+              (&nh_typ_plane[0][0])[set_typ_i_] = set_typ_v_; } while (0)
+ extern void NDECL(nh_typ_sync);
++struct nh_fobj_cursor { unsigned long generation; int index, fallback; };
++extern void NDECL(nh_fobj_invalidate);
++extern struct obj *FDECL(nh_fobj_next, (struct nh_fobj_cursor *, struct obj *, int, int, int, int));
+ extern void FDECL(nh_typ_verify, (const char *));
+ 
+ static inline boolean
+diff --git a/include/nh_ctx_gen.h b/include/nh_ctx_gen.h
+index 5d0e29972..4cd8619c1 100644
+--- a/include/nh_ctx_gen.h
++++ b/include/nh_ctx_gen.h
+@@ -480,6 +480,12 @@ struct nh_ctx {
+     boolean g_files_c_chosen_symset_start; /* files.c: chosen_symset_start */
+     boolean g_files_c_chosen_symset_end; /* files.c: chosen_symset_end */
+     boolean g_dlb_c_initialized; /* dlb.c: initialized */
++    unsigned long g_nh_fobj_generation; /* global: nh_fobj_generation */
++    int g_nh_fobj_valid; /* global: nh_fobj_valid */
++    int g_nh_fobj_count; /* global: nh_fobj_count */
++    short g_nh_fobj_x[2048]; /* global: nh_fobj_x */
++    short g_nh_fobj_y[2048]; /* global: nh_fobj_y */
++    struct obj * g_nh_fobj_ptr[2048]; /* global: nh_fobj_ptr */
+     /* lazily-allocated per-env blobs whose types are private to one
+      * .c file (e.g. options.c boolopt copy); freed by nh_ctx_free.
+      * Slot assignments are documented at the allocation sites. */
+@@ -641,5 +647,11 @@ void nh_ctx_fixup(struct nh_ctx *);
+ #define nle_hero_path (nh_cur->g_nle_hero_path)
+ #define nle_hero_path_n (nh_cur->g_nle_hero_path_n)
+ #define symset_list (nh_cur->g_symset_list)
++#define nh_fobj_generation (nh_cur->g_nh_fobj_generation)
++#define nh_fobj_valid (nh_cur->g_nh_fobj_valid)
++#define nh_fobj_count (nh_cur->g_nh_fobj_count)
++#define nh_fobj_x (nh_cur->g_nh_fobj_x)
++#define nh_fobj_y (nh_cur->g_nh_fobj_y)
++#define nh_fobj_ptr (nh_cur->g_nh_fobj_ptr)
+ 
+ #endif /* NH_CTX_GEN_H */
+diff --git a/src/display.c b/src/display.c
+index f5cff1453..8d89f3d33 100644
+--- a/src/display.c
++++ b/src/display.c
+@@ -1935,6 +1935,15 @@ int beam_type;
+  * the location.  This isn't necessarily the same as the glyph in the levl
+  * structure, so we must check the "third screen".
+  */
++void
++nle_copy_glyphs(short *dst)
++{
++    int x, y;
++    for (y = 0; y < ROWNO; y++)
++        for (x = 1; x < COLNO; x++)
++            *dst++ = (short) gbuf[y][x].glyph;
++}
++
+ int
+ glyph_at(x, y)
+ xchar x, y;
+diff --git a/src/mklev.c b/src/mklev.c
+index 552fdaa32..83cc4b477 100644
+--- a/src/mklev.c
++++ b/src/mklev.c
+@@ -645,6 +645,7 @@ clear_level_structures()
+             level.monsters[x][y] = (struct monst *) 0;
+         }
+     }
++    nh_fobj_invalidate();
+     level.objlist = (struct obj *) 0;
+     level.buriedobjlist = (struct obj *) 0;
+     level.monlist = (struct monst *) 0;
+diff --git a/src/mkobj.c b/src/mkobj.c
+index 876980368..5a5852ba5 100644
+--- a/src/mkobj.c
++++ b/src/mkobj.c
+@@ -453,8 +453,10 @@ long num;
+     obj->nobj = otmp;
+     /* Only set nexthere when on the floor, nexthere is also used */
+     /* as a back pointer to the container object when contained. */
+-    if (obj->where == OBJ_FLOOR)
++    if (obj->where == OBJ_FLOOR) {
+         obj->nexthere = otmp;
++        nh_fobj_invalidate();
++    }
+     copy_oextra(otmp, obj);
+     if (has_omid(otmp))
+         free_omid(otmp); /* only one association with m_id*/
+@@ -609,6 +611,7 @@ struct obj *otmp;
+         otmp->oy = obj->oy;
+         obj->nobj = otmp;
+         obj->nexthere = otmp;
++        nh_fobj_invalidate();
+         extract_nobj(obj, &fobj);
+         extract_nexthere(obj, &level.objs[obj->ox][obj->oy]);
+         break;
+@@ -1791,6 +1794,7 @@ int x, y;
+     /* add to floor chain */
+     otmp->nobj = fobj;
+     fobj = otmp;
++    nh_fobj_invalidate();
+     if (otmp->timed)
+         obj_timer_checks(otmp, x, y, 0);
+ }
+@@ -1924,6 +1928,7 @@ register struct obj *otmp;
+     if (otmp->where != OBJ_FLOOR)
+         panic("remove_object: obj not on floor");
+     extract_nexthere(otmp, &level.objs[x][y]);
++    nh_fobj_invalidate();
+     extract_nobj(otmp, &fobj);
+     /* update vision iff this was the only boulder at its spot */
+     if (otmp->otyp == BOULDER && !sobj_at(BOULDER, x, y))
+diff --git a/src/mon.c b/src/mon.c
+index e74108cb6..5bbb47a64 100644
+--- a/src/mon.c
++++ b/src/mon.c
+@@ -724,6 +724,8 @@ movemon()
+     register struct monst *mtmp, *nmtmp;
+     register boolean somebody_can_move = FALSE;
+ 
++    nh_fobj_invalidate();
++
+     /*
+      * Some of you may remember the former assertion here that
+      * because of deaths and other actions, a simple one-pass
+diff --git a/src/monmove.c b/src/monmove.c
+index 923f630f5..5a1265b33 100644
+--- a/src/monmove.c
++++ b/src/monmove.c
+@@ -768,6 +768,68 @@ xchar nix,niy;
+  * 2: monster died.
+  * 3: did not move, and can't do anything else either.
+  */
++
++/* Preserve fobj order. A mutation during iteration switches that iterator to
++ * the original linked-list walk from prev->nobj; never rebuild under a cursor. */
++void
++nh_fobj_invalidate(void)
++{
++    nh_fobj_valid = 0;
++    nh_fobj_generation++;
++}
++
++static void
++nh_fobj_build(void)
++{
++    struct obj *o;
++    int n = 0;
++    for (o = fobj; o; o = o->nobj) {
++        if (n == 2048) { nh_fobj_count = -1; nh_fobj_valid = 1; return; }
++        nh_fobj_ptr[n] = o;
++        nh_fobj_x[n] = o->ox; nh_fobj_y[n] = o->oy;
++        n++;
++    }
++    nh_fobj_count = n; nh_fobj_valid = 1;
++}
++
++struct obj *
++nh_fobj_next(struct nh_fobj_cursor *cursor, struct obj *prev,
++             int lx, int hx, int ly, int hy)
++{
++    struct obj *o;
++    if (!prev) {
++        if (!nh_fobj_valid) nh_fobj_build();
++        cursor->generation = nh_fobj_generation;
++        cursor->index = 0;
++        cursor->fallback = nh_fobj_count < 0;
++    } else if (cursor->generation != nh_fobj_generation) {
++        cursor->fallback = 1;
++    }
++    if (cursor->fallback) {
++        for (o = prev ? prev->nobj : fobj; o; o = o->nobj)
++            if (o->ox >= lx && o->ox <= hx && o->oy >= ly && o->oy <= hy)
++                return o;
++        return (struct obj *) 0;
++    }
++#ifdef NLE_FOBJ_VERIFY
++    {
++        int n = 0;
++        for (o = fobj; o; o = o->nobj, n++)
++            if (n >= nh_fobj_count || nh_fobj_ptr[n] != o
++                || nh_fobj_x[n] != o->ox || nh_fobj_y[n] != o->oy)
++                panic("floor index mismatch at %d", n);
++        if (n != nh_fobj_count) panic("floor index count mismatch");
++    }
++#endif
++    while (cursor->index < nh_fobj_count) {
++        int i = cursor->index++;
++        if (nh_fobj_x[i] >= lx && nh_fobj_x[i] <= hx
++            && nh_fobj_y[i] >= ly && nh_fobj_y[i] <= hy)
++            return nh_fobj_ptr[i];
++    }
++    return (struct obj *) 0;
++}
++
+ int
+ m_move(mtmp, after)
+ register struct monst *mtmp;
+@@ -974,6 +1036,7 @@ register int after;
+         register struct obj *otmp;
+         register int xx, yy;
+         int oomx, oomy, lmx, lmy;
++        struct nh_fobj_cursor cursor;
+ 
+         /* cut down the search radius if it thinks character is closer. */
+         if (distmin(mtmp->mux, mtmp->muy, omx, omy) < SQSRCHRADIUS
+@@ -991,7 +1054,9 @@ register int after;
+             oomy = min(ROWNO - 1, omy + minr);
+             lmx = max(1, omx - minr);
+             lmy = max(0, omy - minr);
+-            for (otmp = fobj; otmp; otmp = otmp->nobj) {
++            for (otmp = nh_fobj_next(&cursor, (struct obj *) 0, lmx, oomx, lmy, oomy);
++                 otmp;
++                 otmp = nh_fobj_next(&cursor, otmp, lmx, oomx, lmy, oomy)) {
+                 /* monsters may pick rocks up, but won't go out of their way
+                    to grab them; this might hamper sling wielders, but it cuts
+                    down on move overhead by filtering out most common item */
+@@ -1539,7 +1604,6 @@ register struct monst *mtmp;
+ {
+     boolean notseen, gotu;
+     register int disp, mx = mtmp->mux, my = mtmp->muy;
+-    long umoney = money_cnt(invent);
+ 
+     /*
+      * do cheapest and/or most likely tests first
+@@ -1559,7 +1623,7 @@ register struct monst *mtmp;
+     if (notseen || Underwater) {
+         /* Xorns can smell quantities of valuable metal
+             like that in solid gold coins, treat as seen */
+-        if ((mtmp->data == &mons[PM_XORN]) && umoney && !Underwater)
++        if ((mtmp->data == &mons[PM_XORN]) && money_cnt(invent) && !Underwater)
+             disp = 0;
+         else
+             disp = 1;
+diff --git a/src/nle.c b/src/nle.c
+index d50e1240f..5db521120 100644
+--- a/src/nle.c
++++ b/src/nle.c
+@@ -1132,6 +1132,7 @@ nle_step(nle_ctx_t *nle, nle_obs *obs)
+     }
+     current_nle_ctx = nle;
+     nh_cur = (struct nh_ctx *) nle->nh;
++    nh_fobj_invalidate();
+     nle->observation = obs;
+     /* tty gating tracks the CURRENT step's bindings, not nle_start's:
+      * the C API lets each step pass a different obs, so tty_* fields can
+diff --git a/src/restore.c b/src/restore.c
+index 899167172..46e113188 100644
+--- a/src/restore.c
++++ b/src/restore.c
+@@ -125,6 +125,7 @@ find_lev_obj()
+      * place the objects in the proper order.  Make all obj in chain
+      * OBJ_FREE so place_object will work correctly.
+      */
++    nh_fobj_invalidate();
+     while ((otmp = fobj) != 0) {
+         fobj = otmp->nobj;
+         otmp->nobj = fobjtmp;
+@@ -1264,6 +1265,7 @@ boolean ghostly;
+         ftrap = trap;
+     }
+     dealloc_trap(trap);
++    nh_fobj_invalidate();
+     fobj = restobjchn(fd, ghostly, FALSE);
+     find_lev_obj();
+     /* restobjchn()'s `frozen' argument probably ought to be a callback
+diff --git a/src/save.c b/src/save.c
+index 4932a991c..7db5ecd78 100644
+--- a/src/save.c
++++ b/src/save.c
+@@ -711,6 +711,7 @@ int mode;
+                 level.monsters[x][y] = 0;
+         fmon = 0;
+         ftrap = 0;
++        nh_fobj_invalidate();
+         fobj = level.buriedobjlist = billobjs = 0;
+         /* level.bonesinfo = 0; -- handled by savecemetery() */
+     }
+@@ -1667,6 +1668,7 @@ freedynamicdata()
+        fill, so golden hashes are unaffected. */
+     (void) memset((genericptr_t) level.objs, 0, sizeof(level.objs));
+     (void) memset((genericptr_t) level.monsters, 0, sizeof(level.monsters));
++    nh_fobj_invalidate();
+     fobj = (struct obj *) 0;
+     fmon = (struct monst *) 0;
+ 
+diff --git a/tools/globals.def b/tools/globals.def
+index 80b318fa0..771db7b75 100644
+--- a/tools/globals.def
++++ b/tools/globals.def
+@@ -569,3 +569,11 @@ options.c | cold | char | mapped_menu_cmds | [33] | 0   # MAX_MENU_MAPPED_CMDS+1
+ files.c | cold | boolean | chosen_symset_start | | 0
+ files.c | cold | boolean | chosen_symset_end | | 0
+ dlb.c | cold | boolean | initialized | | 0
++
++# Ordered floor-object search cache. Cold section avoids shifting hot state.
++global | cold | unsigned long | nh_fobj_generation | | 0
++global | cold | int | nh_fobj_valid | | 0
++global | cold | int | nh_fobj_count | | 0
++global | cold | short | nh_fobj_x | [2048] | 0
++global | cold | short | nh_fobj_y | [2048] | 0
++global | cold | struct obj * | nh_fobj_ptr | [2048] | 0
+diff --git a/util/CMakeLists.txt b/util/CMakeLists.txt
+index 097d076c7..01fd38e67 100644
+--- a/util/CMakeLists.txt
++++ b/util/CMakeLists.txt
+@@ -91,7 +91,13 @@ add_custom_command(
+           ${NLE_UTIL}/lev_comp.l
+   DEPENDS ${NLE_UTIL}/lev_comp.l)
+ 
+-add_custom_target(util DEPENDS ${MAKEDEFS_HEADERS} recover)
++add_executable(mkcanon mkcanon.c)
++target_include_directories(mkcanon PRIVATE ${NLE_INC} ${NLE_INC_GEN})
++add_custom_command(
++  OUTPUT ${NLE_INC_GEN}/appearance_canon.h
++  COMMAND $<TARGET_FILE:mkcanon> ${NLE_INC_GEN}/appearance_canon.h
++  DEPENDS mkcanon)
++add_custom_target(util DEPENDS ${MAKEDEFS_HEADERS} ${NLE_INC_GEN}/appearance_canon.h recover)
+ 
+ add_executable(tilemap ${NLE_WIN}/share/tilemap.c)
+ target_include_directories(tilemap PUBLIC ${NLE_INC} ${NLE_INC_GEN})
+diff --git a/win/rl/winrl.cc b/win/rl/winrl.cc
+index eeaf2f9bc..934f8fb5e 100644
+--- a/win/rl/winrl.cc
++++ b/win/rl/winrl.cc
+@@ -109,18 +109,14 @@ namespace nethack_rl
+ // stones, amethyst/violet glass) are not shuffled, so the description slot would name the true type. Canonical twin =
+ // the lowest index with that description in the class, the worthless glass for gems. Shuffled classes have unique
+ // descriptions within the class, so this is the identity there.
++#include "appearance_canon.h"
++static_assert(sizeof(nle_appearance_canon) / sizeof(nle_appearance_canon[0]) == NUM_OBJECTS + 1,
++              "appearance table must match object definitions");
+ static int gem_canon(int slot)
+ {
+-    static short canon[NUM_OBJECTS + 1]; static bool init = false;
+-    if (!init) { init = true;
+-        for (int i = 0; i <= NUM_OBJECTS; i++) canon[i] = i;
+-        for (int i = 0; i < NUM_OBJECTS; i++) { if (!obj_descr[i].oc_descr || !obj_descr[i].oc_descr[0]) continue;
+-            int best = -1;
+-            for (int j = 0; j < NUM_OBJECTS; j++) { if (objects[j].oc_class != objects[i].oc_class || !obj_descr[j].oc_descr || strcmp(obj_descr[i].oc_descr, obj_descr[j].oc_descr)) continue;
+-                if (best < 0) best = j; if (objects[j].oc_class == GEM_CLASS && obj_descr[j].oc_name && !strncmp(obj_descr[j].oc_name, "worthless", 9)) best = j; }
+-            if (best >= 0) canon[i] = best; } }
+-    return canon[slot];
++    return nle_appearance_canon[slot];
+ }
++
+ int
+ shuffled_glyph(int glyph)
+ {
+@@ -504,8 +500,9 @@ NetHackRL::fill_obs(nle_obs *obs)
+     }
+     if (obs->glyphs) { // eager identity mapping: every cell reflects the discoveries list now, not at its next
+         // reprint. The screen buffer holds true glyphs; maybe_true_glyph hides the ones the player has not identified.
+-        for (int y = 0; y < ROWNO; y++) for (int x = 1; x < COLNO; x++)
+-            obs->glyphs[(size_t) y * (COLNO - 1) + (x - 1)] = maybe_true_glyph(glyph_at(x, y));
++        nle_copy_glyphs(obs->glyphs);
++        for (int i = 0; i < ROWNO * (COLNO - 1); i++)
++            obs->glyphs[i] = maybe_true_glyph(obs->glyphs[i]);
+     }
+     if (obs->glyphs && nle_underfoot_glyphs() && u.ux >= 1 && u.ux < COLNO
+         && u.uy >= 0 && u.uy < ROWNO) {
+diff --git a/util/mkcanon.c b/util/mkcanon.c
+new file mode 100644
+--- /dev/null
++++ b/util/mkcanon.c
+@@ -0,0 +1,28 @@
++/* Build-time appearance table; generated from the engine's object definitions. */
++#include "../src/objects.c"
++#include <stdio.h>
++#include <string.h>
++int main(int argc, char **argv) {
++    if (argc != 2) return 2;
++    FILE *out = fopen(argv[1], "w");
++    if (!out) return 1;
++    int n = sizeof(objects_baseline) / sizeof(objects_baseline[0]) - 1;
++    fprintf(out, "/* Generated from objects.c; do not edit. */\nstatic const short nle_appearance_canon[%d] = {\n", n + 1);
++    for (int i = 0; i <= n; ++i) {
++        int best = i;
++        const char *desc = obj_descr_baseline[i].oc_descr;
++        if (i < n && desc && desc[0]) {
++            best = -1;
++            for (int j = 0; j < n; ++j) {
++                const struct objdescr *d = &obj_descr_baseline[j];
++                if (objects_baseline[j].oc_class != objects_baseline[i].oc_class || !d->oc_descr || strcmp(desc, d->oc_descr)) continue;
++                if (best < 0) best = j;
++                if (objects_baseline[j].oc_class == GEM_CLASS && d->oc_name && !strncmp(d->oc_name, "worthless", 9)) best = j;
++            }
++            if (best < 0) best = i;
++        }
++        fprintf(out, "%d,%s", best, i % 16 == 15 ? "\n" : " ");
++    }
++    fprintf(out, "\n};\n");
++    return fclose(out) != 0;
++}
+diff --git a/src/monmove.c b/src/monmove.c
+--- a/src/monmove.c
++++ b/src/monmove.c
+@@ -1,3 +1,6 @@
++#ifdef __SSE2__
++#include <emmintrin.h>
++#endif
+ /* NetHack 3.6	monmove.c	$NHDT-Date: 1575245074 2019/12/02 00:04:34 $  $NHDT-Branch: NetHack-3.6 $:$NHDT-Revision: 1.116 $ */
+ /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
+ /*-Copyright (c) Michael Allison, 2006. */
+@@ -819,6 +822,29 @@
+                 || nh_fobj_x[n] != o->ox || nh_fobj_y[n] != o->oy)
+                 panic("floor index mismatch at %d", n);
+         if (n != nh_fobj_count) panic("floor index count mismatch");
++    }
++#endif
++#ifdef __SSE2__
++    /* Reject eight coordinates at once; the first matching entry still wins. */
++    if (lx >= -32768 && hx <= 32767 && ly >= -32768 && hy <= 32767
++        && lx <= hx && ly <= hy) {
++        __m128i xl = _mm_set1_epi16((short) lx), xh = _mm_set1_epi16((short) hx);
++        __m128i yl = _mm_set1_epi16((short) ly), yh = _mm_set1_epi16((short) hy);
++        while (cursor->index + 8 <= nh_fobj_count) {
++            int i = cursor->index;
++            __m128i x = _mm_loadu_si128((const __m128i *) (nh_fobj_x + i));
++            __m128i y = _mm_loadu_si128((const __m128i *) (nh_fobj_y + i));
++            __m128i reject = _mm_or_si128(
++                _mm_or_si128(_mm_cmpgt_epi16(xl, x), _mm_cmpgt_epi16(x, xh)),
++                _mm_or_si128(_mm_cmpgt_epi16(yl, y), _mm_cmpgt_epi16(y, yh)));
++            unsigned int mask = (~(unsigned int) _mm_movemask_epi8(reject)) & 65535U;
++            if (mask) {
++                i += __builtin_ctz(mask) / 2;
++                cursor->index = i + 1;
++                return nh_fobj_ptr[i];
++            }
++            cursor->index += 8;
++        }
+     }
+ #endif
+     while (cursor->index < nh_fobj_count) {
+diff --git a/win/rl/winrl.cc b/win/rl/winrl.cc
+--- a/win/rl/winrl.cc
++++ b/win/rl/winrl.cc
+@@ -1,3 +1,6 @@
++#ifdef __SSE2__
++#include <emmintrin.h>
++#endif
+ /* Copyright (c) Facebook, Inc. and its affiliates. */
+ #include <array>
+ #include <cassert>
+@@ -501,7 +504,23 @@
+     if (obs->glyphs) { // eager identity mapping: every cell reflects the discoveries list now, not at its next
+         // reprint. The screen buffer holds true glyphs; maybe_true_glyph hides the ones the player has not identified.
+         nle_copy_glyphs(obs->glyphs);
+-        for (int i = 0; i < ROWNO * (COLNO - 1); i++)
++        int i = 0;
++#ifdef __SSE2__
++        const __m128i lo = _mm_set1_epi16(GLYPH_OBJ_OFF - 1);
++        const __m128i hi = _mm_set1_epi16(GLYPH_OBJ_OFF + NUM_OBJECTS);
++        for (; i + 8 <= ROWNO * (COLNO - 1); i += 8) {
++            const __m128i g = _mm_loadu_si128((const __m128i *) (obs->glyphs + i));
++            unsigned int mask = _mm_movemask_epi8(_mm_and_si128(
++                _mm_cmpgt_epi16(g, lo), _mm_cmpgt_epi16(hi, g)));
++            while (mask) {
++                unsigned int bit = __builtin_ctz(mask);
++                int j = i + bit / 2;
++                obs->glyphs[j] = maybe_true_glyph(obs->glyphs[j]);
++                mask &= ~(3U << (bit & ~1U));
++            }
++        }
++#endif
++        for (; i < ROWNO * (COLNO - 1); i++)
+             obs->glyphs[i] = maybe_true_glyph(obs->glyphs[i]);
+     }
+     if (obs->glyphs && nle_underfoot_glyphs() && u.ux >= 1 && u.ux < COLNO

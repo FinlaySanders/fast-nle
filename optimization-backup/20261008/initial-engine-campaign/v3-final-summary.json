@@ -1,0 +1,404 @@
+{
+  "input": "/puffertank/experiments/nethack-perf-20260917/v3-validation-timings.json",
+  "verification": [
+    {
+      "workload": "depth",
+      "variant": "baseline",
+      "mode": "engine-verify",
+      "rc": 0
+    },
+    {
+      "workload": "depth",
+      "variant": "candidate02",
+      "mode": "engine-verify",
+      "rc": 0
+    },
+    {
+      "workload": "depth",
+      "variant": "candidate03",
+      "mode": "engine-verify",
+      "rc": 0
+    },
+    {
+      "workload": "score",
+      "variant": "baseline",
+      "mode": "engine-verify",
+      "rc": 0
+    },
+    {
+      "workload": "score",
+      "variant": "candidate02",
+      "mode": "engine-verify",
+      "rc": 0
+    },
+    {
+      "workload": "score",
+      "variant": "candidate03",
+      "mode": "engine-verify",
+      "rc": 0
+    }
+  ],
+  "incomplete_triplets": [],
+  "comparisons": {
+    "depth:candidate01->candidate02": {
+      "completed_triplets": 3,
+      "median_throughput_change_percent": 2.5540739433401516,
+      "min_ratio": 1.0216283508382487,
+      "max_ratio": 1.0346861762989794,
+      "baseline_drift_over_5_percent": false,
+      "triplets": [
+        {
+          "repeat": 0,
+          "throughput_ratio": 1.0346861762989794,
+          "baseline_drift_percent": 1.0499380061730124,
+          "measured_seconds": [
+            1.630001,
+            1.583628,
+            1.647115
+          ],
+          "decisions": 640000,
+          "keys": 1521733,
+          "maxrss_kb": [
+            232628,
+            232228,
+            232160
+          ]
+        },
+        {
+          "repeat": 1,
+          "throughput_ratio": 1.0255407394334015,
+          "baseline_drift_percent": -0.3424968523668026,
+          "measured_seconds": [
+            1.629796,
+            1.586485,
+            1.624214
+          ],
+          "decisions": 640000,
+          "keys": 1521733,
+          "maxrss_kb": [
+            232140,
+            231840,
+            232648
+          ]
+        },
+        {
+          "repeat": 2,
+          "throughput_ratio": 1.0216283508382487,
+          "baseline_drift_percent": -0.5562167500666404,
+          "measured_seconds": [
+            1.639289,
+            1.600122,
+            1.630171
+          ],
+          "decisions": 640000,
+          "keys": 1521733,
+          "maxrss_kb": [
+            231812,
+            232064,
+            231980
+          ]
+        }
+      ]
+    },
+    "depth:candidate02->candidate03": {
+      "completed_triplets": 3,
+      "median_throughput_change_percent": 0.32212265768079007,
+      "min_ratio": 1.0004658198715517,
+      "max_ratio": 1.0050920328082256,
+      "baseline_drift_over_5_percent": false,
+      "triplets": [
+        {
+          "repeat": 0,
+          "throughput_ratio": 1.0004658198715517,
+          "baseline_drift_percent": -1.1431849753192447,
+          "measured_seconds": [
+            1.584433,
+            1.574643,
+            1.56632
+          ],
+          "decisions": 640000,
+          "keys": 1521733,
+          "maxrss_kb": [
+            232616,
+            232364,
+            231732
+          ]
+        },
+        {
+          "repeat": 1,
+          "throughput_ratio": 1.0050920328082256,
+          "baseline_drift_percent": 0.6728394628761958,
+          "measured_seconds": [
+            1.568279,
+            1.565583,
+            1.578831
+          ],
+          "decisions": 640000,
+          "keys": 1521733,
+          "maxrss_kb": [
+            232304,
+            232500,
+            232836
+          ]
+        },
+        {
+          "repeat": 2,
+          "throughput_ratio": 1.003221226576808,
+          "baseline_drift_percent": 0.8257114793412512,
+          "measured_seconds": [
+            1.56786,
+            1.569278,
+            1.580806
+          ],
+          "decisions": 640000,
+          "keys": 1521733,
+          "maxrss_kb": [
+            232052,
+            231776,
+            232236
+          ]
+        }
+      ]
+    },
+    "depth:baseline->candidate03": {
+      "completed_triplets": 3,
+      "median_throughput_change_percent": 8.593207063604469,
+      "min_ratio": 1.0706232272002674,
+      "max_ratio": 1.098903559972389,
+      "baseline_drift_over_5_percent": false,
+      "triplets": [
+        {
+          "repeat": 0,
+          "throughput_ratio": 1.098903559972389,
+          "baseline_drift_percent": 0.5156199623877589,
+          "measured_seconds": [
+            1.727629,
+            1.576192,
+            1.736537
+          ],
+          "decisions": 640000,
+          "keys": 1521733,
+          "maxrss_kb": [
+            232024,
+            232916,
+            232644
+          ]
+        },
+        {
+          "repeat": 1,
+          "throughput_ratio": 1.0859320706360447,
+          "baseline_drift_percent": 0.20683761677489088,
+          "measured_seconds": [
+            1.72019,
+            1.585706,
+            1.723748
+          ],
+          "decisions": 640000,
+          "keys": 1521733,
+          "maxrss_kb": [
+            232200,
+            232064,
+            231872
+          ]
+        },
+        {
+          "repeat": 2,
+          "throughput_ratio": 1.0706232272002674,
+          "baseline_drift_percent": -0.0757009764843608,
+          "measured_seconds": [
+            1.717283,
+            1.603396,
+            1.715983
+          ],
+          "decisions": 640000,
+          "keys": 1521733,
+          "maxrss_kb": [
+            232104,
+            232412,
+            232484
+          ]
+        }
+      ]
+    },
+    "score:candidate01->candidate02": {
+      "completed_triplets": 3,
+      "median_throughput_change_percent": -0.181054218880905,
+      "min_ratio": 0.9937155312963025,
+      "max_ratio": 1.000423155901469,
+      "baseline_drift_over_5_percent": false,
+      "triplets": [
+        {
+          "repeat": 0,
+          "throughput_ratio": 1.000423155901469,
+          "baseline_drift_percent": -0.39780925411710966,
+          "measured_seconds": [
+            14.543905,
+            14.508837,
+            14.486048
+          ],
+          "decisions": 640000,
+          "keys": 1494174,
+          "maxrss_kb": [
+            209888,
+            209732,
+            210184
+          ]
+        },
+        {
+          "repeat": 1,
+          "throughput_ratio": 0.9937155312963025,
+          "baseline_drift_percent": 1.357129098827392,
+          "measured_seconds": [
+            14.510705,
+            14.701561,
+            14.707634
+          ],
+          "decisions": 640000,
+          "keys": 1494174,
+          "maxrss_kb": [
+            210332,
+            210140,
+            209508
+          ]
+        },
+        {
+          "repeat": 2,
+          "throughput_ratio": 0.998189457811191,
+          "baseline_drift_percent": -0.3634767980870146,
+          "measured_seconds": [
+            14.735466,
+            14.735365,
+            14.681906
+          ],
+          "decisions": 640000,
+          "keys": 1494174,
+          "maxrss_kb": [
+            209888,
+            210352,
+            209960
+          ]
+        }
+      ]
+    },
+    "score:candidate02->candidate03": {
+      "completed_triplets": 3,
+      "median_throughput_change_percent": 5.379925289524601,
+      "min_ratio": 1.0500029974605687,
+      "max_ratio": 1.054324635322099,
+      "baseline_drift_over_5_percent": false,
+      "triplets": [
+        {
+          "repeat": 0,
+          "throughput_ratio": 1.053799252895246,
+          "baseline_drift_percent": 0.8443062455135486,
+          "measured_seconds": [
+            14.630118,
+            13.94182,
+            14.753641
+          ],
+          "decisions": 640000,
+          "keys": 1494174,
+          "maxrss_kb": [
+            209948,
+            210124,
+            210424
+          ]
+        },
+        {
+          "repeat": 1,
+          "throughput_ratio": 1.054324635322099,
+          "baseline_drift_percent": 0.26539278493815655,
+          "measured_seconds": [
+            14.655259,
+            13.918584,
+            14.694153
+          ],
+          "decisions": 640000,
+          "keys": 1494174,
+          "maxrss_kb": [
+            209856,
+            210040,
+            210160
+          ]
+        },
+        {
+          "repeat": 2,
+          "throughput_ratio": 1.0500029974605687,
+          "baseline_drift_percent": 0.05518586557067273,
+          "measured_seconds": [
+            14.603377,
+            13.911776,
+            14.611436
+          ],
+          "decisions": 640000,
+          "keys": 1494174,
+          "maxrss_kb": [
+            210692,
+            210160,
+            210192
+          ]
+        }
+      ]
+    },
+    "score:baseline->candidate03": {
+      "completed_triplets": 3,
+      "median_throughput_change_percent": 5.191958496206683,
+      "min_ratio": 1.048180163952122,
+      "max_ratio": 1.054052330063944,
+      "baseline_drift_over_5_percent": false,
+      "triplets": [
+        {
+          "repeat": 0,
+          "throughput_ratio": 1.048180163952122,
+          "baseline_drift_percent": -0.4780398906605976,
+          "measured_seconds": [
+            14.610287,
+            13.905401,
+            14.540444
+          ],
+          "decisions": 640000,
+          "keys": 1494174,
+          "maxrss_kb": [
+            210240,
+            210216,
+            210096
+          ]
+        },
+        {
+          "repeat": 1,
+          "throughput_ratio": 1.0519195849620668,
+          "baseline_drift_percent": -0.2935715129815053,
+          "measured_seconds": [
+            14.647879,
+            13.904464,
+            14.604877
+          ],
+          "decisions": 640000,
+          "keys": 1494174,
+          "maxrss_kb": [
+            210380,
+            210184,
+            209924
+          ]
+        },
+        {
+          "repeat": 2,
+          "throughput_ratio": 1.054052330063944,
+          "baseline_drift_percent": 0.05357373450083358,
+          "measured_seconds": [
+            14.628437,
+            13.882001,
+            14.636274
+          ],
+          "decisions": 640000,
+          "keys": 1494174,
+          "maxrss_kb": [
+            210044,
+            209912,
+            209936
+          ]
+        }
+      ]
+    }
+  }
+}

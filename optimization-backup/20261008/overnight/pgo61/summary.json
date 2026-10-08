@@ -1,0 +1,16 @@
+{
+  "score": {
+    "before": 6.701712,
+    "candidate": 6.497243,
+    "after": 6.690357,
+    "gain_percent": 3.059628522436353,
+    "drift_percent": -0.16943431767882933
+  },
+  "depth": {
+    "before": 1.20762,
+    "candidate": 1.212003,
+    "after": 1.207709,
+    "gain_percent": -0.35796116016214574,
+    "drift_percent": 0.007369868004847291
+  }
+}

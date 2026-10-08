@@ -1,0 +1,20 @@
+--- a/src/pufferl.cu
++++ b/src/pufferl.cu
+@@ -1881,6 +1881,17 @@
+     snprintf(pufferl->env_name, sizeof(pufferl->env_name), "%s", PUFFER_ENV_NAME);
+ 
+     cudaSetDevice(hypers.gpu_id);
++    if (const char* wait_mode = getenv("PUF_CUDA_WAIT")) {
++        unsigned int flags = 0, actual = 0;
++        assert(cudaGetDeviceFlags(&flags) == cudaSuccess);
++        unsigned int policy = !strcmp(wait_mode, "blocking") ? cudaDeviceScheduleBlockingSync
++            : !strcmp(wait_mode, "yield") ? cudaDeviceScheduleYield : cudaDeviceScheduleSpin;
++        assert(cudaSetDeviceFlags((flags & ~cudaDeviceScheduleMask) | policy) == cudaSuccess);
++        assert(cudaGetDeviceFlags(&actual) == cudaSuccess);
++        assert((actual & cudaDeviceScheduleMask) == policy);
++        fprintf(stderr, "CUDA_WAIT_POLICY mode=%s flags=%u\n", wait_mode, actual);
++    }
++
+     cublas_init_handle();
+ 
+     if (hypers.world_size > 1) {

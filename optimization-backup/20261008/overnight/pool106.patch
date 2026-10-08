@@ -1,0 +1,33 @@
+--- a/src/env_pool.h
++++ b/src/env_pool.h
+@@ -14,7 +14,7 @@
+ typedef struct EnvPool EnvPool;
+ typedef struct { EnvPool* pool; int id; } EPWorker;
+ struct EnvPool {
+-    int workers, buffers, stop;
++    int workers, buffers, stop, sleepers;
+     unsigned long epoch;
+     pthread_mutex_t mu;
+     pthread_cond_t ready;
+@@ -60,7 +60,11 @@
+             pthread_mutex_unlock(&r->mu);
+         }
+         pthread_mutex_lock(&p->mu);
+-        while (!p->stop && epoch == p->epoch) pthread_cond_wait(&p->ready, &p->mu);
++        while (!p->stop && epoch == p->epoch) {
++            p->sleepers++;
++            pthread_cond_wait(&p->ready, &p->mu);
++            p->sleepers--;
++        }
+         pthread_mutex_unlock(&p->mu);
+     }
+ }
+@@ -101,7 +105,7 @@
+     r->active = 1;
+     pthread_mutex_unlock(&r->mu);
+     pthread_mutex_lock(&p->mu);
+-    p->epoch++; pthread_cond_broadcast(&p->ready);
++    p->epoch++; if (p->sleepers) pthread_cond_broadcast(&p->ready);
+     pthread_mutex_unlock(&p->mu);
+     ep_claim(p, r, buffer % p->workers);
+     while (__atomic_load_n(&r->done, __ATOMIC_ACQUIRE) < count) sched_yield();

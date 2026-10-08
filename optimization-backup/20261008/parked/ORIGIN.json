@@ -1,0 +1,6 @@
+{
+  "commit": "c967fcf7c54e6210f73b8c42209eaefbd9399042",
+  "parent": "10236329b2cd5b6e3d4dfb8eed33eacd4a0260f1",
+  "remote_branch": "origin/perf-planes-wip",
+  "status": "Historical WIP; documented golden failures. Not applied to this backup branch."
+}

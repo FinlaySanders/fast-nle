@@ -1132,6 +1132,7 @@ nle_step(nle_ctx_t *nle, nle_obs *obs)
     }
     current_nle_ctx = nle;
     nh_cur = (struct nh_ctx *) nle->nh;
+    nh_fobj_invalidate();
     nle->observation = obs;
     /* tty gating tracks the CURRENT step's bindings, not nle_start's:
      * the C API lets each step pass a different obs, so tty_* fields can

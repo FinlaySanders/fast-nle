@@ -1,0 +1,17 @@
+[
+  {
+    "name": "original",
+    "rc": 0,
+    "result": "CUDA_EVAL env=nethack score=1579.444458 perf=0.231111 games=18 params=4319368"
+  },
+  {
+    "name": "recorder-off",
+    "rc": 0,
+    "result": "CUDA_EVAL env=nethack score=1579.444458 perf=0.231111 games=18 params=4319368"
+  },
+  {
+    "name": "recorder-on",
+    "rc": 0,
+    "result": "CUDA_EVAL env=nethack score=1579.444458 perf=0.231111 games=18 params=4319368"
+  }
+]

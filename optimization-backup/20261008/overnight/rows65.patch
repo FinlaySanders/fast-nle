@@ -1,0 +1,67 @@
+--- a/src/display.c
++++ b/src/display.c
+@@ -1614,6 +1614,7 @@
+ 
+     if (gbuf[y][x].glyph != glyph || iflags.use_background_glyph) {
+         gbuf[y][x].glyph = glyph;
++        nh_glyph_valid_rows &= ~(1u << y);
+         gbuf[y][x].new = 1;
+         if (gbuf_start[y] > x)
+             gbuf_start[y] = x;
+@@ -1663,6 +1664,7 @@
+             *gptr++ = nul_gbuf;
+         }
+     }
++    nh_glyph_valid_rows = 0;
+     reset_glyph_bbox();
+ }
+ 
+@@ -1939,9 +1941,19 @@
+ nle_copy_glyphs(short *dst)
+ {
+     int x, y;
++    for (y = 0; y < ROWNO; y++) {
++        if (!(nh_glyph_valid_rows & (1u << y)))
++            for (x = 1; x < COLNO; x++)
++                nh_glyph_plane[y * (COLNO - 1) + x - 1] = (short) gbuf[y][x].glyph;
++    }
++    nh_glyph_valid_rows = (1u << ROWNO) - 1;
++#ifdef NLE_GLYPH_VERIFY
+     for (y = 0; y < ROWNO; y++)
+         for (x = 1; x < COLNO; x++)
+-            *dst++ = (short) gbuf[y][x].glyph;
++            if (nh_glyph_plane[y * (COLNO - 1) + x - 1] != (short) gbuf[y][x].glyph)
++                panic("glyph row cache mismatch at %d,%d", x, y);
++#endif
++    memcpy(dst, nh_glyph_plane, sizeof nh_glyph_plane);
+ }
+ 
+ int
+--- a/tools/globals.def
++++ b/tools/globals.def
+@@ -581,3 +581,6 @@
+ global | cold | unsigned char | nh_track_near | [COLNO][ROWNO] | 0
+ 
+ global | cold | unsigned char | nh_no_hero_gold | | 0
++
++global | cold | short | nh_glyph_plane | [ROWNO * (COLNO - 1)] | 0
++global | cold | unsigned int | nh_glyph_valid_rows | | 0
+--- a/include/nh_ctx_gen.h
++++ b/include/nh_ctx_gen.h
+@@ -488,6 +488,8 @@
+     struct obj * g_nh_fobj_ptr[2048]; /* global: nh_fobj_ptr */
+     unsigned char g_nh_track_near[COLNO][ROWNO]; /* global: nh_track_near */
+     unsigned char g_nh_no_hero_gold; /* global: nh_no_hero_gold */
++    short g_nh_glyph_plane[ROWNO * (COLNO - 1)]; /* global: nh_glyph_plane */
++    unsigned int g_nh_glyph_valid_rows; /* global: nh_glyph_valid_rows */
+     /* lazily-allocated per-env blobs whose types are private to one
+      * .c file (e.g. options.c boolopt copy); freed by nh_ctx_free.
+      * Slot assignments are documented at the allocation sites. */
+@@ -657,5 +659,7 @@
+ #define nh_fobj_ptr (nh_cur->g_nh_fobj_ptr)
+ #define nh_track_near (nh_cur->g_nh_track_near)
+ #define nh_no_hero_gold (nh_cur->g_nh_no_hero_gold)
++#define nh_glyph_plane (nh_cur->g_nh_glyph_plane)
++#define nh_glyph_valid_rows (nh_cur->g_nh_glyph_valid_rows)
+ 
+ #endif /* NH_CTX_GEN_H */

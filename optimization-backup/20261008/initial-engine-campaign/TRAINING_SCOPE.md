@@ -1,0 +1,9 @@
+# Training benchmark correction
+
+The production trainer's `base.load_model_path` is consumed by eval_make, not run_train. Thus earlier candidate04 524K-step integration and scheduling 1M-step training jobs were RANDOM-INITIALISED smoke tests, despite supplying that CLI option. Preserve their results, but do not describe these as training from4B weights or late-game throughput. Replay and native evaluation correctly load the frozen4B policies and are unaffected.
+
+warmtrain/ adds an isolated, identical PUF_PERF_LOAD hook to every scheduler arm: load policy0 through the existing weight loader immediately after trainer creation, synchronise, and save master weights before the first rollout. Require this proof file to be byte-identical to the frozen4B checkpoint. Optimizer state starts fresh; this is a warm-start benchmark, not resuming the original optimizer trajectory. Algorithms/rewards/config stay unchanged.
+
+Late-game engine replay with explicit verified warmup is the primary timing evidence. Mature-policy training still starts games at turn1 and needs sufficient rollout to reach costly states. Total process wall time includes initialization, saves and inline eval, and is not steady-state late-game SPS. Report interval timing/state evidence separately rather than relabel early throughput.
+
+Shared pool four-buffer native proof failed. Repeating the unchanged WS baseline also diverges at sampled action events around decision365–390 in most environments, with identical engine/policy hashes up to that event. This is a baseline multi-buffer inference nondeterminism finding, not proof that the pool is correct. Preserve failures and investigate with fixed-action replay and graph-disabled diagnostic runs. One-buffer raw/trace WS/pool proof passed. Region concurrency stress, ASAN/UBSAN and TSAN passed48000 submissions, including empty/changing regions and destroy/recreate.

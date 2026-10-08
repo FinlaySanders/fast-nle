@@ -1,0 +1,116 @@
+[
+  {
+    "workload": "depth",
+    "path": "/puffertank/experiments/nethack-perf-20260917/depth-record/env00279.trace",
+    "episode": {
+      "score": 11788,
+      "turn": 2973,
+      "depth": 29,
+      "xp": 5,
+      "how": 4,
+      "length": 2746,
+      "start_offset": 556805,
+      "end_offset": 989510,
+      "start_decision": 3706,
+      "end_decision": 6452
+    },
+    "warmup": 5428,
+    "measured_decisions": 512,
+    "scope": "512 decisions in the final1024 decisions of this completed episode; episode maxdepth does not assert depth throughout window"
+  },
+  {
+    "workload": "depth",
+    "path": "/puffertank/experiments/nethack-perf-20260917/depth-record/env00001.trace",
+    "episode": {
+      "score": 11488,
+      "turn": 2405,
+      "depth": 29,
+      "xp": 4,
+      "how": 0,
+      "length": 2055,
+      "start_offset": 681825,
+      "end_offset": 1022074,
+      "start_decision": 4076,
+      "end_decision": 6131
+    },
+    "warmup": 5107,
+    "measured_decisions": 512,
+    "scope": "512 decisions in the final1024 decisions of this completed episode; episode maxdepth does not assert depth throughout window"
+  },
+  {
+    "workload": "depth",
+    "path": "/puffertank/experiments/nethack-perf-20260917/depth-record/env00062.trace",
+    "episode": {
+      "score": 15961,
+      "turn": 2227,
+      "depth": 29,
+      "xp": 4,
+      "how": 0,
+      "length": 2674,
+      "start_offset": 1106865,
+      "end_offset": 1525766,
+      "start_decision": 6940,
+      "end_decision": 9614
+    },
+    "warmup": 8590,
+    "measured_decisions": 512,
+    "scope": "512 decisions in the final1024 decisions of this completed episode; episode maxdepth does not assert depth throughout window"
+  },
+  {
+    "workload": "score",
+    "path": "/puffertank/experiments/nethack-perf-20260917/score-record/env00468.trace",
+    "episode": {
+      "score": 288300,
+      "turn": 220085,
+      "depth": 3,
+      "xp": 13,
+      "how": 0,
+      "length": 33614,
+      "start_offset": 10869273,
+      "end_offset": 15662838,
+      "start_decision": 73602,
+      "end_decision": 107216
+    },
+    "warmup": 106192,
+    "measured_decisions": 512,
+    "scope": "512 decisions in the final1024 decisions of this completed episode; episode maxdepth does not assert depth throughout window"
+  },
+  {
+    "workload": "score",
+    "path": "/puffertank/experiments/nethack-perf-20260917/score-record/env00000.trace",
+    "episode": {
+      "score": 283542,
+      "turn": 213381,
+      "depth": 7,
+      "xp": 15,
+      "how": 0,
+      "length": 31323,
+      "start_offset": 13967813,
+      "end_offset": 18428424,
+      "start_decision": 92732,
+      "end_decision": 124055
+    },
+    "warmup": 123031,
+    "measured_decisions": 512,
+    "scope": "512 decisions in the final1024 decisions of this completed episode; episode maxdepth does not assert depth throughout window"
+  },
+  {
+    "workload": "score",
+    "path": "/puffertank/experiments/nethack-perf-20260917/score-record/env00040.trace",
+    "episode": {
+      "score": 254262,
+      "turn": 187606,
+      "depth": 6,
+      "xp": 13,
+      "how": 0,
+      "length": 26313,
+      "start_offset": 5743914,
+      "end_offset": 9503803,
+      "start_decision": 38674,
+      "end_decision": 64987
+    },
+    "warmup": 63963,
+    "measured_decisions": 512,
+    "scope": "512 decisions in the final1024 decisions of this completed episode; episode maxdepth does not assert depth throughout window"
+  }
+]

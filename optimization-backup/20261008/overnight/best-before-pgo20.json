@@ -1,0 +1,54 @@
+{
+  "time": "2026-09-17T23:09:44.004015+00:00",
+  "candidate": "floor04+mask05+pgo08",
+  "decision": "retained best engine; combined rollout timing active",
+  "library": "/puffertank/experiments/nethack-overnight-20260917/pgo08/variant/libnethack.so",
+  "patch": "/puffertank/experiments/nethack-overnight-20260917/retained-floor04-mask05.patch",
+  "build_recipe": "/puffertank/experiments/nethack-overnight-20260917/pgo08.py",
+  "correctness": "4,472,832 score and23,855,104 depth decisions exact; raw observations match; historical exceptions unchanged; historical-view golden/status/interleaved/shuffled and26fuzz pass; sourceaudit exactly3changed files",
+  "training": {
+    "baseline-before": 26.323356866,
+    "pgo08": 24.986746789,
+    "baseline-after": 26.978978872,
+    "candidate": "pgo08-training",
+    "time": "2026-09-17T23:06:08.418898+00:00",
+    "gain_percent": 6.661215619845029,
+    "drift_percent": 2.490647409969271,
+    "decision": "combined training gain established; no clear extra gain versus earlier floor04 measurement, avoid multiplying engine speedups"
+  },
+  "caveat": "not a new6.7% on top of floor04; both compared original baseline; engine gains reported separately",
+  "fixed_policy_rollouts": {
+    "before": {
+      "seconds": 24.672709942,
+      "sps": 169997.70231400873,
+      "mean_turn": 28589.949375,
+      "gain_percent": 0.1766379356076042
+    },
+    "floor04": {
+      "seconds": 23.644315243,
+      "sps": 177391.6460212034,
+      "mean_turn": 28589.949375,
+      "gain_percent": 4.533758129524856
+    },
+    "mask05": {
+      "seconds": 23.611690045,
+      "sps": 177636.7550144164,
+      "mean_turn": 28589.949375,
+      "gain_percent": 4.678196522124467
+    },
+    "pgo08": {
+      "seconds": 21.784747837999998,
+      "sps": 192533.9706105622,
+      "mean_turn": 28589.949375,
+      "gain_percent": 13.45686207295178
+    },
+    "after": {
+      "seconds": 24.759872673,
+      "sps": 169399.25561789257,
+      "mean_turn": 28589.949375,
+      "gain_percent": -0.17601611315039012
+    },
+    "baseline_drift_percent": 0.3532758712152084
+  },
+  "global_audit": "strict raw checker differences preserved;6 compiler-renamed/EH symbols individually reconciled against whitelist/baseline size+section"
+}

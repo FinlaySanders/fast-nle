@@ -1935,6 +1935,15 @@ int beam_type;
  * the location.  This isn't necessarily the same as the glyph in the levl
  * structure, so we must check the "third screen".
  */
+void
+nle_copy_glyphs(short *dst)
+{
+    int x, y;
+    for (y = 0; y < ROWNO; y++)
+        for (x = 1; x < COLNO; x++)
+            *dst++ = (short) gbuf[y][x].glyph;
+}
+
 int
 glyph_at(x, y)
 xchar x, y;

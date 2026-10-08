@@ -1,0 +1,17 @@
+{
+  "pufferlib": {
+    "manifest_files_verified": 856,
+    "training_patch_reproduces_minimal": [
+      "src/algo.cu",
+      "src/pufferl.cu",
+      "ocean/nethack/nethack.cu"
+    ],
+    "scheduler_patch_roundtrip": true
+  },
+  "fast-nle": {
+    "manifest_files_verified": 1372,
+    "historical_source_manifest_verified": 642,
+    "retained_patch_roundtrip": true
+  },
+  "original_checkouts_unchanged": true
+}

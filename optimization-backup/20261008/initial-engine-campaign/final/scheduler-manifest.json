@@ -1,0 +1,22 @@
+[
+  {
+    "workload": "depth",
+    "scheduler": "ws",
+    "base_trainer_sha256": "2976b0428b5d467f93d4ed449ae14d392d1562cc9d83bc4b0b350966640f4f48",
+    "patch": "/puffertank/experiments/nethack-perf-20260917/patch-review/depth-ws.patch",
+    "patch_sha256": "5fe4bd3798f9034b5c27fa1810c23a9e07f333cd26a4fc7472f05c409d858a1a",
+    "result_trainer_sha256": "ced2eecf4bcac9a8253f8eb7198f4c54e71884ef8230f597e6c369b01d667e17",
+    "build_define": "PUF_ENV_WS",
+    "scope": "Retained work-stealing patch for this frozen trainer version; compile with PUF_ENV_WS. Shared-pool alternatives are not retained."
+  },
+  {
+    "workload": "score",
+    "scheduler": "ws",
+    "base_trainer_sha256": "046688e753bf5b3c5485c0e061abeb8a19606db4556b83e243466fc3274d058f",
+    "patch": "/puffertank/experiments/nethack-perf-20260917/patch-review/score-ws.patch",
+    "patch_sha256": "7d49f87a00d42be75c02a5e12fe019c0d90273575e2ec88e423cbc4473793317",
+    "result_trainer_sha256": "f4af9aa7265d4efe250850f2938007c1d417c01d5c48eca68252b068d82a4e40",
+    "build_define": "PUF_ENV_WS",
+    "scope": "Retained work-stealing patch for this frozen trainer version; compile with PUF_ENV_WS. Shared-pool alternatives are not retained."
+  }
+]

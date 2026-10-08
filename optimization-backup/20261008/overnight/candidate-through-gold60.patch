@@ -1,0 +1,247 @@
+--- a/include/hack.h
++++ b/include/hack.h
+@@ -598,7 +598,7 @@
+          if (set_typ_i_ >= 0 && set_typ_i_ < COLNO * ROWNO) \
+              (&nh_typ_plane[0][0])[set_typ_i_] = set_typ_v_; } while (0)
+ extern void NDECL(nh_typ_sync);
+-struct nh_fobj_cursor { unsigned long generation; int index, fallback; };
++struct nh_fobj_cursor { unsigned long generation; int index, fallback; unsigned int mask; int base, lx, hx, ly, hy; };
+ extern void NDECL(nh_fobj_invalidate);
+ extern struct obj *FDECL(nh_fobj_next, (struct nh_fobj_cursor *, struct obj *, int, int, int, int));
+ extern void FDECL(nh_typ_verify, (const char *));
+--- a/include/nh_ctx_gen.h
++++ b/include/nh_ctx_gen.h
+@@ -486,6 +486,8 @@
+     short g_nh_fobj_x[2048]; /* global: nh_fobj_x */
+     short g_nh_fobj_y[2048]; /* global: nh_fobj_y */
+     struct obj * g_nh_fobj_ptr[2048]; /* global: nh_fobj_ptr */
++    unsigned char g_nh_track_near[COLNO][ROWNO]; /* global: nh_track_near */
++    unsigned char g_nh_no_hero_gold; /* global: nh_no_hero_gold */
+     /* lazily-allocated per-env blobs whose types are private to one
+      * .c file (e.g. options.c boolopt copy); freed by nh_ctx_free.
+      * Slot assignments are documented at the allocation sites. */
+@@ -653,5 +655,7 @@
+ #define nh_fobj_x (nh_cur->g_nh_fobj_x)
+ #define nh_fobj_y (nh_cur->g_nh_fobj_y)
+ #define nh_fobj_ptr (nh_cur->g_nh_fobj_ptr)
++#define nh_track_near (nh_cur->g_nh_track_near)
++#define nh_no_hero_gold (nh_cur->g_nh_no_hero_gold)
+ 
+ #endif /* NH_CTX_GEN_H */
+--- a/tools/globals.def
++++ b/tools/globals.def
+@@ -577,3 +577,7 @@
+ global | cold | short | nh_fobj_x | [2048] | 0
+ global | cold | short | nh_fobj_y | [2048] | 0
+ global | cold | struct obj * | nh_fobj_ptr | [2048] | 0
++
++global | cold | unsigned char | nh_track_near | [COLNO][ROWNO] | 0
++
++global | cold | unsigned char | nh_no_hero_gold | | 0
+--- a/src/mkobj.c
++++ b/src/mkobj.c
+@@ -588,6 +588,7 @@
+         /* do nothing */
+         break;
+     case OBJ_INVENT:
++        nh_no_hero_gold = 0;
+         otmp->nobj = obj->nobj;
+         obj->nobj = otmp;
+         extract_nobj(obj, &invent);
+--- a/src/steal.c
++++ b/src/steal.c
+@@ -69,8 +69,21 @@
+ findgold(chain)
+ register struct obj *chain;
+ {
++    boolean hero_chain = (chain == invent);
++    if (hero_chain && nh_no_hero_gold) {
++#ifdef NLE_GOLD_VERIFY
++        struct obj *check = chain;
++        while (check && check->otyp != GOLD_PIECE)
++            check = check->nobj;
++        if (check)
++            panic("stale hero gold absence");
++#endif
++        return (struct obj *) 0;
++    }
+     while (chain && chain->otyp != GOLD_PIECE)
+         chain = chain->nobj;
++    if (hero_chain && !chain)
++        nh_no_hero_gold = 1;
+     return chain;
+ }
+ 
+--- a/src/track.c
++++ b/src/track.c
+@@ -13,18 +13,32 @@
+ initrack()
+ {
+     utcnt = utpnt = 0;
++    memset(nh_track_near, 0, sizeof(nh_track_near));
++}
++
++static void
++nh_track_adjust(coord *position, int delta)
++{
++    int x, y;
++    for (x = max(0, position->x - 1); x <= min(COLNO - 1, position->x + 1); x++)
++        for (y = max(0, position->y - 1); y <= min(ROWNO - 1, position->y + 1); y++)
++            nh_track_near[x][y] += delta;
+ }
+ 
+ /* add to track */
+ void
+ settrack()
+ {
++    int full = (utcnt == UTSZ);
+     if (utcnt < UTSZ)
+         utcnt++;
+     if (utpnt == UTSZ)
+         utpnt = 0;
++    if (full)
++        nh_track_adjust(&utrack[utpnt], -1);
+     utrack[utpnt].x = u.ux;
+     utrack[utpnt].y = u.uy;
++    nh_track_adjust(&utrack[utpnt], 1);
+     utpnt++;
+ }
+ 
+@@ -34,6 +48,8 @@
+ {
+     register int cnt, ndist;
+     register coord *tc;
++    if (x >= 0 && x < COLNO && y >= 0 && y < ROWNO && !nh_track_near[x][y])
++        return (coord *) 0;
+     cnt = utcnt;
+     for (tc = &utrack[utpnt]; cnt--;) {
+         if (tc == utrack)
+--- a/src/restore.c
++++ b/src/restore.c
+@@ -696,6 +696,7 @@
+     restore_timers(fd, RANGE_GLOBAL, FALSE, 0L);
+     restore_light_sources(fd);
+     invent = restobjchn(fd, FALSE, FALSE);
++    nh_no_hero_gold = 0;
+ 
+     /* restore dangling (not on floor or in inventory) ball and/or chain */
+     bc_obj = restobjchn(fd, FALSE, FALSE);
+--- a/src/monmove.c
++++ b/src/monmove.c
+@@ -345,7 +345,8 @@
+         seescaryy = u.uy;
+     }
+ 
+-    sawscary = onscary(seescaryx, seescaryy, mtmp);
++    sawscary = (*nearby || mtmp->isshk || mtmp->ispriest)
++        && onscary(seescaryx, seescaryy, mtmp);
+     if (*nearby && (sawscary
+                     || (flees_light(mtmp) && !bravegremlin)
+                     || (!mtmp->mpeaceful && in_your_sanctuary(mtmp, 0, 0)))) {
+@@ -804,6 +805,7 @@
+         if (!nh_fobj_valid) nh_fobj_build();
+         cursor->generation = nh_fobj_generation;
+         cursor->index = 0;
++        cursor->mask = 0;
+         cursor->fallback = nh_fobj_count < 0;
+     } else if (cursor->generation != nh_fobj_generation) {
+         cursor->fallback = 1;
+@@ -828,6 +830,15 @@
+     /* Reject eight coordinates at once; the first matching entry still wins. */
+     if (lx >= -32768 && hx <= 32767 && ly >= -32768 && hy <= 32767
+         && lx <= hx && ly <= hy) {
++        if (cursor->mask && cursor->lx == lx && cursor->hx == hx
++            && cursor->ly == ly && cursor->hy == hy) {
++            int bit = __builtin_ctz(cursor->mask);
++            int i = cursor->base + bit / 2;
++            cursor->mask &= ~(3U << bit);
++            cursor->index = i + 1;
++            return nh_fobj_ptr[i];
++        }
++        cursor->mask = 0;
+         __m128i xl = _mm_set1_epi16((short) lx), xh = _mm_set1_epi16((short) hx);
+         __m128i yl = _mm_set1_epi16((short) ly), yh = _mm_set1_epi16((short) hy);
+         while (cursor->index + 8 <= nh_fobj_count) {
+@@ -839,7 +850,12 @@
+                 _mm_or_si128(_mm_cmpgt_epi16(yl, y), _mm_cmpgt_epi16(y, yh)));
+             unsigned int mask = (~(unsigned int) _mm_movemask_epi8(reject)) & 65535U;
+             if (mask) {
+-                i += __builtin_ctz(mask) / 2;
++                int bit = __builtin_ctz(mask);
++                cursor->base = i;
++                cursor->mask = mask & ~(3U << bit);
++                cursor->lx = lx; cursor->hx = hx;
++                cursor->ly = ly; cursor->hy = hy;
++                i += bit / 2;
+                 cursor->index = i + 1;
+                 return nh_fobj_ptr[i];
+             }
+@@ -847,6 +863,7 @@
+         }
+     }
+ #endif
++    cursor->mask = 0;
+     while (cursor->index < nh_fobj_count) {
+         int i = cursor->index++;
+         if (nh_fobj_x[i] >= lx && nh_fobj_x[i] <= hx
+--- a/src/mon.c
++++ b/src/mon.c
+@@ -723,8 +723,6 @@
+ {
+     register struct monst *mtmp, *nmtmp;
+     register boolean somebody_can_move = FALSE;
+-
+-    nh_fobj_invalidate();
+ 
+     /*
+      * Some of you may remember the former assertion here that
+--- a/src/invent.c
++++ b/src/invent.c
+@@ -653,6 +653,7 @@
+     struct obj *otmp, *prev, *next;
+     boolean need_more_sorting;
+ 
++    nh_no_hero_gold = 0;
+     do {
+         /*
+          * We expect at most one item to be out of order, so this
+@@ -944,6 +945,7 @@
+     if (flags.invlet_constant || !prev) {
+         obj->nobj = invent; /* insert at beginning */
+         invent = obj;
++        nh_no_hero_gold = 0;
+         if (flags.invlet_constant)
+             reorder_invent();
+     } else {
+@@ -962,6 +964,7 @@
+         && (throwing_weapon(obj) || is_ammo(obj)))
+         setuqwep(obj);
+  added:
++    nh_no_hero_gold = 0;
+     addinv_core2(obj);
+     carry_obj_effects(obj); /* carrying affects the obj */
+     update_inventory();
+@@ -4022,6 +4025,7 @@
+         goldobj->invlet = GOLD_SYM;
+         goldobj->nobj = invent;
+         invent = goldobj;
++        nh_no_hero_gold = 0;
+     }
+     if (i >= 52)
+         i = 52 - 1;
+@@ -4276,6 +4280,7 @@
+     obj->nobj = invent;
+     obj->where = OBJ_INVENT;
+     invent = obj;
++    nh_no_hero_gold = 0;
+     reorder_invent();
+     if (bumped) {
+         /* splitting the 'from' stack is causing an incompatible
+@@ -4285,6 +4290,7 @@
+         bumped->nobj = invent;
+         bumped->where = OBJ_INVENT;
+         invent = bumped;
++        nh_no_hero_gold = 0;
+         reorder_invent();
+     }
+ 

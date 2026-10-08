@@ -1,0 +1,16 @@
+--- a/src/display.c
++++ b/src/display.c
+@@ -1506,9 +1506,11 @@
+ /* Glyph Buffering (3rd screen) =========================================== */
+ 
+ typedef struct {
+-    xchar new; /* perhaps move this bit into the rm structure. */
+-    int glyph;
++    unsigned short new : 1;
++    signed short glyph : 15;
+ } gbuf_entry;
++_Static_assert(MAX_GLYPH < 16384, "glyph IDs must fit in signed 15 bits");
++_Static_assert(sizeof(gbuf_entry) == 2, "compact screen cell must be 2 bytes");
+ 
+ /* gbuf — per-env display buffer migrated to nle_ctx_t.
+  * ROWNO*COLNO entries; macro casts the flat allocation to a 2D pointer. */

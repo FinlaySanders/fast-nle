@@ -1,0 +1,27 @@
+{
+  "arms": {
+    "before": {
+      "seconds": 16.654414656,
+      "sps": 251843.37526320326,
+      "gain_percent": 0.052000833886300946
+    },
+    "candidate": {
+      "seconds": 16.333333732,
+      "sps": 256794.1161811069,
+      "gain_percent": 2.0188245946017647
+    },
+    "after": {
+      "seconds": 16.671735525,
+      "sps": 251581.72607227706,
+      "gain_percent": -0.0519468083392427
+    }
+  },
+  "baseline_drift_percent": 0.10400166777255748,
+  "initial_rng_and_32block_observations_equal": true,
+  "rng_hashes": {
+    "before": "4321709e6b01c7a2c8642d768daaaa2894d5505b7a6d661edbc3c608aa3bc7d7",
+    "candidate": "4321709e6b01c7a2c8642d768daaaa2894d5505b7a6d661edbc3c608aa3bc7d7",
+    "after": "4321709e6b01c7a2c8642d768daaaa2894d5505b7a6d661edbc3c608aa3bc7d7"
+  },
+  "caveat": "Candidate uses installed tcmalloc minimal allocator with unchanged executable, with retained PGO61 engine. Both24sharedworkers. Four submitters additional. All32blockobshashes and initialRNG/weights required; block checks are not full action trace."
+}

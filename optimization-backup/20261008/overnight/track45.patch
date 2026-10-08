@@ -1,0 +1,13 @@
+--- a/src/track.c
++++ b/src/track.c
+@@ -34,6 +34,10 @@
+         utcnt++;
+     if (utpnt == UTSZ)
+         utpnt = 0;
++    if (full && utrack[utpnt].x == u.ux && utrack[utpnt].y == u.uy) {
++        utpnt++;
++        return;
++    }
+     if (full)
+         nh_track_adjust(&utrack[utpnt], -1);
+     utrack[utpnt].x = u.ux;

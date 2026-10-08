@@ -1,0 +1,37 @@
+--- a/src/pufferl.cu
++++ b/src/pufferl.cu
+@@ -1180,10 +1180,34 @@
+             memset(&vec->rewards[agent_start], 0, apb * sizeof(float));
+             memset(&vec->terminals[agent_start], 0, apb * sizeof(float));
+             clock_gettime(CLOCK_MONOTONIC, &t0);
++#ifdef PUF_ENV_WS
++            {
++                int nw = vec->num_workers;
++                if (nw > 256) nw = 256;
++                int next[256 * 16];
++                int per = (env_count + nw - 1) / nw;
++                for (int w = 0; w < nw; w++) next[w * 16] = env_start + w * per;
++                #pragma omp parallel num_threads(nw)
++                {
++                    int worker = omp_get_thread_num();
++                    for (int k = 0; k < nw; k++) {
++                        int victim = (worker + k) % nw;
++                        int end = env_start + (victim + 1) * per;
++                        if (end > env_start + env_count) end = env_start + env_count;
++                        for (;;) {
++                            int i = __atomic_fetch_add(&next[victim * 16], 1, __ATOMIC_RELAXED);
++                            if (i >= end) break;
++                            puf_step(&envs[i]);
++                        }
++                    }
++                }
++            }
++#else
+             #pragma omp parallel for schedule(static) num_threads(vec->num_workers)
+             for (int i = env_start; i < env_start + env_count; i++) {
+                 puf_step(&envs[i]);
+             }
++#endif
+             clock_gettime(CLOCK_MONOTONIC, &t1);
+             my_accum[PROF_ENV] += (t1.tv_sec - t0.tv_sec) * 1000.0f
+                 + (t1.tv_nsec - t0.tv_nsec) / 1e6f;

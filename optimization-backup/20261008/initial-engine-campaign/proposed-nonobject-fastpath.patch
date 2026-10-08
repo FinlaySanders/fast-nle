@@ -1,0 +1,14 @@
+--- a/win/rl/winrl.cc
++++ b/win/rl/winrl.cc
+@@ -309,8 +309,9 @@
+ int
+ NetHackRL::maybe_true_glyph(int glyph)
+ {
+-    if (true_glyphs_ && glyph_is_normal_object(glyph)
+-        && objects[glyph_to_obj(glyph)].oc_name_known)
++    if (!glyph_is_normal_object(glyph))
++        return glyph;
++    if (true_glyphs_ && objects[glyph_to_obj(glyph)].oc_name_known)
+         return glyph;
+     return shuffled_glyph(glyph);
+ }

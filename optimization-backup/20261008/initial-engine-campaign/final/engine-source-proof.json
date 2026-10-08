@@ -1,0 +1,23 @@
+{
+  "patch_sha256": "22efca953ab957332234f024d49e78740608540a5c401fa76acfa6cffde57f55",
+  "applies_cleanly": true,
+  "source_matches": true,
+  "files": {
+    "util/mkcanon.c": "2fffc836bbf033933ab2cadc7499245a8fe0101b70b2ffa1229a472f2bd92a4c",
+    "include/nh_ctx_gen.h": "3fcdf416bb2c7fcaef87a2331e748d4d0ec4736e8326c8a4f146edbbd9e62b11",
+    "src/mklev.c": "40af0984935d8742b4b4a381d0e76a21429d7af318e388daff86ed94d346e2cc",
+    "include/hack.h": "ab5cbd678662a1396d817b27a2a36c5a5a3d11fedf73b3eb3c8d5cca0ae372d1",
+    "src/display.c": "6ff8119cf833f9639b537b4c95e4c93dadb1729b490047803a395744cb57859f",
+    "src/mon.c": "4fafc60150d13fe78b536fe40bb65e5718cbc018f5e96402cb4b70595a83f21b",
+    "src/nle.c": "12ae9203e4068dec35b6935500571e6e8cde925180a990efdbdd47539d5045a2",
+    "tools/globals.def": "735367a3e75c378d448d132b26ed8a26be1802170bc2906da27cfc0bdd7e0260",
+    "util/CMakeLists.txt": "8728ad55f40fa36f2b852f29ffc4e69a9ab90f15d9052d24f5f5034025f205a1",
+    "include/extern.h": "0e3bd5b74ae3aa1809bf58bf9b6b189c69b568aefb03a922f1cffb06c1ade206",
+    "src/save.c": "fd9ebc597944a34883cfdc3e8dd9b78c7d78cabd83497ceac8300be7ad1e68e5",
+    "src/monmove.c": "95a4e7e17d2f4d09dfaab08a98bc1fc47f3a69c9603240e823a7b7b89c3eabba",
+    "src/mkobj.c": "892bb79d2c600c4723fe23defe4bcc6b41bf24f4696320a0dfd36971a45173d0",
+    "win/rl/winrl.cc": "53b6ade3115e7bc256ea10c986ad07655cae3407604ac9064baff66c2c684426",
+    "src/restore.c": "f711ef5fa9c58097c68f873e78f0a09bdd0522e95220f6e612832a8aa6459107"
+  },
+  "scope": "Packaging only; final broad acceptance remains pending"
+}

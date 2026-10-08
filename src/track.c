@@ -13,18 +13,32 @@ void
 initrack()
 {
     utcnt = utpnt = 0;
+    memset(nh_track_near, 0, sizeof(nh_track_near));
+}
+
+static void
+nh_track_adjust(coord *position, int delta)
+{
+    int x, y;
+    for (x = max(0, position->x - 1); x <= min(COLNO - 1, position->x + 1); x++)
+        for (y = max(0, position->y - 1); y <= min(ROWNO - 1, position->y + 1); y++)
+            nh_track_near[x][y] += delta;
 }
 
 /* add to track */
 void
 settrack()
 {
+    int full = (utcnt == UTSZ);
     if (utcnt < UTSZ)
         utcnt++;
     if (utpnt == UTSZ)
         utpnt = 0;
+    if (full)
+        nh_track_adjust(&utrack[utpnt], -1);
     utrack[utpnt].x = u.ux;
     utrack[utpnt].y = u.uy;
+    nh_track_adjust(&utrack[utpnt], 1);
     utpnt++;
 }
 
@@ -34,6 +48,8 @@ register int x, y;
 {
     register int cnt, ndist;
     register coord *tc;
+    if (x >= 0 && x < COLNO && y >= 0 && y < ROWNO && !nh_track_near[x][y])
+        return (coord *) 0;
     cnt = utcnt;
     for (tc = &utrack[utpnt]; cnt--;) {
         if (tc == utrack)

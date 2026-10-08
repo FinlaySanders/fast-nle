@@ -1,0 +1,96 @@
+[
+  {
+    "workload": "depth",
+    "arms": [
+      {
+        "phase": "before",
+        "seconds": 11.284916878,
+        "steps": 2097152,
+        "sps": 185836.72548695575,
+        "mean_game_turn": 878.0653125,
+        "max_game_turn": 4651,
+        "mean_over10k": 0.0,
+        "environments": 256,
+        "initial_weights_sha256": "e040c52de6230d6bb6fd3563603036c48a7080e3ed3c41d2ec213f2792d5b818",
+        "engine_sha256": "a3a4c32fc0c9107f748ccb8255d4901b85dd80beb9786fa851cd1f8f08f056a2",
+        "binary_sha256": "913211c35162831e1e18a76e49cd22c005bb9e2cd969b6ad4cc6fb6e48570374"
+      },
+      {
+        "phase": "candidate",
+        "seconds": 10.924538135,
+        "steps": 2097152,
+        "sps": 191967.10873122874,
+        "mean_game_turn": 897.991875,
+        "max_game_turn": 4287,
+        "mean_over10k": 0.0,
+        "environments": 256,
+        "initial_weights_sha256": "e040c52de6230d6bb6fd3563603036c48a7080e3ed3c41d2ec213f2792d5b818",
+        "engine_sha256": "70fe544048cd5f9e159d98be3222f35536e508299228e88f61a3c10c968bc403",
+        "binary_sha256": "7cd08ef65cdcdf307014f5868de0cdc9ca60b11fbbb44e89ee1be5b50d43c9b8"
+      },
+      {
+        "phase": "after",
+        "seconds": 11.32787633,
+        "steps": 2097152,
+        "sps": 185131.96462482918,
+        "mean_game_turn": 869.636875,
+        "max_game_turn": 5085,
+        "mean_over10k": 0.0,
+        "environments": 256,
+        "initial_weights_sha256": "e040c52de6230d6bb6fd3563603036c48a7080e3ed3c41d2ec213f2792d5b818",
+        "engine_sha256": "a3a4c32fc0c9107f748ccb8255d4901b85dd80beb9786fa851cd1f8f08f056a2",
+        "binary_sha256": "913211c35162831e1e18a76e49cd22c005bb9e2cd969b6ad4cc6fb6e48570374"
+      }
+    ],
+    "throughput_gain_percent": 3.495419799731425,
+    "baseline_drift_percent": 0.38068026964159785,
+    "scope": "Loaded4B checkpoint,fresh optimizer,original PPO/rewards; later half of4Mdepth/32Mscore. Stochastic graph-enabled trajectories may differ; inspect age and drift."
+  },
+  {
+    "workload": "score",
+    "arms": [
+      {
+        "phase": "before",
+        "seconds": 154.251511333,
+        "steps": 16777216,
+        "sps": 108765.32654374547,
+        "mean_game_turn": 20184.54546875,
+        "max_game_turn": 139413,
+        "mean_over10k": 336.1875,
+        "environments": 512,
+        "initial_weights_sha256": "6541c5212ae4aae45e3c419bec2bf150883c457188117743d546cfb1d62a2718",
+        "engine_sha256": "a3a4c32fc0c9107f748ccb8255d4901b85dd80beb9786fa851cd1f8f08f056a2",
+        "binary_sha256": "afc7188ada3173bce6642c936444eaff1118fb4e189b8e489212666fe80e9c8a"
+      },
+      {
+        "phase": "candidate",
+        "seconds": 151.784959079,
+        "steps": 16777216,
+        "sps": 110532.79654190181,
+        "mean_game_turn": 25930.93109375,
+        "max_game_turn": 194641,
+        "mean_over10k": 364.59375,
+        "environments": 512,
+        "initial_weights_sha256": "6541c5212ae4aae45e3c419bec2bf150883c457188117743d546cfb1d62a2718",
+        "engine_sha256": "70fe544048cd5f9e159d98be3222f35536e508299228e88f61a3c10c968bc403",
+        "binary_sha256": "b43942c844a8fc46f676db471ff2f64a69e7fd02c5591e60d74c360648736e53"
+      },
+      {
+        "phase": "after",
+        "seconds": 159.376661305,
+        "steps": 16777216,
+        "sps": 105267.7089771215,
+        "mean_game_turn": 23441.3784375,
+        "max_game_turn": 174126,
+        "mean_over10k": 353.171875,
+        "environments": 512,
+        "initial_weights_sha256": "6541c5212ae4aae45e3c419bec2bf150883c457188117743d546cfb1d62a2718",
+        "engine_sha256": "a3a4c32fc0c9107f748ccb8255d4901b85dd80beb9786fa851cd1f8f08f056a2",
+        "binary_sha256": "afc7188ada3173bce6642c936444eaff1118fb4e189b8e489212666fe80e9c8a"
+      }
+    ],
+    "throughput_gain_percent": 3.3133238434926104,
+    "baseline_drift_percent": 3.322593035043764,
+    "scope": "Loaded4B checkpoint,fresh optimizer,original PPO/rewards; later half of4Mdepth/32Mscore. Stochastic graph-enabled trajectories may differ; inspect age and drift."
+  }
+]

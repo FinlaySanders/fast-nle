@@ -1,0 +1,115 @@
+{
+  "time": "2026-09-18T04:00:57.007318+00:00",
+  "candidate": "floor04+mask05+distant15+track40+gold60+pgo61+sharedpool83-original20",
+  "decision": "retained after repeated matched rollouts, equal-threadcountcontrol, concurrentfullreplay, regular/ASAN/UBSAN/TSANstress and loadedtraining",
+  "library": "/puffertank/experiments/nethack-overnight-20260917/pgo61/variant/libnethack.so",
+  "library_sha256": "5c302a62f31b21f449b093b985b66f93626c8281fdd90e1bea1f3150a8681274",
+  "patch": "/puffertank/experiments/nethack-overnight-20260917/retained-through-gold60.patch",
+  "source_snapshot": "/puffertank/experiments/nethack-overnight-20260917/pgo61-source",
+  "build_recipe": "/puffertank/experiments/nethack-overnight-20260917/pgo61.py",
+  "fixed_policy_rollouts": {
+    "before": {
+      "seconds": 24.607514383,
+      "sps": 170448.097061669,
+      "mean_turn": 28589.949375,
+      "gain_percent": 0.10459697838389737
+    },
+    "pgo61": {
+      "seconds": 20.964670418,
+      "sps": 200065.34404656434,
+      "mean_turn": 28589.949375,
+      "gain_percent": 17.49888077587045
+    },
+    "pool83": {
+      "seconds": 17.899667502,
+      "sps": 234323.0118398207,
+      "mean_turn": 28589.949375,
+      "gain_percent": 37.6184954091892
+    },
+    "after": {
+      "seconds": 24.658991816,
+      "sps": 170092.27430289844,
+      "mean_turn": 28589.949375,
+      "gain_percent": -0.10437862460904723
+    },
+    "equivalence": {
+      "initial_rng_states_identical": true,
+      "retained_vs_original_observations": true,
+      "pool_vs_original_observations": true,
+      "closing_vs_opening_observations": true,
+      "rng_hashes": {
+        "before": "4321709e6b01c7a2c8642d768daaaa2894d5505b7a6d661edbc3c608aa3bc7d7",
+        "pgo61": "4321709e6b01c7a2c8642d768daaaa2894d5505b7a6d661edbc3c608aa3bc7d7",
+        "pool83": "4321709e6b01c7a2c8642d768daaaa2894d5505b7a6d661edbc3c608aa3bc7d7",
+        "after": "4321709e6b01c7a2c8642d768daaaa2894d5505b7a6d661edbc3c608aa3bc7d7"
+      }
+    },
+    "caveat": "Timings comparable as fixed workload only if per-block observations and initial RNG states match; observation hashes are block-boundary checks, not full action-stream proof.",
+    "baseline_drift_percent": 0.20919395676777253
+  },
+  "training": {
+    "seconds": {
+      "baseline-before": 24.378219366,
+      "baseline-after": 24.40484214,
+      "pool83": 23.03345251
+    },
+    "mean_turns": {
+      "baseline-before": 23284.230666666666,
+      "baseline-after": 22644.38133333333,
+      "pool83": 21442.061999999998
+    },
+    "gain_percent": 5.896112371388473,
+    "baseline_drift_percent": 0.1092072132107047,
+    "caveat": "Incremental sharedpool versus retainedPGO61/WS; asynchronous trajectories differ; not exact-work causality or combined-versus-original training gain."
+  },
+  "previous_best": "/puffertank/experiments/nethack-overnight-20260917/best-before-pool83.json",
+  "correctness": "Full selected32score and512depth traces with GOLD_VERIFY; raw observation snapshots;15rawhistoricalbaseline exceptions unchanged; historical-view34goldens/status/interleaved/shuffled+26fuzz with FOBJ/GOLD diagnostics; source patch roundtrip; writable data symbols identical; sharedpool32score+512depthfullconcurrentreplay;60kregionsregular/ASAN/UBSAN/TSAN;patchreverseforwardexact;all32blockobs+initialRNG+loadedweights identical across rolloutarms",
+  "caveat": "37.62% combined exact-work rollout gain versus original. Training+5.90% is incremental versusPGO61/WS and observational because asynchronous trajectories differ; combined original-versus-pool training comparison still due in final audit. Recovered original sharedpool, central-counter variant rejected. Host-specific20workers+4submitters, not universaldefault.",
+  "patches": [
+    "/puffertank/experiments/nethack-overnight-20260917/retained-through-gold60.patch",
+    "/puffertank/experiments/nethack-overnight-20260917/shared-pool83.patch"
+  ],
+  "rollout_executable": "/puffertank/experiments/nethack-overnight-20260917/pool83-control-source/puffer_pool",
+  "rollout_executable_sha256": "dafb68d4174e62b4c65a7b8f93e4c5f29d782c5636c63be3b99ccbb2a6691c68",
+  "scheduler_source": "/puffertank/experiments/nethack-overnight-20260917/pool83-control-source",
+  "scheduler_source_manifest": "/puffertank/experiments/nethack-overnight-20260917/pool83-review/source-manifest.json",
+  "activation": {
+    "compile_define": "PUF_ENV_POOL",
+    "PUF_POOL_WORKERS": 20,
+    "buffers": 4,
+    "rollout_agents": 512
+  },
+  "scheduler_control": {
+    "arms": {
+      "before": {
+        "seconds": 21.056345938,
+        "sps": 199194.29574105813,
+        "gain_percent": -0.0833035943256677
+      },
+      "ws24": {
+        "seconds": 23.630549908,
+        "sps": 177494.98070631188,
+        "gain_percent": -10.967771266814985
+      },
+      "pool20": {
+        "seconds": 17.787202836,
+        "sps": 235804.5859527185,
+        "gain_percent": 18.280571931293178
+      },
+      "after": {
+        "seconds": 21.021264552,
+        "sps": 199526.72160252824,
+        "gain_percent": 0.08344261572184042
+      }
+    },
+    "baseline_drift_percent": -0.1666071886513243,
+    "initial_rng_and_32block_observations_equal": true,
+    "rng_hashes": {
+      "before": "4321709e6b01c7a2c8642d768daaaa2894d5505b7a6d661edbc3c608aa3bc7d7",
+      "ws24": "4321709e6b01c7a2c8642d768daaaa2894d5505b7a6d661edbc3c608aa3bc7d7",
+      "pool20": "4321709e6b01c7a2c8642d768daaaa2894d5505b7a6d661edbc3c608aa3bc7d7",
+      "after": "4321709e6b01c7a2c8642d768daaaa2894d5505b7a6d661edbc3c608aa3bc7d7"
+    },
+    "caveat": "Matched enginePGO61. WS24 uses24 total threads; pool20 uses20 workers+4submitters, WS32 uses32total. This distinguishes pool scheduling from just reducing thread count. All32blockhashes required."
+  }
+}

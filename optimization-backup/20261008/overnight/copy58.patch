@@ -1,0 +1,12 @@
+--- a/win/rl/winrl.cc
++++ b/win/rl/winrl.cc
+@@ -487,9 +487,6 @@
+                 if (!(dirty & (1u << j)))
+                     continue;
+                 size_t off = j * W;
+-                if (obs->glyphs)
+-                    std::memcpy(obs->glyphs + off, glyphs_.data() + off,
+-                                sizeof(int16_t) * W);
+                 if (obs->chars)
+                     std::memcpy(obs->chars + off, chars_.data() + off, W);
+                 if (obs->colors)

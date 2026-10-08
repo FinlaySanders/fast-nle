@@ -1,0 +1,50 @@
+[
+  {
+    "workload": "depth",
+    "command": [
+      "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/replay_vec",
+      "verify",
+      "1",
+      "0",
+      "128",
+      "/puffertank/experiments/nethack-perf-20260917/depth-record-v2/env00000.trace"
+    ],
+    "stdout": "RESULT mode=verify envs=1 threads=1 warmup=0 limit=128 init_seconds=0.001437 warmup_seconds=0.000000 measured_seconds=0.003660 measured_steps=128 positive_turn_advances=86 sps=34972.81 measured_keys=232 keys_per_second=63388.22 maxrss_kb=12388 completed_streams=0 total_steps=128\n",
+    "validation": {
+      "snapshots": 491,
+      "fields_bytes": 2393579,
+      "kinds": {
+        "S": 1,
+        "F": 129,
+        "O": 129,
+        "K": 232
+      },
+      "last_event": 979,
+      "scope": "all snapshots in file; trace may have an unrecorded suffix"
+    }
+  },
+  {
+    "workload": "score",
+    "command": [
+      "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/replay_vec",
+      "verify",
+      "1",
+      "0",
+      "128",
+      "/puffertank/experiments/nethack-perf-20260917/score-balanced-v2/env00000.trace"
+    ],
+    "stdout": "RESULT mode=verify envs=1 threads=1 warmup=0 limit=128 init_seconds=0.001406 warmup_seconds=0.000000 measured_seconds=0.007335 measured_steps=128 positive_turn_advances=555 sps=17451.49 measured_keys=174 keys_per_second=23723.12 maxrss_kb=12388 completed_streams=0 total_steps=128\n",
+    "validation": {
+      "snapshots": 433,
+      "fields_bytes": 2118292,
+      "kinds": {
+        "S": 1,
+        "F": 129,
+        "O": 129,
+        "K": 174
+      },
+      "last_event": 863,
+      "scope": "all snapshots in file; trace may have an unrecorded suffix"
+    }
+  }
+]

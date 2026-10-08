@@ -1,0 +1,85 @@
+{
+  "time": "2026-09-18T00:07:14.116524+00:00",
+  "candidate": "floor04+mask05+distant15+pgo20",
+  "decision": "retained engine; full andheldout replay,actualrollouts,loadedtraining checked; reporttraining withtrajectory/drift caveats",
+  "library": "/puffertank/experiments/nethack-overnight-20260917/pgo20/variant/libnethack.so",
+  "patch": "/puffertank/experiments/nethack-overnight-20260917/retained-through-distant15.patch",
+  "build_recipe": "/puffertank/experiments/nethack-overnight-20260917/pgo20.py",
+  "correctness": "4,472,832 score and23,855,104 depth decisions exact; raw observations match; historical exceptions unchanged; historical-view golden/status/interleaved/shuffled and26fuzz pass; sourceaudit exactly3changed files",
+  "caveat": "~14% combined rollout gain; incremental1.12% overPGO08 nearcontrol drift, engine-only incremental gain repeats onheldout",
+  "fixed_policy_rollouts": {
+    "before": {
+      "seconds": 24.403380397,
+      "sps": 171873.89336092232,
+      "mean_turn": 28589.949375,
+      "gain_percent": 0.5037194150983693
+    },
+    "pgo08": {
+      "seconds": 21.799822568,
+      "sps": 192400.832021304,
+      "mean_turn": 28589.949375,
+      "gain_percent": 12.506901767183209
+    },
+    "pgo20": {
+      "seconds": 21.558735848,
+      "sps": 194552.40926796294,
+      "mean_turn": 28589.949375,
+      "gain_percent": 13.76504232401594
+    },
+    "after": {
+      "seconds": 24.649229527,
+      "sps": 170159.63908347278,
+      "mean_turn": 28589.949375,
+      "gain_percent": -0.4986953643534964
+    },
+    "baseline_drift_percent": 1.0074388301967607
+  },
+  "global_audit": "strict raw checker differences preserved;6 compiler-renamed/EH symbols individually reconciled against whitelist/baseline size+section",
+  "source_snapshot": "/puffertank/experiments/nethack-overnight-20260917/pgo20-source",
+  "heldout": {
+    "score": {
+      "verify": 14.165752,
+      "before": 11.995634,
+      "candidate": 11.670508,
+      "after": 11.987281,
+      "gain_percent": 2.7500902274348205,
+      "drift_percent": -0.06963366838302898
+    },
+    "depth": {
+      "verify": 5.233665,
+      "before": 2.254917,
+      "candidate": 2.185213,
+      "after": 2.230719,
+      "gain_percent": 2.6361274621741426,
+      "drift_percent": -1.0731215383980697
+    }
+  },
+  "previous_stack_training": {
+    "baseline-before": 26.323356866,
+    "pgo08": 24.986746789,
+    "baseline-after": 26.978978872,
+    "candidate": "pgo08-training",
+    "time": "2026-09-17T23:06:08.418898+00:00",
+    "gain_percent": 6.661215619845029,
+    "drift_percent": 2.490647409969271,
+    "decision": "combined training gain established; no clear extra gain versus earlier floor04 measurement, avoid multiplying engine speedups"
+  },
+  "training": {
+    "time": "2026-09-18T00:10:25.505285+00:00",
+    "candidate": "pgo20-training",
+    "seconds": {
+      "baseline-before": 26.335484743,
+      "baseline-after": 27.095838548,
+      "pgo20": 24.673368216
+    },
+    "mean_turns": {
+      "baseline-before": 23343.37,
+      "baseline-after": 24143.372666666666,
+      "pgo20": 22113.146
+    },
+    "gain_percent": 8.277319138680173,
+    "drift_percent": 2.8871836323502764,
+    "measured_steps": 3932160,
+    "caveat": "Loaded mature checkpoint with fresh optimizer; async training trajectories/game ages differ between arms. This is a whole-training observation, not exact fixed-trajectory timing or an additional gain on top of earlier combined results."
+  }
+}

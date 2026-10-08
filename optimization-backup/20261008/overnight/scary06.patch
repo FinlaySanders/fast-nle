@@ -1,0 +1,14 @@
+--- /puffertank/experiments/nethack-overnight-20260917/scary06-before.c	2026-09-17 22:56:04.406100854 +0000
++++ /puffertank/experiments/nethack-overnight-20260917/engine-source/src/monmove.c	2026-09-17 22:56:04.406217084 +0000
+@@ -138,6 +138,11 @@
+ int x, y;
+ struct monst *mtmp;
+ {
++    if ((x || y) && !OBJ_AT(x, y) && !IS_ALTAR(TYP_AT(x, y))
++        && (u.ux != x || u.uy != y)
++        && (!Displaced || mtmp->mux != x || mtmp->muy != y))
++        return FALSE;
++
+     /* creatures who are directly resistant to magical scaring:
+      * Rodney, lawful minions, Angels, the Riders, shopkeepers
+      * inside their own shop, priests inside their own temple */

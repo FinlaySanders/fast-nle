@@ -1,0 +1,105 @@
+{
+  "input": "/puffertank/experiments/nethack-perf-20260917/expanded04-results.json",
+  "verification": [
+    {
+      "workload": "score",
+      "variant": "baseline",
+      "mode": "verify",
+      "rc": 0
+    },
+    {
+      "workload": "depth",
+      "variant": "candidate04",
+      "mode": "verify",
+      "rc": 0
+    },
+    {
+      "workload": "depth",
+      "variant": "candidate04",
+      "mode": "engine-verify",
+      "rc": 0
+    },
+    {
+      "workload": "score",
+      "variant": "candidate04",
+      "mode": "verify",
+      "rc": 0
+    },
+    {
+      "workload": "score",
+      "variant": "candidate04",
+      "mode": "engine-verify",
+      "rc": 0
+    }
+  ],
+  "incomplete_triplets": [
+    [
+      "score",
+      "baseline",
+      "candidate04",
+      0
+    ]
+  ],
+  "comparisons": {
+    "depth:baseline->candidate04": {
+      "completed_triplets": 3,
+      "median_throughput_change_percent": 5.376451559561968,
+      "min_ratio": 1.0507332315085869,
+      "max_ratio": 1.0558066255214074,
+      "baseline_drift_over_5_percent": false,
+      "triplets": [
+        {
+          "repeat": 0,
+          "throughput_ratio": 1.0507332315085869,
+          "baseline_drift_percent": -4.144567981639568,
+          "measured_seconds": [
+            3.563749,
+            3.321393,
+            3.416047
+          ],
+          "decisions": 1024000,
+          "keys": 2404560,
+          "maxrss_kb": [
+            613660,
+            614016,
+            613252
+          ]
+        },
+        {
+          "repeat": 1,
+          "throughput_ratio": 1.0537645155956197,
+          "baseline_drift_percent": -2.1903971954270185,
+          "measured_seconds": [
+            3.331131,
+            3.126551,
+            3.258166
+          ],
+          "decisions": 1024000,
+          "keys": 2404560,
+          "maxrss_kb": [
+            613560,
+            613712,
+            613188
+          ]
+        },
+        {
+          "repeat": 2,
+          "throughput_ratio": 1.0558066255214074,
+          "baseline_drift_percent": -0.36819235173874976,
+          "measured_seconds": [
+            3.337386,
+            3.155163,
+            3.325098
+          ],
+          "decisions": 1024000,
+          "keys": 2404560,
+          "maxrss_kb": [
+            613856,
+            613048,
+            613876
+          ]
+        }
+      ]
+    }
+  }
+}

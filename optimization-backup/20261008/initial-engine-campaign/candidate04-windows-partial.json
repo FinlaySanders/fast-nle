@@ -1,0 +1,422 @@
+{
+  "input": "/puffertank/experiments/nethack-perf-20260917/candidate04-window-results.json",
+  "verification": [
+    {
+      "workload": "depth-late-env00279",
+      "variant": "baseline",
+      "mode": "verify",
+      "rc": 0
+    },
+    {
+      "workload": "depth-late-env00279",
+      "variant": "candidate04",
+      "mode": "verify",
+      "rc": 0
+    },
+    {
+      "workload": "depth-late-env00001",
+      "variant": "baseline",
+      "mode": "verify",
+      "rc": 0
+    },
+    {
+      "workload": "depth-late-env00001",
+      "variant": "candidate04",
+      "mode": "verify",
+      "rc": 0
+    },
+    {
+      "workload": "depth-late-env00062",
+      "variant": "baseline",
+      "mode": "verify",
+      "rc": 0
+    },
+    {
+      "workload": "depth-late-env00062",
+      "variant": "candidate04",
+      "mode": "verify",
+      "rc": 0
+    },
+    {
+      "workload": "score-late-env00468",
+      "variant": "baseline",
+      "mode": "verify",
+      "rc": 0
+    },
+    {
+      "workload": "score-late-env00468",
+      "variant": "candidate04",
+      "mode": "verify",
+      "rc": 0
+    },
+    {
+      "workload": "score-late-env00000",
+      "variant": "baseline",
+      "mode": "verify",
+      "rc": 0
+    }
+  ],
+  "incomplete_triplets": [],
+  "comparisons": {
+    "depth:candidate03->candidate04": {
+      "completed_triplets": 3,
+      "median_throughput_change_percent": 0.22626526441333894,
+      "min_ratio": 1.0011387461459405,
+      "max_ratio": 1.0567589174170136,
+      "baseline_drift_over_5_percent": false,
+      "triplets": [
+        {
+          "repeat": 0,
+          "throughput_ratio": 1.0011387461459405,
+          "baseline_drift_percent": -0.2555914977813156,
+          "measured_seconds": [
+            1.584951,
+            1.581125,
+            1.5809
+          ],
+          "decisions": 640000,
+          "keys": 1521733,
+          "maxrss_kb": [
+            231684,
+            232468,
+            231980
+          ]
+        },
+        {
+          "repeat": 1,
+          "throughput_ratio": 1.0567589174170136,
+          "baseline_drift_percent": 0.17751738332347777,
+          "measured_seconds": [
+            1.621813,
+            1.536067,
+            1.624692
+          ],
+          "decisions": 640000,
+          "keys": 1521733,
+          "maxrss_kb": [
+            232252,
+            232036,
+            232300
+          ]
+        },
+        {
+          "repeat": 2,
+          "throughput_ratio": 1.0022626526441334,
+          "baseline_drift_percent": -1.3421948532780892,
+          "measured_seconds": [
+            1.604089,
+            1.589727,
+            1.582559
+          ],
+          "decisions": 640000,
+          "keys": 1521733,
+          "maxrss_kb": [
+            232260,
+            232476,
+            232732
+          ]
+        }
+      ]
+    },
+    "score:candidate03->candidate04": {
+      "completed_triplets": 3,
+      "median_throughput_change_percent": 0.41480587180466877,
+      "min_ratio": 0.9701045807068062,
+      "max_ratio": 1.0067429724386547,
+      "baseline_drift_over_5_percent": false,
+      "triplets": [
+        {
+          "repeat": 0,
+          "throughput_ratio": 0.9701045807068062,
+          "baseline_drift_percent": -0.5130050561068522,
+          "measured_seconds": [
+            13.997133,
+            14.391469,
+            13.925327
+          ],
+          "decisions": 640000,
+          "keys": 1494174,
+          "maxrss_kb": [
+            209924,
+            210156,
+            210436
+          ]
+        },
+        {
+          "repeat": 1,
+          "throughput_ratio": 1.0067429724386547,
+          "baseline_drift_percent": 0.3832338866560203,
+          "measured_seconds": [
+            13.949184,
+            13.882305,
+            14.002642
+          ],
+          "decisions": 640000,
+          "keys": 1494174,
+          "maxrss_kb": [
+            210048,
+            210468,
+            209976
+          ]
+        },
+        {
+          "repeat": 2,
+          "throughput_ratio": 1.0041480587180467,
+          "baseline_drift_percent": 0.22052430214074548,
+          "measured_seconds": [
+            13.897788,
+            13.855638,
+            13.928436
+          ],
+          "decisions": 640000,
+          "keys": 1494174,
+          "maxrss_kb": [
+            210156,
+            210400,
+            209740
+          ]
+        }
+      ]
+    },
+    "depth-late-env00279:baseline->candidate04": {
+      "completed_triplets": 3,
+      "median_throughput_change_percent": 24.585957546069515,
+      "min_ratio": 1.2402912621359223,
+      "max_ratio": 1.2460428305400373,
+      "baseline_drift_over_5_percent": false,
+      "triplets": [
+        {
+          "repeat": 0,
+          "throughput_ratio": 1.2458595754606951,
+          "baseline_drift_percent": 0.11240164855750301,
+          "measured_seconds": [
+            0.005338,
+            0.004287,
+            0.005344
+          ],
+          "decisions": 512,
+          "keys": 1284,
+          "maxrss_kb": [
+            29552,
+            29552,
+            29552
+          ]
+        },
+        {
+          "repeat": 1,
+          "throughput_ratio": 1.2402912621359223,
+          "baseline_drift_percent": 0.27995520716685984,
+          "measured_seconds": [
+            0.005358,
+            0.004326,
+            0.005373
+          ],
+          "decisions": 512,
+          "keys": 1284,
+          "maxrss_kb": [
+            29552,
+            29552,
+            29552
+          ]
+        },
+        {
+          "repeat": 2,
+          "throughput_ratio": 1.2460428305400373,
+          "baseline_drift_percent": -0.11202389843166793,
+          "measured_seconds": [
+            0.005356,
+            0.004296,
+            0.00535
+          ],
+          "decisions": 512,
+          "keys": 1284,
+          "maxrss_kb": [
+            29808,
+            29808,
+            29808
+          ]
+        }
+      ]
+    },
+    "depth-late-env00001:baseline->candidate04": {
+      "completed_triplets": 3,
+      "median_throughput_change_percent": 28.779624080632015,
+      "min_ratio": 1.284940411700975,
+      "max_ratio": 1.307533681605719,
+      "baseline_drift_over_5_percent": false,
+      "triplets": [
+        {
+          "repeat": 0,
+          "throughput_ratio": 1.284940411700975,
+          "baseline_drift_percent": 1.187446988973706,
+          "measured_seconds": [
+            0.004716,
+            0.003692,
+            0.004772
+          ],
+          "decisions": 512,
+          "keys": 1070,
+          "maxrss_kb": [
+            30064,
+            30064,
+            30320
+          ]
+        },
+        {
+          "repeat": 1,
+          "throughput_ratio": 1.2877962408063202,
+          "baseline_drift_percent": 0.021155066638467446,
+          "measured_seconds": [
+            0.004727,
+            0.003671,
+            0.004728
+          ],
+          "decisions": 512,
+          "keys": 1070,
+          "maxrss_kb": [
+            30320,
+            30320,
+            30576
+          ]
+        },
+        {
+          "repeat": 2,
+          "throughput_ratio": 1.307533681605719,
+          "baseline_drift_percent": 0.06310475389144088,
+          "measured_seconds": [
+            0.004754,
+            0.003637,
+            0.004757
+          ],
+          "decisions": 512,
+          "keys": 1070,
+          "maxrss_kb": [
+            30576,
+            30576,
+            30832
+          ]
+        }
+      ]
+    },
+    "depth-late-env00062:baseline->candidate04": {
+      "completed_triplets": 3,
+      "median_throughput_change_percent": 15.877437325905298,
+      "min_ratio": 1.1496908809891808,
+      "max_ratio": 1.1647068046409532,
+      "baseline_drift_over_5_percent": false,
+      "triplets": [
+        {
+          "repeat": 0,
+          "throughput_ratio": 1.1496908809891808,
+          "baseline_drift_percent": 0.3366549959601395,
+          "measured_seconds": [
+            0.007426,
+            0.00647,
+            0.007451
+          ],
+          "decisions": 512,
+          "keys": 2200,
+          "maxrss_kb": [
+            31088,
+            31088,
+            31088
+          ]
+        },
+        {
+          "repeat": 1,
+          "throughput_ratio": 1.158774373259053,
+          "baseline_drift_percent": 1.3173813684635105,
+          "measured_seconds": [
+            0.007439,
+            0.006462,
+            0.007537
+          ],
+          "decisions": 512,
+          "keys": 2200,
+          "maxrss_kb": [
+            31088,
+            31088,
+            31088
+          ]
+        },
+        {
+          "repeat": 2,
+          "throughput_ratio": 1.1647068046409532,
+          "baseline_drift_percent": 0.391151874831408,
+          "measured_seconds": [
+            0.007414,
+            0.006378,
+            0.007443
+          ],
+          "decisions": 512,
+          "keys": 2200,
+          "maxrss_kb": [
+            31088,
+            31088,
+            31088
+          ]
+        }
+      ]
+    },
+    "score-late-env00468:baseline->candidate04": {
+      "completed_triplets": 3,
+      "median_throughput_change_percent": 5.155737876765465,
+      "min_ratio": 1.0478286323624733,
+      "max_ratio": 1.0542963772073548,
+      "baseline_drift_over_5_percent": false,
+      "triplets": [
+        {
+          "repeat": 0,
+          "throughput_ratio": 1.0542963772073548,
+          "baseline_drift_percent": 0.20409655695092788,
+          "measured_seconds": [
+            0.150419,
+            0.142818,
+            0.150726
+          ],
+          "decisions": 512,
+          "keys": 1231,
+          "maxrss_kb": [
+            31344,
+            31344,
+            31600
+          ]
+        },
+        {
+          "repeat": 1,
+          "throughput_ratio": 1.0478286323624733,
+          "baseline_drift_percent": 0.24840666768781716,
+          "measured_seconds": [
+            0.150157,
+            0.143481,
+            0.15053
+          ],
+          "decisions": 512,
+          "keys": 1231,
+          "maxrss_kb": [
+            31600,
+            31856,
+            31856
+          ]
+        },
+        {
+          "repeat": 2,
+          "throughput_ratio": 1.0515573787676546,
+          "baseline_drift_percent": -0.03521664883685549,
+          "measured_seconds": [
+            0.150497,
+            0.143093,
+            0.150444
+          ],
+          "decisions": 512,
+          "keys": 1231,
+          "maxrss_kb": [
+            32112,
+            32112,
+            32112
+          ]
+        }
+      ]
+    }
+  }
+}

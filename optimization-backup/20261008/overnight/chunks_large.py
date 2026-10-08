@@ -1,0 +1,8 @@
+from pathlib import Path
+import os,subprocess,json,re,datetime
+r=Path(__file__).parent;old=Path('/puffertank/experiments/nethack-perf-20260917');d=r/'chunks02-large';d.mkdir();paths=list(map(str,sorted((old/'score-record').glob('*.trace'))[:128]));assert len(paths)==128
+E={k:v for k,v in os.environ.items() if not k.startswith(('NH_','NLE_','OMP_','GOMP_','PUF_','PUFFER_')) and k not in ('LD_PRELOAD','LD_LIBRARY_PATH','NETHACKOPTIONS')};E.update(NETHACKDIR=str(old/'dat'),NH_ZT_MASK='0',NH_DISC_SWAP='0',LD_LIBRARY_PATH=str(old/'variants/candidate14-lto-local'),OMP_PROC_BIND='false');rows=[]
+for mode,label,chunk in [('verify','verify-chunk2',2),('time','before',1),('time','candidate',2),('time','after',1)]:
+ cmd=['taskset','-c','0,2,4,6,8,10,12,14',str(r/'chunks02'/f'score-{chunk}'),mode,'8','20000','5000',*paths];print('START',label,flush=True);p=subprocess.run(cmd,env=E,capture_output=True,text=True);rows.append(dict(label=label,rc=p.returncode,command=cmd,stdout=p.stdout,stderr=p.stderr));(d/'results.json').write_text(json.dumps(rows,indent=2));print('DONE',label,p.returncode,p.stdout[-900:],flush=True);assert p.returncode==0,p.stderr[-1000:]
+vals=[float(re.search(r'measured_seconds=([\d.]+)',x['stdout'])[1]) for x in rows[1:]];res=dict(seconds=vals,gain_percent=100*((vals[0]+vals[2])/2/vals[1]-1),drift_percent=100*(vals[2]/vals[0]-1));(d/'summary.json').write_text(json.dumps(res,indent=2));print('SUMMARY',res,flush=True)
+with (r/'ledger.jsonl').open('a') as f:f.write(json.dumps(dict(time=datetime.datetime.now(datetime.timezone.utc).isoformat(),candidate='chunk2 representative128',results=res,correctness='128x25K exact prefix replay',decision='agent review required'))+'\n')

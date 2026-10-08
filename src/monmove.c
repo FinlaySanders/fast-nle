@@ -1,3 +1,6 @@
+#ifdef __SSE2__
+#include <emmintrin.h>
+#endif
 /* NetHack 3.6	monmove.c	$NHDT-Date: 1575245074 2019/12/02 00:04:34 $  $NHDT-Branch: NetHack-3.6 $:$NHDT-Revision: 1.116 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Michael Allison, 2006. */
@@ -342,7 +345,8 @@ int *inrange, *nearby, *scared;
         seescaryy = u.uy;
     }
 
-    sawscary = onscary(seescaryx, seescaryy, mtmp);
+    sawscary = (*nearby || mtmp->isshk || mtmp->ispriest)
+        && onscary(seescaryx, seescaryy, mtmp);
     if (*nearby && (sawscary
                     || (flees_light(mtmp) && !bravegremlin)
                     || (!mtmp->mpeaceful && in_your_sanctuary(mtmp, 0, 0)))) {
@@ -768,6 +772,107 @@ xchar nix,niy;
  * 2: monster died.
  * 3: did not move, and can't do anything else either.
  */
+
+/* Preserve fobj order. A mutation during iteration switches that iterator to
+ * the original linked-list walk from prev->nobj; never rebuild under a cursor. */
+void
+nh_fobj_invalidate(void)
+{
+    nh_fobj_valid = 0;
+    nh_fobj_generation++;
+}
+
+static void
+nh_fobj_build(void)
+{
+    struct obj *o;
+    int n = 0;
+    for (o = fobj; o; o = o->nobj) {
+        if (n == 2048) { nh_fobj_count = -1; nh_fobj_valid = 1; return; }
+        nh_fobj_ptr[n] = o;
+        nh_fobj_x[n] = o->ox; nh_fobj_y[n] = o->oy;
+        n++;
+    }
+    nh_fobj_count = n; nh_fobj_valid = 1;
+}
+
+struct obj *
+nh_fobj_next(struct nh_fobj_cursor *cursor, struct obj *prev,
+             int lx, int hx, int ly, int hy)
+{
+    struct obj *o;
+    if (!prev) {
+        if (!nh_fobj_valid) nh_fobj_build();
+        cursor->generation = nh_fobj_generation;
+        cursor->index = 0;
+        cursor->mask = 0;
+        cursor->fallback = nh_fobj_count < 0;
+    } else if (cursor->generation != nh_fobj_generation) {
+        cursor->fallback = 1;
+    }
+    if (cursor->fallback) {
+        for (o = prev ? prev->nobj : fobj; o; o = o->nobj)
+            if (o->ox >= lx && o->ox <= hx && o->oy >= ly && o->oy <= hy)
+                return o;
+        return (struct obj *) 0;
+    }
+#ifdef NLE_FOBJ_VERIFY
+    {
+        int n = 0;
+        for (o = fobj; o; o = o->nobj, n++)
+            if (n >= nh_fobj_count || nh_fobj_ptr[n] != o
+                || nh_fobj_x[n] != o->ox || nh_fobj_y[n] != o->oy)
+                panic("floor index mismatch at %d", n);
+        if (n != nh_fobj_count) panic("floor index count mismatch");
+    }
+#endif
+#ifdef __SSE2__
+    /* Reject eight coordinates at once; the first matching entry still wins. */
+    if (lx >= -32768 && hx <= 32767 && ly >= -32768 && hy <= 32767
+        && lx <= hx && ly <= hy) {
+        if (cursor->mask && cursor->lx == lx && cursor->hx == hx
+            && cursor->ly == ly && cursor->hy == hy) {
+            int bit = __builtin_ctz(cursor->mask);
+            int i = cursor->base + bit / 2;
+            cursor->mask &= ~(3U << bit);
+            cursor->index = i + 1;
+            return nh_fobj_ptr[i];
+        }
+        cursor->mask = 0;
+        __m128i xl = _mm_set1_epi16((short) lx), xh = _mm_set1_epi16((short) hx);
+        __m128i yl = _mm_set1_epi16((short) ly), yh = _mm_set1_epi16((short) hy);
+        while (cursor->index + 8 <= nh_fobj_count) {
+            int i = cursor->index;
+            __m128i x = _mm_loadu_si128((const __m128i *) (nh_fobj_x + i));
+            __m128i y = _mm_loadu_si128((const __m128i *) (nh_fobj_y + i));
+            __m128i reject = _mm_or_si128(
+                _mm_or_si128(_mm_cmpgt_epi16(xl, x), _mm_cmpgt_epi16(x, xh)),
+                _mm_or_si128(_mm_cmpgt_epi16(yl, y), _mm_cmpgt_epi16(y, yh)));
+            unsigned int mask = (~(unsigned int) _mm_movemask_epi8(reject)) & 65535U;
+            if (mask) {
+                int bit = __builtin_ctz(mask);
+                cursor->base = i;
+                cursor->mask = mask & ~(3U << bit);
+                cursor->lx = lx; cursor->hx = hx;
+                cursor->ly = ly; cursor->hy = hy;
+                i += bit / 2;
+                cursor->index = i + 1;
+                return nh_fobj_ptr[i];
+            }
+            cursor->index += 8;
+        }
+    }
+#endif
+    cursor->mask = 0;
+    while (cursor->index < nh_fobj_count) {
+        int i = cursor->index++;
+        if (nh_fobj_x[i] >= lx && nh_fobj_x[i] <= hx
+            && nh_fobj_y[i] >= ly && nh_fobj_y[i] <= hy)
+            return nh_fobj_ptr[i];
+    }
+    return (struct obj *) 0;
+}
+
 int
 m_move(mtmp, after)
 register struct monst *mtmp;
@@ -974,6 +1079,7 @@ register int after;
         register struct obj *otmp;
         register int xx, yy;
         int oomx, oomy, lmx, lmy;
+        struct nh_fobj_cursor cursor;
 
         /* cut down the search radius if it thinks character is closer. */
         if (distmin(mtmp->mux, mtmp->muy, omx, omy) < SQSRCHRADIUS
@@ -991,7 +1097,9 @@ register int after;
             oomy = min(ROWNO - 1, omy + minr);
             lmx = max(1, omx - minr);
             lmy = max(0, omy - minr);
-            for (otmp = fobj; otmp; otmp = otmp->nobj) {
+            for (otmp = nh_fobj_next(&cursor, (struct obj *) 0, lmx, oomx, lmy, oomy);
+                 otmp;
+                 otmp = nh_fobj_next(&cursor, otmp, lmx, oomx, lmy, oomy)) {
                 /* monsters may pick rocks up, but won't go out of their way
                    to grab them; this might hamper sling wielders, but it cuts
                    down on move overhead by filtering out most common item */
@@ -1539,7 +1647,6 @@ register struct monst *mtmp;
 {
     boolean notseen, gotu;
     register int disp, mx = mtmp->mux, my = mtmp->muy;
-    long umoney = money_cnt(invent);
 
     /*
      * do cheapest and/or most likely tests first
@@ -1559,7 +1666,7 @@ register struct monst *mtmp;
     if (notseen || Underwater) {
         /* Xorns can smell quantities of valuable metal
             like that in solid gold coins, treat as seen */
-        if ((mtmp->data == &mons[PM_XORN]) && umoney && !Underwater)
+        if ((mtmp->data == &mons[PM_XORN]) && money_cnt(invent) && !Underwater)
             disp = 0;
         else
             disp = 1;

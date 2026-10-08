@@ -1,0 +1,16 @@
+from pathlib import Path
+import os,subprocess,json,time,re,shutil
+r=Path(__file__).parent;old=Path('/puffertank/experiments/nethack-perf-20260917');d=r/'depth102';d.mkdir();rows=[];src=r/'pool83-gates/depth'
+e={k:v for k,v in os.environ.items() if not k.startswith(('NH_','NLE_','OMP_','GOMP_','PUF_','PUFFER_')) and k not in ('LD_LIBRARY_PATH','LD_PRELOAD','NETHACKOPTIONS')};e.update(NETHACKDIR=str(old/'dat'),NH_ZT_MASK='0',NH_DISC_SWAP='1')
+cmd=['cc','-O2','-g','-fopenmp','-pthread','-DREPLAY_WS=1','-I'+str(r/'pool83-control-source/src'),'-I'+str(src/'source/src'),'-I'+str(src/'source/ocean/nethack'),'-I'+str(old/'engine-baseline/include'),'-I/puffertank/pufferlib/vendor/fast-nle/build/_deps/deboost_context-src/include','-I/puffertank/pufferlib/raylib-5.5_linux_amd64/include',str(src/'replay_pthreads.c'),'-L'+str(old/'lib'),'-Wl,-rpath,'+str(old/'lib'),'-lnethack','-lm','-ldl','-o',str(d/'replay_ws')]
+with (d/'build.log').open('w') as f:subprocess.run(cmd,stdout=f,stderr=subprocess.STDOUT,check=True)
+paths=sorted((old/'depth-record-v2').glob('*.trace'));assert len(paths)==512
+for label,exe,threads,lib,mode,measure in [('verify-original',d/'replay_ws',32,old/'variants/candidate14-lto-local','verify',64),('verify-retained',src/'replay_pool',28,r/'pgo61/variant','verify',64),('before',d/'replay_ws',32,old/'variants/candidate14-lto-local','time',8000),('engine61',d/'replay_ws',32,r/'pgo61/variant','time',8000),('pool24',src/'replay_pool',28,r/'pgo61/variant','time',8000),('after',d/'replay_ws',32,old/'variants/candidate14-lto-local','time',8000)]:
+ cmd=[str(exe),mode,str(threads),'20000',str(measure),*map(str,paths)];print('START',label,flush=True);start=time.time()
+ with (d/(label+'.log')).open('w') as f:p=subprocess.run(cmd,env=dict(e,LD_LIBRARY_PATH=str(lib)),stdout=f,stderr=subprocess.STDOUT)
+ t=(d/(label+'.log')).read_text(errors='replace');assert p.returncode==0,t[-2000:];line=re.search(r'RESULT [^\n]+',t);assert line;result=dict(re.findall(r'(\w+)=([^\s]+)',line[0]));assert int(result['measured_steps'])==512*measure
+ row=dict(label=label,mode=mode,command=cmd,library=str(lib),wall_seconds=time.time()-start,result=result);rows.append(row);(d/'results.json').write_text(json.dumps(rows,indent=2));print('DONE',label,line[0],flush=True)
+timed=[x for x in rows if x['mode']=='time'];assert all([x['result'][k] for k in ['measured_steps','measured_keys','positive_turn_advances']]==[timed[0]['result'][k] for k in ['measured_steps','measured_keys','positive_turn_advances']] for x in timed)
+base=(float(timed[0]['result']['measured_seconds'])+float(timed[-1]['result']['measured_seconds']))/2
+summary=dict(arms={x['label']:dict(seconds=float(x['result']['measured_seconds']),gain_percent=(base/float(x['result']['measured_seconds'])-1)*100,steps=int(x['result']['measured_steps']),keys=int(x['result']['measured_keys'])) for x in timed},drift_percent=(float(timed[-1]['result']['measured_seconds'])/float(timed[0]['result']['measured_seconds'])-1)*100,caveat='CPU-only fixed-action depth replay512streams,4buffers,20Kwarm+8Kmeasure perenv. OriginalWS32total vs retainedpool24workers+4submitters. NoGPUinference/training claim. Both512warm-prefixes verified, aggregateworkload counters equal.')
+(d/'summary.json').write_text(json.dumps(summary,indent=2));print('DEPTH102_COMPLETE',json.dumps(summary),flush=True)

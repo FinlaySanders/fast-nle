@@ -1,0 +1,50 @@
+--- a/src/env_pool.h
++++ b/src/env_pool.h
+@@ -36,6 +36,34 @@
+             __atomic_fetch_add(&r->done, 1, __ATOMIC_RELEASE);
+         }
+     }
++}
++
++static int ep_help_one(EnvPool* p, int own) {
++    for (int b = 1; b < p->buffers; b++) {
++        EPRegion* r = &p->region[(own+b) % p->buffers];
++        pthread_mutex_lock(&r->mu);
++        int active = r->active;
++        if (active) r->readers++;
++        pthread_mutex_unlock(&r->mu);
++        if (!active) continue;
++        int worked = 0;
++        for (int k = 0; k < p->workers; k++) {
++            int home = (own+k) % p->workers;
++            int seen = __atomic_load_n(&r->next[home*16], __ATOMIC_RELAXED);
++            if (home + seen*p->workers >= r->count) continue;
++            int n = __atomic_fetch_add(&r->next[home*16], 1, __ATOMIC_RELAXED);
++            int offset = home + n*p->workers;
++            if (offset >= r->count) continue;
++            p->step(p->context, r->start+offset);
++            __atomic_fetch_add(&r->done, 1, __ATOMIC_RELEASE);
++            worked = 1; break;
++        }
++        pthread_mutex_lock(&r->mu);
++        if (--r->readers == 0) pthread_cond_signal(&r->quiet);
++        pthread_mutex_unlock(&r->mu);
++        if (worked) return 1;
++    }
++    return 0;
+ }
+ 
+ static void* ep_worker(void* arg) {
+@@ -104,7 +132,11 @@
+     p->epoch++; pthread_cond_broadcast(&p->ready);
+     pthread_mutex_unlock(&p->mu);
+     ep_claim(p, r, buffer % p->workers);
+-    while (__atomic_load_n(&r->done, __ATOMIC_ACQUIRE) < count) sched_yield();
++    unsigned int polls = 0;
++    while (__atomic_load_n(&r->done, __ATOMIC_ACQUIRE) < count) {
++        if ((polls++ & 63) == 0 && ep_help_one(p, buffer)) continue;
++        sched_yield();
++    }
+     pthread_mutex_lock(&r->mu);
+     r->active = 0;
+     while (r->readers) pthread_cond_wait(&r->quiet, &r->mu);

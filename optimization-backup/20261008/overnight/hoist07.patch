@@ -1,0 +1,19 @@
+--- /puffertank/experiments/nethack-overnight-20260917/hoist07-before.c	2026-09-17 22:57:50.453980131 +0000
++++ /puffertank/experiments/nethack-overnight-20260917/engine-source/src/mon.c	2026-09-17 22:57:50.454393938 +0000
+@@ -1306,6 +1306,7 @@
+     boolean rockok = FALSE, treeok = FALSE, thrudoor;
+     int maxx, maxy;
+     boolean poisongas_ok, in_poisongas;
++    boolean monseeu = (mon->mcansee && (!Invis || perceives(mdat)));
+     NhRegion *gas_reg;
+     int gas_glyph = cmap_to_glyph(S_poisoncloud);
+ 
+@@ -1405,8 +1406,6 @@
+             if ((is_pool(nx, ny) == wantpool || poolok)
+                 && (lavaok || !is_lava(nx, ny))) {
+                 int dispx, dispy;
+-                boolean monseeu =
+-                    (mon->mcansee && (!Invis || perceives(mdat)));
+                 boolean checkobj = OBJ_AT(nx, ny);
+ 
+                 /* Displacement also displaces the Elbereth/scare monster,

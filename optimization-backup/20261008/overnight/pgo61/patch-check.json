@@ -1,0 +1,18 @@
+{
+  "files": [
+    "include/hack.h",
+    "include/nh_ctx_gen.h",
+    "tools/globals.def",
+    "src/mkobj.c",
+    "src/steal.c",
+    "src/track.c",
+    "src/restore.c",
+    "src/monmove.c",
+    "src/mon.c",
+    "src/invent.c"
+  ],
+  "reverse_matches_original_baseline": true,
+  "forward_matches_frozen_candidate": true,
+  "writable_data_symbols_unchanged": true,
+  "patch_sha256": "105f97c6c2041fabaa39b0da631eb321543f764acc67bb1aa3b7acfa1ee47c62"
+}

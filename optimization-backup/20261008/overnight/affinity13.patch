@@ -1,0 +1,20 @@
+--- a/src/pufferl.cu
++++ b/src/pufferl.cu
+@@ -1,3 +1,4 @@
++#include <sched.h>
+ // CUDA
+ #include <cuda_runtime.h>
+ #include <cuda_bf16.h>
+@@ -1139,6 +1140,12 @@
+     PuffeRL* pufferl = a->pufferl;
+     VecEnv* vec = pufferl->vec;
+     int buf = a->buf;
++    assert(vec->buffers == 4 && vec->num_workers == 8);
++    cpu_set_t affinity;
++    CPU_ZERO(&affinity);
++    for (int k=0;k<4;k++) {CPU_SET(4*buf+k,&affinity);CPU_SET(16+4*buf+k,&affinity);}
++    assert(pthread_setaffinity_np(pthread_self(),sizeof(affinity),&affinity)==0);
++
+     int* state = &vec->worker_state[buf];
+     int horizon = pufferl->hypers.horizon;
+     cudaSetDevice(pufferl->hypers.gpu_id);

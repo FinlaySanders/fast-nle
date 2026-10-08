@@ -1,0 +1,95 @@
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/invent.c:3910:    boolean at_u = (obj->ox == u.ux && obj->oy == u.uy);
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/invent.c:4447:    return (obj->ox == nh_cur->g_invent_c_only_x
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/invent.c:4448:            && obj->oy == nh_cur->g_invent_c_only_y);
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/invent.c:4468:        if (obj->ox == x && obj->oy == y) {
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/ball.c:771:                if (uchain->oy == y)
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/pickup.c:2353:        obj->ox = current_container->ox;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/pickup.c:2354:        obj->oy = current_container->oy;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/pickup.c:2422:        box->ox = ox, box->oy = oy; /* in case it's being carried */
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/pickup.c:3146:        box->ox = ox, box->oy = oy;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/pickup.c:3248:            otmp->ox = box->ox, otmp->oy = box->oy;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/detect.c:392:                temp->ox = obj->ox;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/detect.c:393:                temp->oy = obj->oy;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/detect.c:398:                temp->ox = obj->ox;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/detect.c:399:                temp->oy = obj->oy;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/detect.c:403:        if (temp && temp->ox == u.ux && temp->oy == u.uy)
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/detect.c:421:                    temp->ox = mtmp->mx;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/detect.c:422:                    temp->oy = mtmp->my;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/detect.c:426:                    temp->ox = mtmp->mx;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/detect.c:427:                    temp->oy = mtmp->my;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/detect.c:432:        if (temp && temp->ox == u.ux && temp->oy == u.uy)
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/detect.c:471:            if (obj->ox == u.ux && obj->oy == u.uy)
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/detect.c:534:                    temp->ox = obj->ox;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/detect.c:535:                    temp->oy = obj->oy;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/detect.c:543:                    temp->ox = mtmp->mx;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/detect.c:544:                    temp->oy = mtmp->my;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/detect.c:625:            if (obj->ox == u.ux && obj->oy == u.uy)
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/detect.c:636:            if (obj->ox == u.ux && obj->oy == u.uy)
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/detect.c:687:                    otmp->ox = obj->ox;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/detect.c:688:                    otmp->oy = obj->oy;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/detect.c:709:                            otmp->ox = obj->ox;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/detect.c:710:                            otmp->oy = obj->oy;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/detect.c:727:                otmp->ox = mtmp->mx; /* at monster location */
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/detect.c:728:                otmp->oy = mtmp->my;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/hack.c:296:                        otmp->ox = dest.dnum;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/hack.c:297:                        otmp->oy = dest.dlevel;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/apply.c:90:        obj->ox = u.ux, obj->oy = u.uy;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/apply.c:3370:    obj->ox = u.ux;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/apply.c:3371:    obj->oy = u.uy;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/mklev.c:1048:                        otmp->ox = x, otmp->oy = y;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/mklev.c:1063:                                otmp->ox = x, otmp->oy = y;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/mklev.c:1781:        gold->ox = m.x, gold->oy = m.y;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/mklev.c:1789:        otmp->ox = m.x;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/mklev.c:1790:        otmp->oy = m.y;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/save.c:715:        fobj = level.buriedobjlist = billobjs = 0;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/save.c:1672:    fobj = (struct obj *) 0;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/dothrow.c:1159:            uball->ox = uchain->ox = u.ux;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/dothrow.c:1160:            uball->oy = uchain->oy = u.uy;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/zap.c:774:    corpse->ox = x, corpse->oy = y;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/zap.c:3377:                    obj->ox = u.ux, obj->oy = u.uy;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/display.c:720:            if (uchain->ox == x && uchain->oy == y) {
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/display.c:726:            if (!carried(uball) && uball->ox == x && uball->oy == y) {
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/mkmaze.c:1495:                                otmp->ox = otmp->oy = 0;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/dokick.c:1467:        obj->ox = cc.x;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/dokick.c:1468:        obj->oy = cc.y;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/dokick.c:1617:    otmp->ox = cc.x;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/dokick.c:1618:    otmp->oy = cc.y;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/dokick.c:1706:            otmp->ox = otmp->oy = 0;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/dokick.c:1742:            otmp->ox = otmp->oy = 0;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/explode.c:686:            stmp->ox = sx;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/explode.c:687:            stmp->oy = sy;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/explode.c:753:                stmp->ox = bhitpos.x;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/explode.c:754:                stmp->oy = bhitpos.y;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/dig.c:1752:            if (otmp->ox == cc->x && otmp->oy == cc->y)
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/dig.c:1940:        if (otmp->ox == x && otmp->oy == y) {
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/dig.c:1977:        obj->cobj->ox = obj->ox, obj->cobj->oy = obj->oy;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/shk.c:3797:            && ((uchain->ox == x && uchain->oy == y)
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/shk.c:3798:                || (uball->ox == x && uball->oy == y))) {
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/do.c:558:        obj->ox = u.ux;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/do.c:559:        obj->oy = u.uy;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/trap.c:873:    otmp->ox = trap->tx, otmp->oy = trap->ty;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/trap.c:1825:        && singleobj->ox == context.digging.pos.x
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/trap.c:1826:        && singleobj->oy == context.digging.pos.y)
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/trap.c:1958:                        singleobj->ox = dest.dnum;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/trap.c:1959:                        singleobj->oy = dest.dlevel;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/trap.c:4843:        obj->ox = cc.x, obj->oy = cc.y;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/trap.c:4910:            if (Punished && ((uchain->ox == u.ux && uchain->oy == u.uy)
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/trap.c:4912:                                 && uball->ox == u.ux && uball->oy == u.uy)))
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/vault.c:72:            || (Punished && !carried(uball) && uball->ox == fcx
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/vault.c:73:                && uball->oy == fcy))
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/mhitu.c:1891:            uchain->ox = mtmp->mx, uchain->oy = mtmp->my;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/mhitu.c:1893:            uball->ox = mtmp->mx, uball->oy = mtmp->my;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/restore.c:130:        fobj = otmp->nobj;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/restore.c:1269:    fobj = restobjchn(fd, ghostly, FALSE);
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/mkobj.c:610:        otmp->ox = obj->ox;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/mkobj.c:611:        otmp->oy = obj->oy;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/mkobj.c:615:        extract_nobj(obj, &fobj);
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/mkobj.c:1790:    otmp->ox = x;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/mkobj.c:1791:    otmp->oy = y;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/mkobj.c:1796:    fobj = otmp;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/mkobj.c:1820:            if (otmp->ox == x && otmp->oy == y) {
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/mkobj.c:1932:    extract_nobj(otmp, &fobj);
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/pager.c:191:            if (otmp->ox == x && otmp->oy == y && otmp->otyp == glyphotyp)
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/pager.c:229:        otmp->ox = x, otmp->oy = y;
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/files.c:3070:        obj->ox = 0; /* index of main dungeon */
+/puffertank/experiments/nethack-overnight-20260917/engine-source/src/files.c:3071:        obj->oy = 1; /* starting level number */

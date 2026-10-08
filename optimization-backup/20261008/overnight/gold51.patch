@@ -1,0 +1,97 @@
+--- a/src/steal.c
++++ b/src/steal.c
+@@ -69,8 +69,21 @@
+ findgold(chain)
+ register struct obj *chain;
+ {
++    boolean hero_chain = (chain == invent);
++    if (hero_chain && nh_gold_absence == 2) {
++#ifdef NLE_GOLD_VERIFY
++        struct obj *check = chain;
++        while (check && check->otyp != GOLD_PIECE)
++            check = check->nobj;
++        if (check)
++            panic("stale hero gold absence");
++#endif
++        return (struct obj *) 0;
++    }
+     while (chain && chain->otyp != GOLD_PIECE)
+         chain = chain->nobj;
++    if (hero_chain && nh_gold_absence && !chain)
++        nh_gold_absence = 2;
+     return chain;
+ }
+ 
+--- a/src/mon.c
++++ b/src/mon.c
+@@ -743,6 +743,7 @@
+      * teleport another, this scheme would have problems.
+      */
+ 
++    nh_gold_absence = 1; /* cache absence only during this movement pass */
+     for (mtmp = fmon; mtmp; mtmp = nmtmp) {
+         /* end monster movement early if hero is flagged to leave the level */
+         if (u.utotype
+@@ -839,6 +840,7 @@
+             continue;
+     }
+ 
++    nh_gold_absence = 0;
+     if (any_light_source())
+         vision_full_recalc = 1; /* in case a mon moved with a light source */
+     /* reset obj bypasses after last monster has moved */
+--- a/src/invent.c
++++ b/src/invent.c
+@@ -962,6 +962,7 @@
+         && (throwing_weapon(obj) || is_ammo(obj)))
+         setuqwep(obj);
+  added:
++    if (nh_gold_absence) nh_gold_absence = 1;
+     addinv_core2(obj);
+     carry_obj_effects(obj); /* carrying affects the obj */
+     update_inventory();
+--- a/src/mkobj.c
++++ b/src/mkobj.c
+@@ -588,6 +588,7 @@
+         /* do nothing */
+         break;
+     case OBJ_INVENT:
++        if (nh_gold_absence) nh_gold_absence = 1;
+         otmp->nobj = obj->nobj;
+         obj->nobj = otmp;
+         extract_nobj(obj, &invent);
+--- a/src/nle.c
++++ b/src/nle.c
+@@ -1132,6 +1132,7 @@
+     }
+     current_nle_ctx = nle;
+     nh_cur = (struct nh_ctx *) nle->nh;
++    nh_gold_absence = 0;
+     nh_fobj_invalidate();
+     nle->observation = obs;
+     /* tty gating tracks the CURRENT step's bindings, not nle_start's:
+--- a/tools/globals.def
++++ b/tools/globals.def
+@@ -579,3 +579,5 @@
+ global | cold | struct obj * | nh_fobj_ptr | [2048] | 0
+ 
+ global | cold | unsigned char | nh_track_near | [COLNO][ROWNO] | 0
++
++global | hot | unsigned char | nh_gold_absence | | 0
+--- a/include/nh_ctx_gen.h
++++ b/include/nh_ctx_gen.h
+@@ -36,6 +36,7 @@
+     isaac64_ctx g_rnd_c_rng_state[2]; /* rnd.c: rng_state */
+     int g_rnd_c_rng_init[2]; /* rnd.c: rng_init */
+     nhsym g_drawing_c_showsyms[SYM_MAX]; /* drawing.c: showsyms */
++    unsigned char g_nh_gold_absence; /* global: nh_gold_absence */
+     /* --- cold --- */
+     int g_track_c_utcnt; /* track.c: utcnt */
+     int g_track_c_utpnt; /* track.c: utpnt */
+@@ -655,5 +656,6 @@
+ #define nh_fobj_y (nh_cur->g_nh_fobj_y)
+ #define nh_fobj_ptr (nh_cur->g_nh_fobj_ptr)
+ #define nh_track_near (nh_cur->g_nh_track_near)
++#define nh_gold_absence (nh_cur->g_nh_gold_absence)
+ 
+ #endif /* NH_CTX_GEN_H */

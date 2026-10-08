@@ -1,0 +1,42 @@
+        int scan_cell = 0;
+#ifdef __SSE2__
+        for (; scan_cell + 8 <= NH_GRID; scan_cell += 8) {
+            __m128i gs = _mm_loadu_si128((const __m128i*)(env->glyphs + scan_cell));
+            __m128i oldmem = _mm_loadu_si128((const __m128i*)(env->obj_mem + scan_cell));
+            __m128i cm = _mm_and_si128(
+                _mm_cmpgt_epi16(gs, _mm_set1_epi16(NETHACK_GLYPH_CMAP_OFF - 1)),
+                _mm_cmpgt_epi16(_mm_set1_epi16(NETHACK_GLYPH_CMAP_OFF + 96), gs));
+            __m128i om = _mm_and_si128(
+                _mm_cmpgt_epi16(gs, _mm_set1_epi16(NETHACK_GLYPH_OBJ_LO - 1)),
+                _mm_cmpgt_epi16(_mm_set1_epi16(NETHACK_GLYPH_OBJ_HI), gs));
+            __m128i bm = _mm_and_si128(
+                _mm_cmpgt_epi16(gs, _mm_set1_epi16(NETHACK_GLYPH_BODY_OFF - 1)),
+                _mm_cmpgt_epi16(_mm_set1_epi16(NETHACK_GLYPH_BODY_HI), gs));
+            __m128i mem = _mm_or_si128(
+                _mm_andnot_si128(_mm_or_si128(cm, _mm_or_si128(om, bm)), oldmem),
+                _mm_or_si128(
+                    _mm_and_si128(om, _mm_sub_epi16(gs, _mm_set1_epi16(NETHACK_GLYPH_OBJ_LO - 1))),
+                    _mm_and_si128(bm, _mm_sub_epi16(gs, _mm_set1_epi16(NETHACK_GLYPH_BODY_OFF - 454)))));
+            _mm_storeu_si128((__m128i*)(env->obj_mem + scan_cell), mem);
+            unsigned monsters = (unsigned)_mm_movemask_epi8(_mm_and_si128(
+                _mm_cmpgt_epi16(gs, _mm_set1_epi16(-1)),
+                _mm_cmpgt_epi16(_mm_set1_epi16(NETHACK_GLYPH_BODY_OFF), gs)));
+            while (monsters && nmon < 256) {
+                int lane = __builtin_ctz(monsters) / 2;
+                int cell = scan_cell + lane;
+                monsters &= ~(3u << (2 * lane));
+                if (cell != hero_cell) {
+                    mon_cell[nmon] = cell;
+                    mon_g[nmon++] = env->glyphs[cell];
+                }
+            }
+            unsigned items = (unsigned)_mm_movemask_epi8(_mm_cmpeq_epi16(mem, _mm_setzero_si128())) ^ 65535u;
+            while (items && nit < 256) {
+                int lane = __builtin_ctz(items) / 2;
+                it_cell[nit++] = scan_cell + lane;
+                items &= ~(3u << (2 * lane));
+            }
+        }
+#endif
+        for (int cell = scan_cell; cell < NH_GRID; cell++) {
+            int g = env->glyphs[cell];

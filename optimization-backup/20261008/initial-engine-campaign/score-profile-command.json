@@ -1,0 +1,13 @@
+[
+  "valgrind",
+  "--tool=callgrind",
+  "--instr-atstart=no",
+  "--collect-jumps=yes",
+  "--callgrind-out-file=/puffertank/experiments/nethack-perf-20260917/score-late.callgrind",
+  "/puffertank/experiments/nethack-perf-20260917/score/replay_vec",
+  "time",
+  "1",
+  "106192",
+  "512",
+  "/puffertank/experiments/nethack-perf-20260917/score-record/env00468.trace"
+]

@@ -1,0 +1,10 @@
+--- a/src/mon.c
++++ b/src/mon.c
+@@ -1367,6 +1367,7 @@
+         for (ny = max(0, y - 1); ny <= maxy; ny++) {
+             if (nx == x && ny == y)
+                 continue;
++            __builtin_prefetch(&level.monsters[nx][ny], 0, 1);
+             ntyp = TYP_AT(nx, ny);
+             if (IS_ROCK(ntyp)
+                 && !((flag & ALLOW_WALL) && may_passwall(nx, ny))

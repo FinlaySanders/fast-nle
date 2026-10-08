@@ -1,0 +1,17 @@
+--- a/src/env_pool.h
++++ b/src/env_pool.h
+@@ -41,6 +41,14 @@
+ static void* ep_worker(void* arg) {
+     EPWorker* w = (EPWorker*)arg;
+     EnvPool* p = w->pool;
++    const char* pin = getenv("PUF_POOL_PHYSICAL");
++    if (pin && atoi(pin)) {
++        assert(p->workers == 24);
++        cpu_set_t cpus; CPU_ZERO(&cpus);
++        CPU_SET(w->id < 8 ? 2*w->id : w->id+8, &cpus);
++        if (pthread_setaffinity_np(pthread_self(), sizeof(cpus), &cpus)) abort();
++    }
++
+     for (;;) {
+         pthread_mutex_lock(&p->mu);
+         unsigned long epoch = p->epoch;

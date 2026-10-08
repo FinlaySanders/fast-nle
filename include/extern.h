@@ -384,6 +384,7 @@ E void FDECL(flush_screen, (int));
 E int FDECL(back_to_glyph, (XCHAR_P, XCHAR_P));
 E int FDECL(zapdir_to_glyph, (int, int, int));
 E int FDECL(glyph_at, (XCHAR_P, XCHAR_P));
+E void FDECL(nle_copy_glyphs, (short *));
 E void NDECL(set_wall_state);
 E void FDECL(unset_seenv, (struct rm *, int, int, int, int));
 E int FDECL(warning_of, (struct monst *));

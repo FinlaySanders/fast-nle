@@ -1,0 +1,11 @@
+--- a/src/env_pool.h
++++ b/src/env_pool.h
+@@ -103,7 +103,7 @@
+     pthread_mutex_lock(&p->mu);
+     p->epoch++; pthread_cond_broadcast(&p->ready);
+     pthread_mutex_unlock(&p->mu);
+-    ep_claim(p, r, buffer % p->workers);
++    /* Dedicated workers execute all environment steps. */
+     while (__atomic_load_n(&r->done, __ATOMIC_ACQUIRE) < count) sched_yield();
+     pthread_mutex_lock(&r->mu);
+     r->active = 0;

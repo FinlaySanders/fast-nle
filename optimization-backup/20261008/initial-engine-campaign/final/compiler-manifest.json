@@ -1,0 +1,14 @@
+{
+  "engine_source": "engine-glyph-simd; byte-identical candidate08 source",
+  "library": "/puffertank/experiments/nethack-perf-20260917/variants/candidate14-lto-local/libnethack.so",
+  "library_sha256": "70fe544048cd5f9e159d98be3222f35536e508299228e88f61a3c10c968bc403",
+  "flags": [
+    "CMAKE_BUILD_TYPE=Release",
+    "NLE_TLS_INITIAL_EXEC=ON",
+    "CMAKE_INTERPROCEDURAL_OPTIMIZATION=ON",
+    "CMAKE_C_FLAGS=-fno-semantic-interposition",
+    "CMAKE_CXX_FLAGS=-fno-semantic-interposition"
+  ],
+  "justification": "Existing -Wl,-Bsymbolic-functions binds internal calls locally at link time; compile-time local binding allows inlining.",
+  "status": "promising; broad validation pending"
+}

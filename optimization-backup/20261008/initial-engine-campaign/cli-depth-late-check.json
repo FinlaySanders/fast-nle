@@ -1,0 +1,44 @@
+{
+  "command": [
+    "taskset",
+    "-c",
+    "0,2,4,6,8,10,12,14",
+    "/puffertank/experiments/nethack-perf-20260917/harness-v3/depth/replay_vec",
+    "verify",
+    "1",
+    "6420",
+    "32",
+    "/puffertank/experiments/nethack-perf-20260917/depth-record-v2/env00279.trace"
+  ],
+  "workload": "depth",
+  "mode": "verify",
+  "selection": "late",
+  "late_episode": {
+    "score": 11788,
+    "turn": 2973,
+    "depth": 29,
+    "xp": 5,
+    "how": 4,
+    "length": 2746,
+    "start_offset": 556805,
+    "end_offset": 989510,
+    "start_decision": 3706,
+    "end_decision": 6452
+  },
+  "library": "/puffertank/experiments/nethack-perf-20260917/variants/candidate03/libnethack.so",
+  "library_sha256": "76f173fba020d97f6191c34ccb11fdcca969412a123b1108607d29605c19213d",
+  "harness_sha256": "eafa2e05e96e54ec6e6ce67526c7d38a7a66c0909365b884acbe9f03d83a3fb8",
+  "environment": {
+    "NH_DISC_SWAP": "1",
+    "NH_ZT_MASK": "0",
+    "NETHACKDIR": "/puffertank/pufferlib/vendor/fast-nle/build/dat",
+    "LD_LIBRARY_PATH": "/puffertank/experiments/nethack-perf-20260917/variants/candidate03",
+    "OMP_PROC_BIND": "true",
+    "OMP_PLACES": "cores"
+  },
+  "started": 1789642674.7559912,
+  "returncode": 0,
+  "elapsed": 0.1852269172668457,
+  "stdout": "RESULT mode=verify envs=1 threads=1 warmup=6420 limit=32 init_seconds=0.000722 warmup_seconds=0.178865 measured_seconds=0.002779 measured_steps=32 positive_turn_advances=31 sps=11513.20 measured_keys=92 keys_per_second=33100.45 maxrss_kb=37056 completed_streams=0 total_steps=6452\n",
+  "stderr": ""
+}

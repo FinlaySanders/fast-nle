@@ -1,0 +1,119 @@
+--- a/src/steal.c
++++ b/src/steal.c
+@@ -69,8 +69,21 @@
+ findgold(chain)
+ register struct obj *chain;
+ {
++    boolean hero_chain = (chain == invent);
++    if (hero_chain && nh_no_hero_gold) {
++#ifdef NLE_GOLD_VERIFY
++        struct obj *check = chain;
++        while (check && check->otyp != GOLD_PIECE)
++            check = check->nobj;
++        if (check)
++            panic("stale hero gold absence");
++#endif
++        return (struct obj *) 0;
++    }
+     while (chain && chain->otyp != GOLD_PIECE)
+         chain = chain->nobj;
++    if (hero_chain && !chain)
++        nh_no_hero_gold = 1;
+     return chain;
+ }
+ 
+--- a/src/invent.c
++++ b/src/invent.c
+@@ -653,6 +653,7 @@
+     struct obj *otmp, *prev, *next;
+     boolean need_more_sorting;
+ 
++    nh_no_hero_gold = 0;
+     do {
+         /*
+          * We expect at most one item to be out of order, so this
+@@ -944,6 +945,7 @@
+     if (flags.invlet_constant || !prev) {
+         obj->nobj = invent; /* insert at beginning */
+         invent = obj;
++        nh_no_hero_gold = 0;
+         if (flags.invlet_constant)
+             reorder_invent();
+     } else {
+@@ -962,6 +964,7 @@
+         && (throwing_weapon(obj) || is_ammo(obj)))
+         setuqwep(obj);
+  added:
++    nh_no_hero_gold = 0;
+     addinv_core2(obj);
+     carry_obj_effects(obj); /* carrying affects the obj */
+     update_inventory();
+@@ -4022,6 +4025,7 @@
+         goldobj->invlet = GOLD_SYM;
+         goldobj->nobj = invent;
+         invent = goldobj;
++        nh_no_hero_gold = 0;
+     }
+     if (i >= 52)
+         i = 52 - 1;
+@@ -4276,6 +4280,7 @@
+     obj->nobj = invent;
+     obj->where = OBJ_INVENT;
+     invent = obj;
++    nh_no_hero_gold = 0;
+     reorder_invent();
+     if (bumped) {
+         /* splitting the 'from' stack is causing an incompatible
+@@ -4285,6 +4290,7 @@
+         bumped->nobj = invent;
+         bumped->where = OBJ_INVENT;
+         invent = bumped;
++        nh_no_hero_gold = 0;
+         reorder_invent();
+     }
+ 
+--- a/src/mkobj.c
++++ b/src/mkobj.c
+@@ -588,6 +588,7 @@
+         /* do nothing */
+         break;
+     case OBJ_INVENT:
++        nh_no_hero_gold = 0;
+         otmp->nobj = obj->nobj;
+         obj->nobj = otmp;
+         extract_nobj(obj, &invent);
+--- a/src/restore.c
++++ b/src/restore.c
+@@ -696,6 +696,7 @@
+     restore_timers(fd, RANGE_GLOBAL, FALSE, 0L);
+     restore_light_sources(fd);
+     invent = restobjchn(fd, FALSE, FALSE);
++    nh_no_hero_gold = 0;
+ 
+     /* restore dangling (not on floor or in inventory) ball and/or chain */
+     bc_obj = restobjchn(fd, FALSE, FALSE);
+--- a/tools/globals.def
++++ b/tools/globals.def
+@@ -579,3 +579,5 @@
+ global | cold | struct obj * | nh_fobj_ptr | [2048] | 0
+ 
+ global | cold | unsigned char | nh_track_near | [COLNO][ROWNO] | 0
++
++global | cold | unsigned char | nh_no_hero_gold | | 0
+--- a/include/nh_ctx_gen.h
++++ b/include/nh_ctx_gen.h
+@@ -487,6 +487,7 @@
+     short g_nh_fobj_y[2048]; /* global: nh_fobj_y */
+     struct obj * g_nh_fobj_ptr[2048]; /* global: nh_fobj_ptr */
+     unsigned char g_nh_track_near[COLNO][ROWNO]; /* global: nh_track_near */
++    unsigned char g_nh_no_hero_gold; /* global: nh_no_hero_gold */
+     /* lazily-allocated per-env blobs whose types are private to one
+      * .c file (e.g. options.c boolopt copy); freed by nh_ctx_free.
+      * Slot assignments are documented at the allocation sites. */
+@@ -655,5 +656,6 @@
+ #define nh_fobj_y (nh_cur->g_nh_fobj_y)
+ #define nh_fobj_ptr (nh_cur->g_nh_fobj_ptr)
+ #define nh_track_near (nh_cur->g_nh_track_near)
++#define nh_no_hero_gold (nh_cur->g_nh_no_hero_gold)
+ 
+ #endif /* NH_CTX_GEN_H */

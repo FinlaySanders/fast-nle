@@ -1,0 +1,52 @@
+--- a/src/monmove.c
++++ b/src/monmove.c
+@@ -1057,16 +1057,16 @@
+              * situation where you toss arrows at it and it has nothing
+              * better to do than pick the arrows up.
+              */
+-            register int pctload =
+-                (curr_mon_load(mtmp) * 100) / max_mon_load(mtmp);
++            int scaled_load = curr_mon_load(mtmp) * 100;
++            long long load_capacity = max_mon_load(mtmp);
+ 
+             /* look for gold or jewels nearby */
+-            likegold = (likes_gold(ptr) && pctload < 95);
+-            likegems = (likes_gems(ptr) && pctload < 85);
+-            uses_items = (!mindless(ptr) && !is_animal(ptr) && pctload < 75);
+-            likeobjs = (likes_objs(ptr) && pctload < 75);
+-            likemagic = (likes_magic(ptr) && pctload < 85);
+-            likerock = (throws_rocks(ptr) && pctload < 50 && !Sokoban);
++            likegold = (likes_gold(ptr) && scaled_load < 95 * load_capacity);
++            likegems = (likes_gems(ptr) && scaled_load < 85 * load_capacity);
++            uses_items = (!mindless(ptr) && !is_animal(ptr) && scaled_load < 75 * load_capacity);
++            likeobjs = (likes_objs(ptr) && scaled_load < 75 * load_capacity);
++            likemagic = (likes_magic(ptr) && scaled_load < 85 * load_capacity);
++            likerock = (throws_rocks(ptr) && scaled_load < 50 * load_capacity && !Sokoban);
+             conceals = hides_under(ptr);
+             setlikes = TRUE;
+         }
+@@ -1542,16 +1542,17 @@
+             /* recompute the likes tests, in case we polymorphed
+              * or if the "likegold" case got taken above */
+             if (setlikes) {
+-                int pctload = (curr_mon_load(mtmp) * 100) / max_mon_load(mtmp);
++                int scaled_load = curr_mon_load(mtmp) * 100;
++                long long load_capacity = max_mon_load(mtmp);
+ 
+                 /* look for gold or jewels nearby */
+-                likegold = (likes_gold(ptr) && pctload < 95);
+-                likegems = (likes_gems(ptr) && pctload < 85);
++                likegold = (likes_gold(ptr) && scaled_load < 95 * load_capacity);
++                likegems = (likes_gems(ptr) && scaled_load < 85 * load_capacity);
+                 uses_items =
+-                    (!mindless(ptr) && !is_animal(ptr) && pctload < 75);
+-                likeobjs = (likes_objs(ptr) && pctload < 75);
+-                likemagic = (likes_magic(ptr) && pctload < 85);
+-                likerock = (throws_rocks(ptr) && pctload < 50 && !Sokoban);
++                    (!mindless(ptr) && !is_animal(ptr) && scaled_load < 75 * load_capacity);
++                likeobjs = (likes_objs(ptr) && scaled_load < 75 * load_capacity);
++                likemagic = (likes_magic(ptr) && scaled_load < 85 * load_capacity);
++                likerock = (throws_rocks(ptr) && scaled_load < 50 * load_capacity && !Sokoban);
+                 conceals = hides_under(ptr);
+             }
+ 

@@ -1,0 +1,20 @@
+--- a/src/monmove.c
++++ b/src/monmove.c
+@@ -836,6 +836,8 @@
+             int i = cursor->base + bit / 2;
+             cursor->mask &= ~(3U << bit);
+             cursor->index = i + 1;
++            if (cursor->mask)
++                __builtin_prefetch(nh_fobj_ptr[cursor->base + __builtin_ctz(cursor->mask) / 2], 0, 1);
+             return nh_fobj_ptr[i];
+         }
+         cursor->mask = 0;
+@@ -857,6 +859,8 @@
+                 cursor->ly = ly; cursor->hy = hy;
+                 i += bit / 2;
+                 cursor->index = i + 1;
++                if (cursor->mask)
++                    __builtin_prefetch(nh_fobj_ptr[cursor->base + __builtin_ctz(cursor->mask) / 2], 0, 1);
+                 return nh_fobj_ptr[i];
+             }
+             cursor->index += 8;

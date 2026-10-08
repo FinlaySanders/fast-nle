@@ -1,0 +1,5 @@
+#include <assert.h>
+#include "hack.h"
+#include "nh_ctx_files/track_c.h"
+static coord* original(int x,int y){int cnt=utcnt,ndist;coord*tc;for(tc=&utrack[utpnt];cnt--;){if(tc==utrack)tc=&utrack[49];else tc--;ndist=distmin(x,y,tc->x,tc->y);if(ndist>2){ndist-=2;cnt-=ndist;if(cnt<=0)return 0;if(tc<&utrack[ndist])tc+=50-ndist;else tc-=ndist;}else if(ndist<=1)return ndist?tc:0;}return 0;}
+int main(void){nh_cur=calloc(1,sizeof(*nh_cur));assert(nh_cur);unsigned seed=329;long checks=0;initrack();for(int step=0;step<4096;step++){if(step%193==0)initrack();seed=seed*1664525u+1013904223u;u.ux=(seed>>8)%COLNO;seed=seed*1664525u+1013904223u;u.uy=(seed>>8)%ROWNO;settrack();for(int x=-1;x<=COLNO;x++)for(int y=-1;y<=ROWNO;y++){assert(gettrack(x,y)==original(x,y));checks++;}}free(nh_cur);nh_cur=NULL;printf("PASS %ld tracking comparisons including resets, wraparound, repeated and teleporting positions, edges\n",checks);return 0;}

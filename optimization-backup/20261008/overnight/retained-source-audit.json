@@ -1,0 +1,8 @@
+{
+  "changed_files": [
+    "include/hack.h",
+    "src/monmove.c",
+    "src/mon.c"
+  ],
+  "unchanged_files": 639
+}

@@ -1,0 +1,19 @@
+{
+  "pid": 1788024,
+  "command": [
+    "/puffertank/experiments/nethack-overnight-20260917/pool83-control-source/puffer_pool",
+    "train",
+    "--headless",
+    "--base.env_name=nethack",
+    "--train.total_timesteps=8388608",
+    "--vec.num_threads=32",
+    "--base.seed=901",
+    "--base.run_id=screen",
+    "--base.eval_episodes=8",
+    "--base.eval_agents=8",
+    "--base.checkpoint_dir=/puffertank/experiments/nethack-overnight-20260917/alloc94-training/baseline-after/checkpoints",
+    "--base.log_dir=/puffertank/experiments/nethack-overnight-20260917/alloc94-training/baseline-after/logs"
+  ],
+  "label": "baseline-after",
+  "started": 1789705948.4055514
+}

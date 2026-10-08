@@ -1,0 +1,11 @@
+--- a/src/mon.c
++++ b/src/mon.c
+@@ -723,8 +723,6 @@
+ {
+     register struct monst *mtmp, *nmtmp;
+     register boolean somebody_can_move = FALSE;
+-
+-    nh_fobj_invalidate();
+ 
+     /*
+      * Some of you may remember the former assertion here that

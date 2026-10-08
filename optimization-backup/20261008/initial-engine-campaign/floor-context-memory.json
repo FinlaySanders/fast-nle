@@ -1,0 +1,29 @@
+{
+  "baseline": {
+    "bytes": 149720,
+    "command": [
+      "cc",
+      "-O0",
+      "-I/puffertank/experiments/nethack-perf-20260917/engine-baseline/include",
+      "-I/puffertank/experiments/nethack-perf-20260917/engine-baseline/build/include",
+      "/puffertank/experiments/nethack-perf-20260917/measure_context_size.c",
+      "-o",
+      "/puffertank/experiments/nethack-perf-20260917/context-size-baseline"
+    ]
+  },
+  "candidate05": {
+    "bytes": 174312,
+    "command": [
+      "cc",
+      "-O0",
+      "-I/puffertank/experiments/nethack-perf-20260917/engine-floor/include",
+      "-I/puffertank/experiments/nethack-perf-20260917/engine-floor/build-diagnostic/include",
+      "/puffertank/experiments/nethack-perf-20260917/measure_context_size.c",
+      "-o",
+      "/puffertank/experiments/nethack-perf-20260917/context-size-candidate05"
+    ]
+  },
+  "delta_bytes_per_env": 24592,
+  "delta_bytes_512_envs": 12591104,
+  "scope": "sizeof nh_ctx only; excludes heaps, replay buffers and mapped trace pages"
+}

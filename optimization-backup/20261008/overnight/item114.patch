@@ -1,0 +1,22 @@
+--- a/src/muse.c
++++ b/src/muse.c
+@@ -2071,6 +2071,19 @@
+ struct obj *obj;
+ {
+     int typ = obj->otyp;
++
++    /* Classes with no useful items need no monster-property reads.
++       Keep the original type-only exceptions even for unusual objects. */
++    if (typ != WAN_MAKE_INVISIBLE && typ != POT_INVISIBILITY
++        && typ != WAN_SPEED_MONSTER && typ != POT_SPEED) {
++        switch (obj->oclass) {
++        case WAND_CLASS: case POTION_CLASS: case SCROLL_CLASS:
++        case AMULET_CLASS: case TOOL_CLASS: case FOOD_CLASS:
++            break;
++        default:
++            return FALSE;
++        }
++    }
+ 
+     if (is_animal(mon->data) || mindless(mon->data)
+         || mon->data == &mons[PM_GHOST]) /* don't loot bones piles */

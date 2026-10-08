@@ -1,0 +1,949 @@
+{
+  "created_utc": "2026-09-17T10:50:26.967423+00:00",
+  "files": {
+    "/puffertank/experiments/nethack-perf-20260917/depth-record-command.json": {
+      "bytes": 826,
+      "sha256": "f5175f38474a0894e96ec4a16e6bc189f01707f73939f80800cbba9d09a44290"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/harness-v3/depth/source/ocean/nethack/depth.ini": {
+      "bytes": 1261,
+      "sha256": "5b000f54ae83846b7444f4a2e78802c68b79747985ae6ebbaf5b3e33bcc70491"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/harness-v3/depth/source/ocean/nethack/fs.h": {
+      "bytes": 5172,
+      "sha256": "c72818016a8d37a5c054ee38971ebe2392f1adf368e14fe84ecefe0175f9c786"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/harness-v3/depth/source/ocean/nethack/glyph_map.h": {
+      "bytes": 100884,
+      "sha256": "29e75affb9ece25d602603648a04b5eb05b73feb7673a69c1c2812f58a46d09a"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/harness-v3/depth/source/ocean/nethack/macros.h": {
+      "bytes": 14379,
+      "sha256": "328259d53ea0751009fd91d3b44f30247e78074a8845c237493b70c62795bccf"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/harness-v3/depth/source/ocean/nethack/nethack.c": {
+      "bytes": 71644,
+      "sha256": "0f9714fb26a890ceda74d24fccc0996656f67b868daaa5176b669576141ae696"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/harness-v3/depth/source/ocean/nethack/nethack.cu": {
+      "bytes": 175815,
+      "sha256": "0fe30b2178de175d97649e560173f6968c96b91fd3e9bc9203568db0decf0a91"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/harness-v3/depth/source/ocean/nethack/nethack.h": {
+      "bytes": 60941,
+      "sha256": "c022863bb6059b1b6c1775d700812e4e2fc7e3c91387c7fab20857c7daa5a07a"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/harness-v3/depth/source/ocean/nethack/nethack_policy.cu": {
+      "bytes": 3551,
+      "sha256": "474d1413dc99828bff43c1e5be12afa8950c8e9671a00fb85741e2337afed3e0"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/harness-v3/depth/source/ocean/nethack/netlib.h": {
+      "bytes": 20224,
+      "sha256": "02a6ec445723673e20763bf4ed0fbb680777b3e274d3b5956b8dd5d36a59f5fc"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/harness-v3/depth/source/ocean/nethack/perf_trace.h": {
+      "bytes": 4676,
+      "sha256": "9a9e20924300e616bf213a0d2371a3c6b95b7a778463a51266494c346468001f"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/harness-v3/score/source/ocean/nethack/depth.ini": {
+      "bytes": 1261,
+      "sha256": "5b000f54ae83846b7444f4a2e78802c68b79747985ae6ebbaf5b3e33bcc70491"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/harness-v3/score/source/ocean/nethack/fs.h": {
+      "bytes": 5172,
+      "sha256": "c72818016a8d37a5c054ee38971ebe2392f1adf368e14fe84ecefe0175f9c786"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/harness-v3/score/source/ocean/nethack/glyph_map.h": {
+      "bytes": 100884,
+      "sha256": "29e75affb9ece25d602603648a04b5eb05b73feb7673a69c1c2812f58a46d09a"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/harness-v3/score/source/ocean/nethack/macros.h": {
+      "bytes": 12717,
+      "sha256": "7d0ab6ad822802a27e4f1a1d5f09f98009c02e0a056aecb996a9e8bb54089f95"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/harness-v3/score/source/ocean/nethack/nethack.c": {
+      "bytes": 72003,
+      "sha256": "e71c42ef5988502133dd2681e390d4593358324caa6dc5ab9c1bd8bd84475716"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/harness-v3/score/source/ocean/nethack/nethack.cu": {
+      "bytes": 175799,
+      "sha256": "35f69d1d712b55b4d00236d07948d4e0236bdb4edb8146f8e279eee9ae538180"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/harness-v3/score/source/ocean/nethack/nethack.h": {
+      "bytes": 59758,
+      "sha256": "5eb6aa54163be145006ecb2a5e8c1cfb6c8b8c7acdd56756cc1ad17e9bcd686d"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/harness-v3/score/source/ocean/nethack/nethack_policy.cu": {
+      "bytes": 3374,
+      "sha256": "73e453f5f2c1d26450481097d84f172a68696b317ac2d0261352e023e8cd83f9"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/harness-v3/score/source/ocean/nethack/netlib.h": {
+      "bytes": 20073,
+      "sha256": "7ecf36f47ded62187ec7f93ac0e12d0ed9a0e95ae6459b1bb5449c93efb3cfb3"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/harness-v3/score/source/ocean/nethack/perf_trace.h": {
+      "bytes": 4676,
+      "sha256": "9a9e20924300e616bf213a0d2371a3c6b95b7a778463a51266494c346468001f"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/lib/libnethack.so": {
+      "bytes": 3540296,
+      "sha256": "a3a4c32fc0c9107f748ccb8255d4901b85dd80beb9786fa851cd1f8f08f056a2"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/manifest.json": {
+      "bytes": 296,
+      "sha256": "632bb353b77a6007d76e970c6f305598238db86b75bf2407ee5cc391d90984ff"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/puffer-baseline": {
+      "bytes": 2504576,
+      "sha256": "c7005e077b0257aa8cd4b1963c08a09524b1d2d26f9327df0f36260785e23104"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/puffer-working.patch": {
+      "bytes": 1627388,
+      "sha256": "f9ba818a0df0496e74ab1c1e272cd65c011ae169ae702ca9224a765602c3b2bf"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/admiral.ini": {
+      "bytes": 1399,
+      "sha256": "c1f118b8719d06353c80413821b630c77144e73c78dd6152ebb96a571ae10f5e"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/affine_lock.ini": {
+      "bytes": 634,
+      "sha256": "8720eb8130579d50286a3f3a4b209820c660f809619a92c30f94c50f4bdec52e"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/ants.ini": {
+      "bytes": 647,
+      "sha256": "f3a8b1489f6eb017104dabb5eda72432236d4667db37f69109842fbf13dffef3"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/asteroids.ini": {
+      "bytes": 474,
+      "sha256": "50330450989ce3e592fcf7ec4eaec4486d01f411d9117e59207cb37c90b70ed4"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/backgammon.ini": {
+      "bytes": 412,
+      "sha256": "376d8d7807114fb8e6a210d8e47c54760cd7cfdfb6a10dea79a1a51c75ad78b5"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/bat.ini": {
+      "bytes": 4682,
+      "sha256": "2e0103a69f95086c4a69308ed3785d9be9bc203c8443c95ce24969e96a3b0ed9"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/battle.ini": {
+      "bytes": 1182,
+      "sha256": "449278949935b03c2397b882c30f8f06dfbd3a6382a7bdaf61fd32b304f2ed60"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/benchmark.ini": {
+      "bytes": 220,
+      "sha256": "a8c706d68bff776d8122d57d70248142679b48afaeaadf22934456ed1ce808ac"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/blastar.ini": {
+      "bytes": 252,
+      "sha256": "9d410ec56b2e2a8143c20c3873c0f4466727e376a7ea61c17e59f03e15b8272f"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/boids.ini": {
+      "bytes": 855,
+      "sha256": "9b01d311acf23b263b7178a7c9bc15e42aa0a77c195e6485b9492c6bb42feba0"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/boss_fight.ini": {
+      "bytes": 830,
+      "sha256": "25a8fc4559e7fcb08aa7baef4ca82e85ab4190e4f930355b955608cbb4bde6e8"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/boxoban.ini": {
+      "bytes": 538,
+      "sha256": "2bd3325728dfa6058201384235df752cb363a398ac6ec6ce18e61cdc8621e1d8"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/breakout.ini": {
+      "bytes": 953,
+      "sha256": "ba73db9127cbe9222e7dffec14399cd132065e9cf4a858e58ac553c62d847f17"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/cartpole.ini": {
+      "bytes": 621,
+      "sha256": "5c67f29a8b2e53f9f64be36c28c50dbf2a4a653f03a4420aedc150693a14ecf2"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/chain_mdp.ini": {
+      "bytes": 139,
+      "sha256": "396665e871214b29aca4f6e7137144bb3f52764bbfcc9eacfa9f37d3b26f06e6"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/chain_reaction.ini": {
+      "bytes": 695,
+      "sha256": "bc810a1e40317c88356644de633e87246c2f57798cdc4a204f77b79254a0ef91"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/checkers.ini": {
+      "bytes": 120,
+      "sha256": "2309b79bdef8bf0a43c742c0fa9d30ac872a6aa8a45c32826a9ebc955940930e"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/chess.ini": {
+      "bytes": 1141,
+      "sha256": "e8e620465b6ef4833385ef567d0c7b126d93fe37a2b050de355d6d0af11a3989"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/click.ini": {
+      "bytes": 252,
+      "sha256": "5f2a40b96c135e90826004b5ae755af36057e715b10583a3ce29846766c01d98"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/clifford.ini": {
+      "bytes": 696,
+      "sha256": "ab021f68712af9a3629eca0f03c6c3beabdac758fbfa28708c4a06a770f73419"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/connect4.ini": {
+      "bytes": 563,
+      "sha256": "cdb2fd371d14d5821fb2edddc380120239177fbbfced7ae55bafe80999521eeb"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/convert.ini": {
+      "bytes": 300,
+      "sha256": "c178f93100f1681e081e5acf9b34e40b57afe486f492a8978c0eea31e1749a64"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/convert_circle.ini": {
+      "bytes": 334,
+      "sha256": "94118a259e2362477ee0a9d6284e74e34a36ecfe5799860dbfd9d457a80b2f9b"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/craftax.ini": {
+      "bytes": 867,
+      "sha256": "9ba2860406969a5aa8c48a282e67b2108642c8c762f41e5570dc9df2a54a4d1e"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/craftax_1m.ini": {
+      "bytes": 930,
+      "sha256": "95e9c8e4febd392895ea5a36344661710b955fda74aa19d9020675e4d5c2546a"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/craftax_classic.ini": {
+      "bytes": 133,
+      "sha256": "4fb21799a347be118cb42cb96bcbc9660a945fc6a7101fea2efe0c5ef21e9392"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/default.ini": {
+      "bytes": 5129,
+      "sha256": "7f493977f49f2537a59c18c2a283f062e5d6063d9e130c2d15f6be075cda1084"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/dino.ini": {
+      "bytes": 233,
+      "sha256": "10d2cf74fc623f111887537cf338e57bc4ea009404aa0017783a6417ff58f01a"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/docking.ini": {
+      "bytes": 1284,
+      "sha256": "1a6082e691ec1cd49c147340a862a7085661a35030a65d79397a4d53e1974889"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/double_pendulum.ini": {
+      "bytes": 590,
+      "sha256": "39a2723c712ebaec3d474430d4d1d02117c864381c0077989428d313e069ee88"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/drive.ini": {
+      "bytes": 981,
+      "sha256": "e19691fbb620620d90a7c50a081e8d8f767b3afa70f3e1c01741a975396e5ae1"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/drmario.ini": {
+      "bytes": 426,
+      "sha256": "383dd460b13ce587e354754f4d79a7a4f3e59b8e124a7b29c6c8866fa1c37c04"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/drone.ini": {
+      "bytes": 1940,
+      "sha256": "f52c5f0678f15eaaba32f3122130b4969606b10355dd77a2629bcf8c186bc437"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/enduro.ini": {
+      "bytes": 644,
+      "sha256": "7da46eebd5b07e25e954c4389fcb129c59a1d9b34956aeb4d600680182807060"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/flappy.ini": {
+      "bytes": 576,
+      "sha256": "f443679ac395f267d800f1f39321e558d5a404aec467192e6a1ce79a01731014"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/freeway.ini": {
+      "bytes": 703,
+      "sha256": "a8090c626f8b5515b62443bccd13f03f3aa248089a9737c3596f1b14545a20a2"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/g2048.ini": {
+      "bytes": 823,
+      "sha256": "7fbd2b1700d276623b6da8aaa656b96074ac0a005bbecd4ac2e9d5acf245f1df"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/go.ini": {
+      "bytes": 1166,
+      "sha256": "c5fbf721f000747a7d48f1945ea8269722a93533599d2bc860420fefec52a713"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/guerrillacheckers.ini": {
+      "bytes": 1719,
+      "sha256": "a10387ce71e497d70be83490f7419436c16f03bc9b51d292f342f58c7ee13085"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/hex.ini": {
+      "bytes": 534,
+      "sha256": "5f83d28aa0407bf045295ae3334ecaaf870c97c712a5e4574886e5e93b98352b"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/impulse_wars.ini": {
+      "bytes": 1804,
+      "sha256": "2928dca2546253273492bbddfcaafe2eb994175bb1c35e3d9bc44a4cd6447da5"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/laser_puzzle.ini": {
+      "bytes": 292,
+      "sha256": "e15c522350d1c9b4ebdab7217f5addbb71d8a0f4c8d851bc663351daa253edf1"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/lightsout.ini": {
+      "bytes": 90,
+      "sha256": "49c7ac862ff0573336e22292814acad470c75cd4eaf50dbb794f32e8dd5a6cd2"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/matsci.ini": {
+      "bytes": 110,
+      "sha256": "b4e8dbd0943e6dc11da8bea34214e6320648577d18688dc8906970c00274d6b2"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/maze.ini": {
+      "bytes": 571,
+      "sha256": "2ff7f0940e5dfc9241f3906bde4ad19fdbf34bf46156d943288e0757e3209e86"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/mazing_contest.ini": {
+      "bytes": 378,
+      "sha256": "379741d6b2f1e2edf456c7a63ef6eb802bff0a8ee0dc126dc3cefc3edc1309eb"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/memory.ini": {
+      "bytes": 105,
+      "sha256": "f740199d7daf95d917472dd9fe5f9a1b3bea8c9ead2fbab969c37296f1e2a0ec"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/minimal.ini": {
+      "bytes": 285,
+      "sha256": "e51b5c71300547eb87a6954859dfedf92fc56446d5a4ddc20d7dd4550e0d96bd"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/moba.ini": {
+      "bytes": 1013,
+      "sha256": "f78072e3267b427bc86eec3fad26939b8e9ec208ccee56cbb9f4c92681de1a25"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/nethack.ini": {
+      "bytes": 1844,
+      "sha256": "db2ed9f49ec6d0c81f3f1a351368e9c656919795330cc7f815108277756e7344"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/nmmo3.ini": {
+      "bytes": 1084,
+      "sha256": "9c94f256c4af3a8827fae2682390d2d0ddc9b64b96a6fb71f741ad3782b87788"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/onestateworld.ini": {
+      "bytes": 178,
+      "sha256": "bd2f1830d8a6e48126abc4a843f280106a5dc34f047dbb16d45c3a1654350a0b"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/onlyfish.ini": {
+      "bytes": 190,
+      "sha256": "6b73494c9079fca4c93cd76dde362759f9f880069968b43a012ee3feca750bde"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/osrs_colosseum.ini": {
+      "bytes": 2633,
+      "sha256": "7ad6e606a9af90ad0ef9c12023218b14e3c55990d9d101686667304b93a29a6b"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/osrs_inferno.ini": {
+      "bytes": 4375,
+      "sha256": "a330bf989b599a903cbcc1e91329534dd37bc0c8179afb493a69b00479fc2815"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/osrs_pvp.ini": {
+      "bytes": 280,
+      "sha256": "c2a2c7a30d77183ab408d9efa77dfe2015159b51ecd89731c7497974ace41d4c"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/osrs_zulrah.ini": {
+      "bytes": 1866,
+      "sha256": "93d1288442a7807a57e2d5bad0eb514a172d2e3d6408f10fc74ff5dd01328de9"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/overcooked.ini": {
+      "bytes": 518,
+      "sha256": "3d5c1313b69d49e61852dd527a42f1f972ca26506fc17b760ef4e4b2cf17d589"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/pacman.ini": {
+      "bytes": 707,
+      "sha256": "383d662443b80ebb2f55baf91a3aa1f04db8b329e63d6f3012049645fd8249de"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/pathfinder.ini": {
+      "bytes": 1765,
+      "sha256": "8da9e822bdec7ceb19594f1bdee296e53f0f15add96fb287c9be77389259d6fa"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/pong.ini": {
+      "bytes": 804,
+      "sha256": "fc4b26ef110b5bef75e69a39e86f8ead85140640c68932a855309dc41e3cd923"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/robocode.ini": {
+      "bytes": 2487,
+      "sha256": "c05dc0c189bff06178f9517884d40e77f72eedf1e2f6f14d6b0724a2c03e17ad"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/robot_arm.ini": {
+      "bytes": 539,
+      "sha256": "b207726ed51ea222f49d6f39bda90b854a3d60757e3ffccc5f7131c3e488a461"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/rware.ini": {
+      "bytes": 353,
+      "sha256": "c65b5159468a7829d5e421f19699ecd31eda85511bed1a943b9ec127aa3cd36c"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/scape.ini": {
+      "bytes": 89,
+      "sha256": "1aa0b33c042e1bd14c380e2adc4110b745455f35a7691b537be0a56a3cd1e028"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/shared_pool.ini": {
+      "bytes": 716,
+      "sha256": "c95e9a676101a292750aa2b113da19a3d4105f17af5a0447b1d15d6cbcda7460"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/slimevolley.ini": {
+      "bytes": 1680,
+      "sha256": "21d07084a0c7d2d0e2656108ea2ab68baebd3b2aee71e9f1eb70e1a0734d25a0"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/snake.ini": {
+      "bytes": 1034,
+      "sha256": "0a9d3f70d4f9387febdc6076052816d92bf083c32df4e1901276da0254e1f55a"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/soccer.ini": {
+      "bytes": 1893,
+      "sha256": "3c93bc94e2f43402b09d1f9bc043c6d18ef5a9b370b9fb98117b9a911d765210"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/space_invaders.ini": {
+      "bytes": 746,
+      "sha256": "d06559f11b663524a7625932be4c8e5f06560814925d7d863447711a0e3c18d6"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/squared.ini": {
+      "bytes": 226,
+      "sha256": "4e671fdeefb0fe2a39e7305d9d30ed12627e6083a5ef4e871223d5d1afee2a2d"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/squared_continuous.ini": {
+      "bytes": 235,
+      "sha256": "4fdd7969c64b63c17d12fa93cc3680799f529d78792e84f62197417c7967e249"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/tactical.ini": {
+      "bytes": 27,
+      "sha256": "915e47c6986b0b85f20c398fc8838c84bccf33ce01effbcd805c21ab8435ec79"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/target.ini": {
+      "bytes": 182,
+      "sha256": "aad5c4b5c524d3927ce0ff83be5d598d5c6038f673a9429a84644b8fb6921546"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/template.ini": {
+      "bytes": 81,
+      "sha256": "a3f598a60eab9cee0e0bb65bb8493207a7860c8dceabb784158806e30824d579"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/terraform.ini": {
+      "bytes": 796,
+      "sha256": "c6703ccc8dd5d9ffe596de6e5e5d0dbe582c7d8b4f56035362923c034f386054"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/tetris.ini": {
+      "bytes": 671,
+      "sha256": "f2c3cd3866f28416a6e2b7f93082dfbc8d315d9c362428f8a777799a24030c56"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/tmaze.ini": {
+      "bytes": 119,
+      "sha256": "a396583796c7ea91a3581adc369b97e037fb1455728c824a50322f54e962f5ec"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/tower_climb.ini": {
+      "bytes": 1057,
+      "sha256": "143f0971a51ed91ab1149d8fc08e4eeb8ec9652fd0a5348a1d833f1863a0e452"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/tower_defence.ini": {
+      "bytes": 883,
+      "sha256": "589065b9176b24b76bd2c79d70c9fd0ee118b45e9671d077c08a0f974b9de66e"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/trash_pickup.ini": {
+      "bytes": 623,
+      "sha256": "e90c1bb0931ac7be2f13aba615f6c6ec14b8dbbfc6827f20e4af6d78051cdaaf"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/tripletriad.ini": {
+      "bytes": 592,
+      "sha256": "fe211a15aa670dbd2c7a773c148bb2b506f01c43f3769a3507c500de34839e1b"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/tron.ini": {
+      "bytes": 749,
+      "sha256": "3e20e90f9acb65a356078d27b4c32ce5d5db38b3af0eb2c2909f0c1f9b2b9a9c"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/wef.ini": {
+      "bytes": 1130,
+      "sha256": "bfb8a403509042c67ac217ae9bfedb906e6ffa9f226c7935f156f315e28e404e"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/whackamole.ini": {
+      "bytes": 135,
+      "sha256": "ff68bb17eb87cac7097afd6857956234398da57f9352b55eab0688225dbb0585"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/config/whisker_racer.ini": {
+      "bytes": 2276,
+      "sha256": "039b4f124cc0e17def08a907718b56eb4cc848103a72012aa4a94eec49e2a023"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/ocean/nethack/depth.ini": {
+      "bytes": 1261,
+      "sha256": "5b000f54ae83846b7444f4a2e78802c68b79747985ae6ebbaf5b3e33bcc70491"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/ocean/nethack/fs.h": {
+      "bytes": 5172,
+      "sha256": "c72818016a8d37a5c054ee38971ebe2392f1adf368e14fe84ecefe0175f9c786"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/ocean/nethack/glyph_map.h": {
+      "bytes": 100884,
+      "sha256": "29e75affb9ece25d602603648a04b5eb05b73feb7673a69c1c2812f58a46d09a"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/ocean/nethack/macros.h": {
+      "bytes": 12687,
+      "sha256": "5a3af75ecbe46ebda1b4c36bcd9e57d6125a7041d8cc747b35b0c2fd6f36f8c8"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/ocean/nethack/nethack.c": {
+      "bytes": 72003,
+      "sha256": "e71c42ef5988502133dd2681e390d4593358324caa6dc5ab9c1bd8bd84475716"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/ocean/nethack/nethack.cu": {
+      "bytes": 175799,
+      "sha256": "35f69d1d712b55b4d00236d07948d4e0236bdb4edb8146f8e279eee9ae538180"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/ocean/nethack/nethack.h": {
+      "bytes": 59709,
+      "sha256": "f6ae17d5403c4ab6f18a97149405dbeec08461e3bd476ea42c7629a7a65c8c0f"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/ocean/nethack/nethack_policy.cu": {
+      "bytes": 3374,
+      "sha256": "73e453f5f2c1d26450481097d84f172a68696b317ac2d0261352e023e8cd83f9"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/ocean/nethack/netlib.h": {
+      "bytes": 20073,
+      "sha256": "7ecf36f47ded62187ec7f93ac0e12d0ed9a0e95ae6459b1bb5449c93efb3cfb3"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/ocean/nethack/perf_trace.h": {
+      "bytes": 4096,
+      "sha256": "462558b5e9afdd54532a3a7da6b639e1b45978e38fe0a5a657f99446b9adfa51"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/src/algo.cu": {
+      "bytes": 68549,
+      "sha256": "beb55f848076b6e089b015cf90970bb0d7a38290aa6e1ff74c961d9d4e1471f1"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/src/constellation.c": {
+      "bytes": 56112,
+      "sha256": "deda12600fb99755994dcb0a9b84c442dac76259b15910eea83e398150c1f6c4"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/src/ini.h": {
+      "bytes": 14358,
+      "sha256": "cd4c83ba12ba40a7bef03ad810246cc0a5880f81e8566f6ac5a089b5c598859f"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/src/ocean.cu": {
+      "bytes": 2844,
+      "sha256": "511ea7c7c516f3fa658eb6e55f3b4b7204b467d0ce1c816b152ed90f10c5f7ff"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/src/protein.cu": {
+      "bytes": 47240,
+      "sha256": "7127fe4fa3e9b0ab76ae0b8a4703357318366b1292f835f02b23bd98a6c90538"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/src/puffercpu.c": {
+      "bytes": 33447,
+      "sha256": "8ef774ae7678aa360c6526968d21282006d9684db5a29e99e06d607d03edc1ff"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/src/pufferenv.h": {
+      "bytes": 2130,
+      "sha256": "3324a670791e2b3e46cbe7d10d9233d52fbc258e0d7e37d5b0c470e580de880c"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score/source/src/pufferl.cu": {
+      "bytes": 134313,
+      "sha256": "046688e753bf5b3c5485c0e061abeb8a19606db4556b83e243466fc3274d058f"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/score-record-command.json": {
+      "bytes": 465,
+      "sha256": "20b22a3829926da5e0a7f9f94b031a0b6caa827e434bee5a36b564f072c5df43"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/admiral.ini": {
+      "bytes": 1399,
+      "sha256": "c1f118b8719d06353c80413821b630c77144e73c78dd6152ebb96a571ae10f5e"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/affine_lock.ini": {
+      "bytes": 634,
+      "sha256": "8720eb8130579d50286a3f3a4b209820c660f809619a92c30f94c50f4bdec52e"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/ants.ini": {
+      "bytes": 647,
+      "sha256": "f3a8b1489f6eb017104dabb5eda72432236d4667db37f69109842fbf13dffef3"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/asteroids.ini": {
+      "bytes": 474,
+      "sha256": "50330450989ce3e592fcf7ec4eaec4486d01f411d9117e59207cb37c90b70ed4"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/backgammon.ini": {
+      "bytes": 412,
+      "sha256": "376d8d7807114fb8e6a210d8e47c54760cd7cfdfb6a10dea79a1a51c75ad78b5"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/bat.ini": {
+      "bytes": 4682,
+      "sha256": "2e0103a69f95086c4a69308ed3785d9be9bc203c8443c95ce24969e96a3b0ed9"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/battle.ini": {
+      "bytes": 1182,
+      "sha256": "449278949935b03c2397b882c30f8f06dfbd3a6382a7bdaf61fd32b304f2ed60"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/benchmark.ini": {
+      "bytes": 220,
+      "sha256": "a8c706d68bff776d8122d57d70248142679b48afaeaadf22934456ed1ce808ac"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/blastar.ini": {
+      "bytes": 252,
+      "sha256": "9d410ec56b2e2a8143c20c3873c0f4466727e376a7ea61c17e59f03e15b8272f"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/boids.ini": {
+      "bytes": 855,
+      "sha256": "9b01d311acf23b263b7178a7c9bc15e42aa0a77c195e6485b9492c6bb42feba0"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/boss_fight.ini": {
+      "bytes": 830,
+      "sha256": "25a8fc4559e7fcb08aa7baef4ca82e85ab4190e4f930355b955608cbb4bde6e8"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/boxoban.ini": {
+      "bytes": 538,
+      "sha256": "2bd3325728dfa6058201384235df752cb363a398ac6ec6ce18e61cdc8621e1d8"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/breakout.ini": {
+      "bytes": 953,
+      "sha256": "ba73db9127cbe9222e7dffec14399cd132065e9cf4a858e58ac553c62d847f17"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/cartpole.ini": {
+      "bytes": 621,
+      "sha256": "5c67f29a8b2e53f9f64be36c28c50dbf2a4a653f03a4420aedc150693a14ecf2"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/chain_mdp.ini": {
+      "bytes": 139,
+      "sha256": "396665e871214b29aca4f6e7137144bb3f52764bbfcc9eacfa9f37d3b26f06e6"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/chain_reaction.ini": {
+      "bytes": 695,
+      "sha256": "bc810a1e40317c88356644de633e87246c2f57798cdc4a204f77b79254a0ef91"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/checkers.ini": {
+      "bytes": 120,
+      "sha256": "2309b79bdef8bf0a43c742c0fa9d30ac872a6aa8a45c32826a9ebc955940930e"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/chess.ini": {
+      "bytes": 1141,
+      "sha256": "e8e620465b6ef4833385ef567d0c7b126d93fe37a2b050de355d6d0af11a3989"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/click.ini": {
+      "bytes": 252,
+      "sha256": "5f2a40b96c135e90826004b5ae755af36057e715b10583a3ce29846766c01d98"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/clifford.ini": {
+      "bytes": 696,
+      "sha256": "ab021f68712af9a3629eca0f03c6c3beabdac758fbfa28708c4a06a770f73419"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/connect4.ini": {
+      "bytes": 563,
+      "sha256": "cdb2fd371d14d5821fb2edddc380120239177fbbfced7ae55bafe80999521eeb"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/convert.ini": {
+      "bytes": 300,
+      "sha256": "c178f93100f1681e081e5acf9b34e40b57afe486f492a8978c0eea31e1749a64"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/convert_circle.ini": {
+      "bytes": 334,
+      "sha256": "94118a259e2362477ee0a9d6284e74e34a36ecfe5799860dbfd9d457a80b2f9b"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/craftax.ini": {
+      "bytes": 867,
+      "sha256": "9ba2860406969a5aa8c48a282e67b2108642c8c762f41e5570dc9df2a54a4d1e"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/craftax_1m.ini": {
+      "bytes": 930,
+      "sha256": "95e9c8e4febd392895ea5a36344661710b955fda74aa19d9020675e4d5c2546a"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/craftax_classic.ini": {
+      "bytes": 133,
+      "sha256": "4fb21799a347be118cb42cb96bcbc9660a945fc6a7101fea2efe0c5ef21e9392"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/default.ini": {
+      "bytes": 5129,
+      "sha256": "7f493977f49f2537a59c18c2a283f062e5d6063d9e130c2d15f6be075cda1084"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/dino.ini": {
+      "bytes": 233,
+      "sha256": "10d2cf74fc623f111887537cf338e57bc4ea009404aa0017783a6417ff58f01a"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/docking.ini": {
+      "bytes": 1284,
+      "sha256": "1a6082e691ec1cd49c147340a862a7085661a35030a65d79397a4d53e1974889"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/double_pendulum.ini": {
+      "bytes": 590,
+      "sha256": "39a2723c712ebaec3d474430d4d1d02117c864381c0077989428d313e069ee88"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/drive.ini": {
+      "bytes": 981,
+      "sha256": "e19691fbb620620d90a7c50a081e8d8f767b3afa70f3e1c01741a975396e5ae1"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/drmario.ini": {
+      "bytes": 426,
+      "sha256": "383dd460b13ce587e354754f4d79a7a4f3e59b8e124a7b29c6c8866fa1c37c04"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/drone.ini": {
+      "bytes": 1940,
+      "sha256": "f52c5f0678f15eaaba32f3122130b4969606b10355dd77a2629bcf8c186bc437"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/enduro.ini": {
+      "bytes": 644,
+      "sha256": "7da46eebd5b07e25e954c4389fcb129c59a1d9b34956aeb4d600680182807060"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/flappy.ini": {
+      "bytes": 576,
+      "sha256": "f443679ac395f267d800f1f39321e558d5a404aec467192e6a1ce79a01731014"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/freeway.ini": {
+      "bytes": 703,
+      "sha256": "a8090c626f8b5515b62443bccd13f03f3aa248089a9737c3596f1b14545a20a2"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/g2048.ini": {
+      "bytes": 823,
+      "sha256": "7fbd2b1700d276623b6da8aaa656b96074ac0a005bbecd4ac2e9d5acf245f1df"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/go.ini": {
+      "bytes": 1166,
+      "sha256": "c5fbf721f000747a7d48f1945ea8269722a93533599d2bc860420fefec52a713"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/guerrillacheckers.ini": {
+      "bytes": 1719,
+      "sha256": "a10387ce71e497d70be83490f7419436c16f03bc9b51d292f342f58c7ee13085"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/hex.ini": {
+      "bytes": 534,
+      "sha256": "5f83d28aa0407bf045295ae3334ecaaf870c97c712a5e4574886e5e93b98352b"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/impulse_wars.ini": {
+      "bytes": 1804,
+      "sha256": "2928dca2546253273492bbddfcaafe2eb994175bb1c35e3d9bc44a4cd6447da5"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/laser_puzzle.ini": {
+      "bytes": 292,
+      "sha256": "e15c522350d1c9b4ebdab7217f5addbb71d8a0f4c8d851bc663351daa253edf1"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/lightsout.ini": {
+      "bytes": 90,
+      "sha256": "49c7ac862ff0573336e22292814acad470c75cd4eaf50dbb794f32e8dd5a6cd2"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/matsci.ini": {
+      "bytes": 110,
+      "sha256": "b4e8dbd0943e6dc11da8bea34214e6320648577d18688dc8906970c00274d6b2"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/maze.ini": {
+      "bytes": 571,
+      "sha256": "2ff7f0940e5dfc9241f3906bde4ad19fdbf34bf46156d943288e0757e3209e86"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/mazing_contest.ini": {
+      "bytes": 378,
+      "sha256": "379741d6b2f1e2edf456c7a63ef6eb802bff0a8ee0dc126dc3cefc3edc1309eb"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/memory.ini": {
+      "bytes": 105,
+      "sha256": "f740199d7daf95d917472dd9fe5f9a1b3bea8c9ead2fbab969c37296f1e2a0ec"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/minimal.ini": {
+      "bytes": 285,
+      "sha256": "e51b5c71300547eb87a6954859dfedf92fc56446d5a4ddc20d7dd4550e0d96bd"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/moba.ini": {
+      "bytes": 1013,
+      "sha256": "f78072e3267b427bc86eec3fad26939b8e9ec208ccee56cbb9f4c92681de1a25"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/nethack.ini": {
+      "bytes": 1844,
+      "sha256": "db2ed9f49ec6d0c81f3f1a351368e9c656919795330cc7f815108277756e7344"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/nmmo3.ini": {
+      "bytes": 1084,
+      "sha256": "9c94f256c4af3a8827fae2682390d2d0ddc9b64b96a6fb71f741ad3782b87788"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/onestateworld.ini": {
+      "bytes": 178,
+      "sha256": "bd2f1830d8a6e48126abc4a843f280106a5dc34f047dbb16d45c3a1654350a0b"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/onlyfish.ini": {
+      "bytes": 190,
+      "sha256": "6b73494c9079fca4c93cd76dde362759f9f880069968b43a012ee3feca750bde"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/osrs_colosseum.ini": {
+      "bytes": 2633,
+      "sha256": "7ad6e606a9af90ad0ef9c12023218b14e3c55990d9d101686667304b93a29a6b"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/osrs_inferno.ini": {
+      "bytes": 4375,
+      "sha256": "a330bf989b599a903cbcc1e91329534dd37bc0c8179afb493a69b00479fc2815"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/osrs_pvp.ini": {
+      "bytes": 280,
+      "sha256": "c2a2c7a30d77183ab408d9efa77dfe2015159b51ecd89731c7497974ace41d4c"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/osrs_zulrah.ini": {
+      "bytes": 1866,
+      "sha256": "93d1288442a7807a57e2d5bad0eb514a172d2e3d6408f10fc74ff5dd01328de9"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/overcooked.ini": {
+      "bytes": 518,
+      "sha256": "3d5c1313b69d49e61852dd527a42f1f972ca26506fc17b760ef4e4b2cf17d589"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/pacman.ini": {
+      "bytes": 707,
+      "sha256": "383d662443b80ebb2f55baf91a3aa1f04db8b329e63d6f3012049645fd8249de"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/pathfinder.ini": {
+      "bytes": 1765,
+      "sha256": "8da9e822bdec7ceb19594f1bdee296e53f0f15add96fb287c9be77389259d6fa"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/pong.ini": {
+      "bytes": 804,
+      "sha256": "fc4b26ef110b5bef75e69a39e86f8ead85140640c68932a855309dc41e3cd923"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/robocode.ini": {
+      "bytes": 2487,
+      "sha256": "c05dc0c189bff06178f9517884d40e77f72eedf1e2f6f14d6b0724a2c03e17ad"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/robot_arm.ini": {
+      "bytes": 539,
+      "sha256": "b207726ed51ea222f49d6f39bda90b854a3d60757e3ffccc5f7131c3e488a461"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/rware.ini": {
+      "bytes": 353,
+      "sha256": "c65b5159468a7829d5e421f19699ecd31eda85511bed1a943b9ec127aa3cd36c"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/scape.ini": {
+      "bytes": 89,
+      "sha256": "1aa0b33c042e1bd14c380e2adc4110b745455f35a7691b537be0a56a3cd1e028"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/shared_pool.ini": {
+      "bytes": 716,
+      "sha256": "c95e9a676101a292750aa2b113da19a3d4105f17af5a0447b1d15d6cbcda7460"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/slimevolley.ini": {
+      "bytes": 1680,
+      "sha256": "21d07084a0c7d2d0e2656108ea2ab68baebd3b2aee71e9f1eb70e1a0734d25a0"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/snake.ini": {
+      "bytes": 1034,
+      "sha256": "0a9d3f70d4f9387febdc6076052816d92bf083c32df4e1901276da0254e1f55a"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/soccer.ini": {
+      "bytes": 1893,
+      "sha256": "3c93bc94e2f43402b09d1f9bc043c6d18ef5a9b370b9fb98117b9a911d765210"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/space_invaders.ini": {
+      "bytes": 746,
+      "sha256": "d06559f11b663524a7625932be4c8e5f06560814925d7d863447711a0e3c18d6"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/squared.ini": {
+      "bytes": 226,
+      "sha256": "4e671fdeefb0fe2a39e7305d9d30ed12627e6083a5ef4e871223d5d1afee2a2d"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/squared_continuous.ini": {
+      "bytes": 235,
+      "sha256": "4fdd7969c64b63c17d12fa93cc3680799f529d78792e84f62197417c7967e249"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/tactical.ini": {
+      "bytes": 27,
+      "sha256": "915e47c6986b0b85f20c398fc8838c84bccf33ce01effbcd805c21ab8435ec79"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/target.ini": {
+      "bytes": 182,
+      "sha256": "aad5c4b5c524d3927ce0ff83be5d598d5c6038f673a9429a84644b8fb6921546"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/template.ini": {
+      "bytes": 81,
+      "sha256": "a3f598a60eab9cee0e0bb65bb8493207a7860c8dceabb784158806e30824d579"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/terraform.ini": {
+      "bytes": 796,
+      "sha256": "c6703ccc8dd5d9ffe596de6e5e5d0dbe582c7d8b4f56035362923c034f386054"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/tetris.ini": {
+      "bytes": 671,
+      "sha256": "f2c3cd3866f28416a6e2b7f93082dfbc8d315d9c362428f8a777799a24030c56"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/tmaze.ini": {
+      "bytes": 119,
+      "sha256": "a396583796c7ea91a3581adc369b97e037fb1455728c824a50322f54e962f5ec"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/tower_climb.ini": {
+      "bytes": 1057,
+      "sha256": "143f0971a51ed91ab1149d8fc08e4eeb8ec9652fd0a5348a1d833f1863a0e452"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/tower_defence.ini": {
+      "bytes": 883,
+      "sha256": "589065b9176b24b76bd2c79d70c9fd0ee118b45e9671d077c08a0f974b9de66e"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/trash_pickup.ini": {
+      "bytes": 623,
+      "sha256": "e90c1bb0931ac7be2f13aba615f6c6ec14b8dbbfc6827f20e4af6d78051cdaaf"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/tripletriad.ini": {
+      "bytes": 592,
+      "sha256": "fe211a15aa670dbd2c7a773c148bb2b506f01c43f3769a3507c500de34839e1b"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/tron.ini": {
+      "bytes": 749,
+      "sha256": "3e20e90f9acb65a356078d27b4c32ce5d5db38b3af0eb2c2909f0c1f9b2b9a9c"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/wef.ini": {
+      "bytes": 1130,
+      "sha256": "bfb8a403509042c67ac217ae9bfedb906e6ffa9f226c7935f156f315e28e404e"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/whackamole.ini": {
+      "bytes": 135,
+      "sha256": "ff68bb17eb87cac7097afd6857956234398da57f9352b55eab0688225dbb0585"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/config/whisker_racer.ini": {
+      "bytes": 2276,
+      "sha256": "039b4f124cc0e17def08a907718b56eb4cc848103a72012aa4a94eec49e2a023"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/ocean/nethack/depth.ini": {
+      "bytes": 1261,
+      "sha256": "5b000f54ae83846b7444f4a2e78802c68b79747985ae6ebbaf5b3e33bcc70491"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/ocean/nethack/fs.h": {
+      "bytes": 5172,
+      "sha256": "c72818016a8d37a5c054ee38971ebe2392f1adf368e14fe84ecefe0175f9c786"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/ocean/nethack/glyph_map.h": {
+      "bytes": 100884,
+      "sha256": "29e75affb9ece25d602603648a04b5eb05b73feb7673a69c1c2812f58a46d09a"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/ocean/nethack/macros.h": {
+      "bytes": 14349,
+      "sha256": "16715597ea89872f1bd3b1877c566cb603a3e21e99dcb4e1a6af59f389b46ead"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/ocean/nethack/nethack.c": {
+      "bytes": 71644,
+      "sha256": "0f9714fb26a890ceda74d24fccc0996656f67b868daaa5176b669576141ae696"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/ocean/nethack/nethack.cu": {
+      "bytes": 175815,
+      "sha256": "0fe30b2178de175d97649e560173f6968c96b91fd3e9bc9203568db0decf0a91"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/ocean/nethack/nethack.h": {
+      "bytes": 60892,
+      "sha256": "8f85bc27eb197bc36a2b34a53c90f1822c24ae868ab884cf3e9620c40c504d0d"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/ocean/nethack/nethack_policy.cu": {
+      "bytes": 3551,
+      "sha256": "474d1413dc99828bff43c1e5be12afa8950c8e9671a00fb85741e2337afed3e0"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/ocean/nethack/netlib.h": {
+      "bytes": 20224,
+      "sha256": "02a6ec445723673e20763bf4ed0fbb680777b3e274d3b5956b8dd5d36a59f5fc"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/ocean/nethack/perf_trace.h": {
+      "bytes": 4096,
+      "sha256": "462558b5e9afdd54532a3a7da6b639e1b45978e38fe0a5a657f99446b9adfa51"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/src/algo.cu": {
+      "bytes": 68632,
+      "sha256": "e43bdac7937a6cf9f6f5428680956f2d0f6753efe1bdb0ac781f5c3ebffddd21"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/src/constellation.c": {
+      "bytes": 56112,
+      "sha256": "deda12600fb99755994dcb0a9b84c442dac76259b15910eea83e398150c1f6c4"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/src/ini.h": {
+      "bytes": 14358,
+      "sha256": "cd4c83ba12ba40a7bef03ad810246cc0a5880f81e8566f6ac5a089b5c598859f"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/src/ocean.cu": {
+      "bytes": 2844,
+      "sha256": "511ea7c7c516f3fa658eb6e55f3b4b7204b467d0ce1c816b152ed90f10c5f7ff"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/src/protein.cu": {
+      "bytes": 47240,
+      "sha256": "7127fe4fa3e9b0ab76ae0b8a4703357318366b1292f835f02b23bd98a6c90538"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/src/puffercpu.c": {
+      "bytes": 33447,
+      "sha256": "8ef774ae7678aa360c6526968d21282006d9684db5a29e99e06d607d03edc1ff"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/src/pufferenv.h": {
+      "bytes": 2130,
+      "sha256": "3324a670791e2b3e46cbe7d10d9233d52fbc258e0d7e37d5b0c470e580de880c"
+    },
+    "/puffertank/experiments/nethack-perf-20260917/source/src/pufferl.cu": {
+      "bytes": 136403,
+      "sha256": "2976b0428b5d467f93d4ed449ae14d392d1562cc9d83bc4b0b350966640f4f48"
+    },
+    "/puffertank/experiments/depth4b-20260916/checkpoints/nethack/depth4b_s901/0000003999989760.bin": {
+      "bytes": 17277472,
+      "sha256": "e040c52de6230d6bb6fd3563603036c48a7080e3ed3c41d2ec213f2792d5b818"
+    },
+    "/puffertank/pufferlib/resources/nethack/fixwt4b_s705.bin": {
+      "bytes": 62208544,
+      "sha256": "6541c5212ae4aae45e3c419bec2bf150883c457188117743d546cfb1d62a2718"
+    }
+  }
+}

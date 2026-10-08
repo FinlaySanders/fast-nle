@@ -1,0 +1,30 @@
+[
+  {
+    "label": "original",
+    "command": [
+      "nsys",
+      "stats",
+      "--report=cuda_gpu_kern_sum,cuda_api_sum,nvtx_sum",
+      "--format=csv",
+      "/puffertank/experiments/nethack-perf-20260917/tight-loop/campaign2h/training-profile/original/timeline.nsys-rep"
+    ],
+    "rc": 0,
+    "epochs": 96,
+    "weights_match": true,
+    "seconds": 8.552043437957764
+  },
+  {
+    "label": "optimized-retry",
+    "command": [
+      "nsys",
+      "stats",
+      "--report=cuda_gpu_kern_sum,cuda_api_sum,nvtx_sum",
+      "--format=csv",
+      "/puffertank/experiments/nethack-perf-20260917/tight-loop/campaign2h/training-profile/optimized-retry/timeline.nsys-rep"
+    ],
+    "rc": 0,
+    "epochs": 96,
+    "weights_match": true,
+    "seconds": 8.970585107803345
+  }
+]

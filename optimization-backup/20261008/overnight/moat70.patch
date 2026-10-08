@@ -1,0 +1,17 @@
+--- a/include/hack.h
++++ b/include/hack.h
+@@ -578,10 +578,10 @@
+     if (!isok(x, y))
+         return FALSE;
+     ltyp = levl[x][y].typ;
+-    if (!Is_juiblex_level(&u.uz)
+-        && (ltyp == MOAT
+-            || (ltyp == DRAWBRIDGE_UP
+-                && (levl[x][y].drawbridgemask & DB_UNDER) == DB_MOAT)))
++    if ((ltyp == MOAT
++         || (ltyp == DRAWBRIDGE_UP
++             && (levl[x][y].drawbridgemask & DB_UNDER) == DB_MOAT))
++        && !Is_juiblex_level(&u.uz))
+         return TRUE;
+     return FALSE;
+ }

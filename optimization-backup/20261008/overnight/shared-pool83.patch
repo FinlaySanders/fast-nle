@@ -1,0 +1,203 @@
+--- a/src/pufferl.cu
++++ b/src/pufferl.cu
+@@ -24,6 +24,9 @@
+ #include <fcntl.h>
+ #include <omp.h>
+ #include <pthread.h>
++#ifdef PUF_ENV_POOL
++#include "env_pool.h"
++#endif
+ #include <signal.h>
+ #include <spawn.h>
+ #include <sys/file.h>
+@@ -434,6 +437,9 @@
+     float* terminals;
+     unsigned char* action_mask;
+     int* worker_state;
++#ifdef PUF_ENV_POOL
++    EnvPool* env_pool;
++#endif
+     int shutdown;
+     pthread_t* threads;
+     float* accum;
+@@ -1118,6 +1124,10 @@
+     int buf;
+ } VecThreadArg;
+ 
++#ifdef PUF_ENV_POOL
++static void pool_env_step(void* context, int i) { puf_step(&((Env*)context)[i]); }
++#endif
++
+ static void* vec_thread_main(void* arg) {
+     VecThreadArg* a = (VecThreadArg*)arg;
+     PuffeRL* pufferl = a->pufferl;
+@@ -1180,7 +1190,9 @@
+             memset(&vec->rewards[agent_start], 0, apb * sizeof(float));
+             memset(&vec->terminals[agent_start], 0, apb * sizeof(float));
+             clock_gettime(CLOCK_MONOTONIC, &t0);
+-#ifdef PUF_ENV_WS
++#ifdef PUF_ENV_POOL
++            ep_run(vec->env_pool, buf, env_start, env_count);
++#elif defined(PUF_ENV_WS)
+             {
+                 int nw = vec->num_workers;
+                 if (nw > 256) nw = 256;
+@@ -1258,6 +1270,13 @@
+         vec->buffers * sizeof(VecThreadArg));
+     vec->accum = (float*)calloc(1, vec->buffers * NUM_PROF * sizeof(float));
+     env_restart(p);
++#ifdef PUF_ENV_POOL
++    int workers = vec->num_workers * vec->buffers - 12;
++    const char* pool_workers = getenv("PUF_POOL_WORKERS");
++    if (pool_workers) workers = atoi(pool_workers);
++    if (workers < 1) workers = 1;
++    vec->env_pool = ep_create(workers, vec->buffers, pool_env_step, vec->envs);
++#endif
+     for (int i = 0; i < vec->buffers; i++) {
+         args[i].pufferl = p;
+         args[i].buf = i;
+@@ -1376,6 +1395,10 @@
+     for (int i = 0; i < vec->buffers; i++) {
+         pthread_join(vec->threads[i], NULL);
+     }
++#ifdef PUF_ENV_POOL
++    ep_destroy(vec->env_pool);
++    vec->env_pool = NULL;
++#endif
+     for (int i = 0; i < vec->size; i++) {
+         puf_close(&vec->envs[i]);
+     }
+diff --git a/src/env_pool.h b/src/env_pool.h
+new file mode 100644
+--- /dev/null
++++ b/src/env_pool.h
+@@ -0,0 +1,129 @@
++#ifndef ENV_POOL_H
++#define ENV_POOL_H
++#include <pthread.h>
++#include <stdlib.h>
++#include <assert.h>
++#include <sched.h>
++
++typedef struct {
++    pthread_mutex_t mu;
++    pthread_cond_t quiet;
++    int active, readers, start, count, done;
++    int* next;
++} EPRegion;
++typedef struct EnvPool EnvPool;
++typedef struct { EnvPool* pool; int id; } EPWorker;
++struct EnvPool {
++    int workers, buffers, stop;
++    unsigned long epoch;
++    pthread_mutex_t mu;
++    pthread_cond_t ready;
++    EPRegion* region;
++    pthread_t* threads;
++    EPWorker* args;
++    void (*step)(void*, int);
++    void* context;
++};
++
++static void ep_claim(EnvPool* p, EPRegion* r, int id) {
++    for (int k = 0; k < p->workers; k++) {
++        int home = (id + k) % p->workers;
++        for (;;) {
++            int n = __atomic_fetch_add(&r->next[home * 16], 1, __ATOMIC_RELAXED);
++            int offset = home + n * p->workers;
++            if (offset >= r->count) break;
++            p->step(p->context, r->start + offset);
++            __atomic_fetch_add(&r->done, 1, __ATOMIC_RELEASE);
++        }
++    }
++}
++
++static void* ep_worker(void* arg) {
++    EPWorker* w = (EPWorker*)arg;
++    EnvPool* p = w->pool;
++    for (;;) {
++        pthread_mutex_lock(&p->mu);
++        unsigned long epoch = p->epoch;
++        int stop = p->stop;
++        pthread_mutex_unlock(&p->mu);
++        if (stop) return NULL;
++        for (int k = 0; k < p->buffers; k++) {
++            EPRegion* r = &p->region[(w->id + k) % p->buffers];
++            pthread_mutex_lock(&r->mu);
++            int active = r->active;
++            if (active) r->readers++;
++            pthread_mutex_unlock(&r->mu);
++            if (!active) continue;
++            ep_claim(p, r, w->id);
++            pthread_mutex_lock(&r->mu);
++            if (--r->readers == 0) pthread_cond_signal(&r->quiet);
++            pthread_mutex_unlock(&r->mu);
++        }
++        pthread_mutex_lock(&p->mu);
++        while (!p->stop && epoch == p->epoch) pthread_cond_wait(&p->ready, &p->mu);
++        pthread_mutex_unlock(&p->mu);
++    }
++}
++
++static EnvPool* ep_create(int workers, int buffers, void (*step)(void*, int), void* context) {
++    assert(workers > 0 && buffers > 0);
++    EnvPool* p = (EnvPool*)calloc(1, sizeof(*p));
++    assert(p);
++    p->workers = workers; p->buffers = buffers; p->step = step; p->context = context;
++    p->region = (EPRegion*)calloc(buffers, sizeof(*p->region));
++    p->threads = (pthread_t*)calloc(workers, sizeof(*p->threads));
++    p->args = (EPWorker*)calloc(workers, sizeof(*p->args));
++    assert(p->region && p->threads && p->args);
++    pthread_mutex_init(&p->mu, NULL); pthread_cond_init(&p->ready, NULL);
++    for (int b = 0; b < buffers; b++) {
++        pthread_mutex_init(&p->region[b].mu, NULL);
++        pthread_cond_init(&p->region[b].quiet, NULL);
++        p->region[b].next = (int*)calloc(workers * 16, sizeof(int));
++        assert(p->region[b].next);
++    }
++    for (int w = 0; w < workers; w++) {
++        p->args[w].pool = p; p->args[w].id = w;
++        if (pthread_create(&p->threads[w], NULL, ep_worker, &p->args[w])) abort();
++    }
++    return p;
++}
++
++/* One submitting thread per region. Readers lease the region until all
++ * accesses to its generation's counters have finished. */
++static void ep_run(EnvPool* p, int buffer, int start, int count) {
++    assert(buffer >= 0 && buffer < p->buffers && count >= 0);
++    EPRegion* r = &p->region[buffer];
++    pthread_mutex_lock(&r->mu);
++    assert(!r->active && !r->readers);
++    r->start = start; r->count = count;
++    __atomic_store_n(&r->done, 0, __ATOMIC_RELAXED);
++    for (int w = 0; w < p->workers; w++) r->next[w * 16] = 0;
++    r->active = 1;
++    pthread_mutex_unlock(&r->mu);
++    pthread_mutex_lock(&p->mu);
++    p->epoch++; pthread_cond_broadcast(&p->ready);
++    pthread_mutex_unlock(&p->mu);
++    ep_claim(p, r, buffer % p->workers);
++    while (__atomic_load_n(&r->done, __ATOMIC_ACQUIRE) < count) sched_yield();
++    pthread_mutex_lock(&r->mu);
++    r->active = 0;
++    while (r->readers) pthread_cond_wait(&r->quiet, &r->mu);
++    pthread_mutex_unlock(&r->mu);
++}
++
++/* Submitters must be joined before destroying the pool or its environments. */
++static void ep_destroy(EnvPool* p) {
++    pthread_mutex_lock(&p->mu);
++    p->stop = 1; pthread_cond_broadcast(&p->ready);
++    pthread_mutex_unlock(&p->mu);
++    for (int w = 0; w < p->workers; w++) pthread_join(p->threads[w], NULL);
++    for (int b = 0; b < p->buffers; b++) {
++        assert(!p->region[b].active && !p->region[b].readers);
++        pthread_mutex_destroy(&p->region[b].mu);
++        pthread_cond_destroy(&p->region[b].quiet);
++        free(p->region[b].next);
++    }
++    pthread_mutex_destroy(&p->mu); pthread_cond_destroy(&p->ready);
++    free(p->region); free(p->threads); free(p->args); free(p);
++}
++#endif

@@ -1,0 +1,15 @@
+--- a/include/hack.h
++++ b/include/hack.h
+@@ -577,7 +577,11 @@
+ 
+     if (!isok(x, y))
+         return FALSE;
+-    ltyp = levl[x][y].typ;
++    ltyp = nh_typ_plane[x][y];
++#ifdef NLE_MOAT_VERIFY
++    if (ltyp != levl[x][y].typ)
++        panic("moat terrain cache mismatch at %d,%d", x, y);
++#endif
+     if (!Is_juiblex_level(&u.uz)
+         && (ltyp == MOAT
+             || (ltyp == DRAWBRIDGE_UP

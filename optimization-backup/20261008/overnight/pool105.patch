@@ -1,0 +1,30 @@
+--- a/src/env_pool.h
++++ b/src/env_pool.h
+@@ -2,14 +2,16 @@
+ #define ENV_POOL_H
+ #include <pthread.h>
+ #include <stdlib.h>
++#include <string.h>
+ #include <assert.h>
+ #include <sched.h>
+ 
+ typedef struct {
+     pthread_mutex_t mu;
+     pthread_cond_t quiet;
+-    int active, readers, start, count, done;
++    int active, readers, start, count;
+     int* next;
++    int done __attribute__((aligned(64)));
+ } EPRegion;
+ typedef struct EnvPool EnvPool;
+ typedef struct { EnvPool* pool; int id; } EPWorker;
+@@ -70,7 +72,8 @@
+     EnvPool* p = (EnvPool*)calloc(1, sizeof(*p));
+     assert(p);
+     p->workers = workers; p->buffers = buffers; p->step = step; p->context = context;
+-    p->region = (EPRegion*)calloc(buffers, sizeof(*p->region));
++    if (posix_memalign((void**)&p->region, 64, buffers * sizeof(*p->region))) abort();
++    memset(p->region, 0, buffers * sizeof(*p->region));
+     p->threads = (pthread_t*)calloc(workers, sizeof(*p->threads));
+     p->args = (EPWorker*)calloc(workers, sizeof(*p->args));
+     assert(p->region && p->threads && p->args);

@@ -1,0 +1,11 @@
+from pathlib import Path
+import os,subprocess,json,time,re,hashlib
+r=Path(__file__).parent;d=r/'pool100';d.mkdir();old=r/'buffers42-source';new=r/'pool83-central-source';control=r/'pool83-control-source';engine=r/'pgo61/variant';ckpt=Path('/puffertank/pufferlib/resources/nethack/fixwt4b_s705.bin');rows=[]
+e={k:v for k,v in os.environ.items() if not k.startswith(('NH_','NLE_','OMP_','GOMP_','PUF_','PUFFER_')) and k not in ('LD_LIBRARY_PATH','LD_PRELOAD','NETHACKOPTIONS','NVCC_EXTRA')};e.update(NETHACKDIR='/puffertank/experiments/nethack-perf-20260917/dat',LD_LIBRARY_PATH=str(engine),NH_ZT_MASK='0',NH_DISC_SWAP='0',OMP_NUM_THREADS='32',CUDA_VISIBLE_DEVICES='0',PUF_ROLLOUT_BLOCKS='32',PUF_BENCH_REFERENCE_AGENTS='0')
+for label,src,exe,extra in [('diagnostic',r/'pool100-source','puffer_pool',{'PUF_POOL_WORKERS':'24'})]:
+ o=d/label;o.mkdir();cmd=[str(src/exe),'eval','--headless','--base.env_name=nethack','--load-model-path='+str(ckpt),'--base.eval_agents=512','--vec.num_buffers=4','--vec.num_threads=32','--base.eval_episodes=1000000000','--base.seed=901'];print('START',label,flush=True);start=time.time()
+ with (o/'log').open('w') as f:p=subprocess.run(cmd,cwd=src,env=dict(e,PUF_PERF_LOADED_PROOF=str(o/'loaded.bin'),PUF_BENCH_RNG_PROOF=str(o/'rng.bin'),**extra),stdout=f,stderr=subprocess.STDOUT)
+ t=(o/'log').read_text(errors='replace');b=[dict(re.findall(r'(\w+)=([^\s]+)',x)) for x in re.findall(r'ROLLOUT_BLOCK [^\n]+',t)];assert p.returncode==0 and [int(x['block']) for x in b]==list(range(32)),t[-2000:];assert hashlib.sha256((o/'loaded.bin').read_bytes()).digest()==hashlib.sha256(ckpt.read_bytes()).digest();digests=re.findall(r'ROLLOUT_OBS block=(\d+) hash=([0-9a-f]+)',t);assert len(digests)==32
+ row=dict(label=label,command=cmd,extra=extra,seconds=sum(float(x['seconds']) for x in b[16:]),steps=4194304,mean_turn=sum(float(x['mean_turn']) for x in b[16:])/16,digests=digests,blocks=b,wall_seconds=time.time()-start);rows.append(row);(d/'results.json').write_text(json.dumps(rows,indent=2));print('DONE',label,row['seconds'],flush=True)
+
+print('POOL100_DIAGNOSTIC_DONE; inspect counters and compare digests to retained93',flush=True)

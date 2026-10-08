@@ -1,0 +1,13 @@
+--- a/src/mhitm.c
++++ b/src/mhitm.c
+@@ -1293,8 +1293,9 @@
+             add_to_minv(magr, gold);
+         }
+         mdef->mstrategy &= ~STRAT_WAITFORU;
++        if (vis)
++            Strcpy(buf, Monnam(magr));
+         if (vis && canseemon(mdef)) {
+-            Strcpy(buf, Monnam(magr));
+             pline("%s steals some gold from %s.", buf, mon_nam(mdef));
+         }
+         if (!tele_restrict(magr)) {

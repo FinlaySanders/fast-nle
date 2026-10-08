@@ -1,0 +1,112 @@
+--- a/include/nh_ctx_gen.h
++++ b/include/nh_ctx_gen.h
+@@ -486,6 +486,8 @@
+     short g_nh_fobj_x[2048]; /* global: nh_fobj_x */
+     short g_nh_fobj_y[2048]; /* global: nh_fobj_y */
+     struct obj * g_nh_fobj_ptr[2048]; /* global: nh_fobj_ptr */
++    int g_nh_trap_valid; /* global: nh_trap_valid */
++    struct trap * g_nh_trap_index[COLNO][ROWNO]; /* global: nh_trap_index */
+     /* lazily-allocated per-env blobs whose types are private to one
+      * .c file (e.g. options.c boolopt copy); freed by nh_ctx_free.
+      * Slot assignments are documented at the allocation sites. */
+@@ -653,5 +655,7 @@
+ #define nh_fobj_x (nh_cur->g_nh_fobj_x)
+ #define nh_fobj_y (nh_cur->g_nh_fobj_y)
+ #define nh_fobj_ptr (nh_cur->g_nh_fobj_ptr)
++#define nh_trap_valid (nh_cur->g_nh_trap_valid)
++#define nh_trap_index (nh_cur->g_nh_trap_index)
+ 
+ #endif /* NH_CTX_GEN_H */
+--- a/src/mkmaze.c
++++ b/src/mkmaze.c
+@@ -1984,6 +1984,7 @@
+ 
+                 btrap->tx = cons->x;
+                 btrap->ty = cons->y;
++                nh_trap_valid = 0;
+                 break;
+             }
+ 
+--- a/src/restore.c
++++ b/src/restore.c
+@@ -1258,6 +1258,7 @@
+ 
+     rest_worm(fd); /* restore worm information */
+     ftrap = 0;
++    nh_trap_valid = 0;
+     while (trap = newtrap(),
+            mread(fd, (genericptr_t) trap, sizeof(struct trap)),
+            trap->tx != 0) { /* need "!= 0" to work around DICE 3.0 bug */
+--- a/src/save.c
++++ b/src/save.c
+@@ -711,6 +711,7 @@
+                 level.monsters[x][y] = 0;
+         fmon = 0;
+         ftrap = 0;
++        nh_trap_valid = 0;
+         nh_fobj_invalidate();
+         fobj = level.buriedobjlist = billobjs = 0;
+         /* level.bonesinfo = 0; -- handled by savecemetery() */
+--- a/src/trap.c
++++ b/src/trap.c
+@@ -441,6 +441,7 @@
+     if (!oldplace) {
+         ttmp->ntrap = ftrap;
+         ftrap = ttmp;
++        nh_trap_valid = 0;
+     } else {
+         /* oldplace;
+            it shouldn't be possible to override a sokoban pit or hole
+@@ -5019,14 +5020,27 @@
+ t_at(x, y)
+ register int x, y;
+ {
+-    register struct trap *trap = ftrap;
+-
+-    while (trap) {
+-        if (trap->tx == x && trap->ty == y)
+-            return trap;
+-        trap = trap->ntrap;
+-    }
+-    return (struct trap *) 0;
++    struct trap *trap, *result;
++    if ((unsigned) x >= COLNO || (unsigned) y >= ROWNO) {
++        for (trap = ftrap; trap; trap = trap->ntrap)
++            if (trap->tx == x && trap->ty == y) return trap;
++        return (struct trap *) 0;
++    }
++    if (!nh_trap_valid) {
++        memset(nh_trap_index, 0, sizeof(nh_trap_index));
++        for (trap = ftrap; trap; trap = trap->ntrap)
++            if ((unsigned) trap->tx < COLNO && (unsigned) trap->ty < ROWNO
++                && !nh_trap_index[trap->tx][trap->ty])
++                nh_trap_index[trap->tx][trap->ty] = trap;
++        nh_trap_valid = 1;
++    }
++    result = nh_trap_index[x][y];
++#ifdef NLE_TRAP_VERIFY
++    for (trap = ftrap; trap; trap = trap->ntrap)
++        if (trap->tx == x && trap->ty == y) break;
++    if (trap != result) panic("trap index mismatch");
++#endif
++    return result;
+ }
+ 
+ void
+@@ -5046,6 +5060,7 @@
+             panic("deltrap: no preceding trap!");
+         ttmp->ntrap = trap->ntrap;
+     }
++    nh_trap_valid = 0;
+     if (Sokoban && (trap->ttyp == PIT || trap->ttyp == HOLE))
+         maybe_finish_sokoban();
+     dealloc_trap(trap);
+--- a/tools/globals.def
++++ b/tools/globals.def
+@@ -577,3 +577,6 @@
+ global | cold | short | nh_fobj_x | [2048] | 0
+ global | cold | short | nh_fobj_y | [2048] | 0
+ global | cold | struct obj * | nh_fobj_ptr | [2048] | 0
++
++global | cold | int | nh_trap_valid | | 0
++global | cold | struct trap * | nh_trap_index | [COLNO][ROWNO] | 0

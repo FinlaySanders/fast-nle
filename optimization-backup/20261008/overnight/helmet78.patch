@@ -1,0 +1,20 @@
+--- a/src/muse.c
++++ b/src/muse.c
+@@ -1107,7 +1107,7 @@
+ {
+     register struct obj *obj;
+     boolean reflection_skip = (Reflecting && rn2(2));
+-    struct obj *helmet = which_armor(mtmp, W_ARMH);
++    struct obj *helmet;
+ 
+     m.offensive = (struct obj *) 0;
+     m.has_offense = 0;
+@@ -1225,7 +1225,7 @@
+          */
+         nomore(MUSE_SCR_EARTH);
+         if (obj->otyp == SCR_EARTH
+-            && ((helmet && is_metallic(helmet)) || mtmp->mconf
++            && (((helmet = which_armor(mtmp, W_ARMH)) && is_metallic(helmet)) || mtmp->mconf
+                 || amorphous(mtmp->data) || passes_walls(mtmp->data)
+                 || noncorporeal(mtmp->data) || unsolid(mtmp->data)
+                 || !rn2(10))

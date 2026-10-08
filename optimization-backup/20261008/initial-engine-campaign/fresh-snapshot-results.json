@@ -1,0 +1,297 @@
+[
+  {
+    "workload": "depth",
+    "record_command": [
+      "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/source/puffer",
+      "eval",
+      "--headless",
+      "--env.dr=0",
+      "--env.num_agents=1",
+      "--env.num_bots=0",
+      "--env.gold_coef=0.0953414813",
+      "--env.exp_coef=9.99999975e-05",
+      "--env.descent_coef=0.807671428",
+      "--env.floor_coef=0.463313729",
+      "--env.xp_coef=0.0555660129",
+      "--env.scout_coef=0.0192291923",
+      "--env.death_penalty=-0.580139101",
+      "--env.mask_search20=1",
+      "--env.mask_run=1",
+      "--env.multi_role=1",
+      "--env.score_coef=0",
+      "--policy.hidden_size=512",
+      "--policy.num_layers=3",
+      "--base.load_model_path=/puffertank/experiments/depth4b-20260916/checkpoints/nethack/depth4b_s901/0000003999989760.bin",
+      "--base.eval_agents=8",
+      "--base.eval_episodes=16",
+      "--base.seed=7",
+      "--vec.num_threads=4",
+      "--vec.num_buffers=1",
+      "--base.async=0"
+    ],
+    "comparisons": [
+      {
+        "label": "baseline",
+        "command": [
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/replay_vec",
+          "verify",
+          "4",
+          "0",
+          "1000000",
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/fresh-traces/env00000.trace",
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/fresh-traces/env00001.trace",
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/fresh-traces/env00002.trace",
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/fresh-traces/env00003.trace",
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/fresh-traces/env00004.trace",
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/fresh-traces/env00005.trace",
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/fresh-traces/env00006.trace",
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/fresh-traces/env00007.trace"
+        ],
+        "observations": [
+          {
+            "file": "env00000.obs",
+            "bytes": 93709735,
+            "sha256": "a9c3a4de3a741174e6b18649d46517f515199b61d41639ff542e12d7120f4c71"
+          },
+          {
+            "file": "env00001.obs",
+            "bytes": 106350631,
+            "sha256": "384e8634c3bf2f9c361e4dc134f2680f1165cc4bfd9c9f44f6663a6a67521dc4"
+          },
+          {
+            "file": "env00002.obs",
+            "bytes": 99196688,
+            "sha256": "c53b82cfd7b2916fa8810f1012024196721eafcbe79a9d1c1f1d58a55d8c9419"
+          },
+          {
+            "file": "env00003.obs",
+            "bytes": 95603483,
+            "sha256": "07b7a6cb75e31b7f3e4587e8bebc75b11d5cf21425ccdb4e745980510e53c7e6"
+          },
+          {
+            "file": "env00004.obs",
+            "bytes": 97486123,
+            "sha256": "1111e859acb0a9e210c09a6cc7ff9d31ef88f28b9334773cf9be3eeb482635ea"
+          },
+          {
+            "file": "env00005.obs",
+            "bytes": 93342512,
+            "sha256": "6824fdf4303d93578702a16039f6cef4a6d2df1dd9fd3dd2010df6e44afc1399"
+          },
+          {
+            "file": "env00006.obs",
+            "bytes": 103842021,
+            "sha256": "7264dea74d1a43aaa5735ef3d8afcea55d069004c2a99a41f39ec57fe8dabd81"
+          },
+          {
+            "file": "env00007.obs",
+            "bytes": 98236786,
+            "sha256": "389d6aa331f5179c15bed274ab2f64ae5009756928379f7c4a038d67e5da6c2a"
+          }
+        ]
+      },
+      {
+        "label": "candidate04",
+        "command": [
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/replay_vec",
+          "verify",
+          "4",
+          "0",
+          "1000000",
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/fresh-traces/env00000.trace",
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/fresh-traces/env00001.trace",
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/fresh-traces/env00002.trace",
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/fresh-traces/env00003.trace",
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/fresh-traces/env00004.trace",
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/fresh-traces/env00005.trace",
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/fresh-traces/env00006.trace",
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/depth/fresh-traces/env00007.trace"
+        ],
+        "observations": [
+          {
+            "file": "env00000.obs",
+            "bytes": 93709735,
+            "sha256": "a9c3a4de3a741174e6b18649d46517f515199b61d41639ff542e12d7120f4c71"
+          },
+          {
+            "file": "env00001.obs",
+            "bytes": 106350631,
+            "sha256": "384e8634c3bf2f9c361e4dc134f2680f1165cc4bfd9c9f44f6663a6a67521dc4"
+          },
+          {
+            "file": "env00002.obs",
+            "bytes": 99196688,
+            "sha256": "c53b82cfd7b2916fa8810f1012024196721eafcbe79a9d1c1f1d58a55d8c9419"
+          },
+          {
+            "file": "env00003.obs",
+            "bytes": 95603483,
+            "sha256": "07b7a6cb75e31b7f3e4587e8bebc75b11d5cf21425ccdb4e745980510e53c7e6"
+          },
+          {
+            "file": "env00004.obs",
+            "bytes": 97486123,
+            "sha256": "1111e859acb0a9e210c09a6cc7ff9d31ef88f28b9334773cf9be3eeb482635ea"
+          },
+          {
+            "file": "env00005.obs",
+            "bytes": 93342512,
+            "sha256": "6824fdf4303d93578702a16039f6cef4a6d2df1dd9fd3dd2010df6e44afc1399"
+          },
+          {
+            "file": "env00006.obs",
+            "bytes": 103842021,
+            "sha256": "7264dea74d1a43aaa5735ef3d8afcea55d069004c2a99a41f39ec57fe8dabd81"
+          },
+          {
+            "file": "env00007.obs",
+            "bytes": 98236786,
+            "sha256": "389d6aa331f5179c15bed274ab2f64ae5009756928379f7c4a038d67e5da6c2a"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "workload": "score",
+    "record_command": [
+      "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/source/puffer",
+      "eval",
+      "--headless",
+      "--base.load_model_path=/puffertank/pufferlib/resources/nethack/fixwt4b_s705.bin",
+      "--policy.hidden_size=1024",
+      "--policy.num_layers=4",
+      "--env.multi_role=1",
+      "--env.mask_search20=0",
+      "--env.mask_run=0",
+      "--base.seed=7",
+      "--base.async=0",
+      "--vec.num_buffers=1",
+      "--base.eval_agents=8",
+      "--base.eval_episodes=16",
+      "--vec.num_threads=4"
+    ],
+    "comparisons": [
+      {
+        "label": "baseline",
+        "command": [
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/replay_vec",
+          "verify",
+          "4",
+          "0",
+          "1000000",
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/fresh-traces/env00000.trace",
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/fresh-traces/env00001.trace",
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/fresh-traces/env00002.trace",
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/fresh-traces/env00003.trace",
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/fresh-traces/env00004.trace",
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/fresh-traces/env00005.trace",
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/fresh-traces/env00006.trace",
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/fresh-traces/env00007.trace"
+        ],
+        "observations": [
+          {
+            "file": "env00000.obs",
+            "bytes": 204193609,
+            "sha256": "2d055f9114bacb8ae9c8997e1123816f6d0af8ef1cea840106dba916812d9319"
+          },
+          {
+            "file": "env00001.obs",
+            "bytes": 214263977,
+            "sha256": "77e7731775f86dd7e45565e00ac9d59821920a38fb97cab032f24dafbb8d40b1"
+          },
+          {
+            "file": "env00002.obs",
+            "bytes": 202878449,
+            "sha256": "2ad9ca9636a8c12b800c36e72866eaad8ed3c6c9bc1b4de3f2e34f3359f09669"
+          },
+          {
+            "file": "env00003.obs",
+            "bytes": 200492373,
+            "sha256": "11abe5d3fc9e6514a70cad7b64baeb536d53edd7b9b522229961dea278535049"
+          },
+          {
+            "file": "env00004.obs",
+            "bytes": 202206778,
+            "sha256": "0bd8543e62a31dd21a5c6adc85b4c3e65f7125cdbdaace27a1b45d3faa5124fc"
+          },
+          {
+            "file": "env00005.obs",
+            "bytes": 199877066,
+            "sha256": "ea9c01a0ecf707c92ebb63d3c9f3b1a3d52b3697b475177443822ee4b5332152"
+          },
+          {
+            "file": "env00006.obs",
+            "bytes": 205842256,
+            "sha256": "b35c440fe21e7e76d345605e361c79e35f8f1767d86850598c95ea2ba298c028"
+          },
+          {
+            "file": "env00007.obs",
+            "bytes": 206772262,
+            "sha256": "548c4b11e149f425cd27ce4e79dfd11fb6fe7fb072d511d0cede9aa1d1c9edfa"
+          }
+        ]
+      },
+      {
+        "label": "candidate04",
+        "command": [
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/replay_vec",
+          "verify",
+          "4",
+          "0",
+          "1000000",
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/fresh-traces/env00000.trace",
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/fresh-traces/env00001.trace",
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/fresh-traces/env00002.trace",
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/fresh-traces/env00003.trace",
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/fresh-traces/env00004.trace",
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/fresh-traces/env00005.trace",
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/fresh-traces/env00006.trace",
+          "/puffertank/experiments/nethack-perf-20260917/harness-v4/score/fresh-traces/env00007.trace"
+        ],
+        "observations": [
+          {
+            "file": "env00000.obs",
+            "bytes": 204193609,
+            "sha256": "2d055f9114bacb8ae9c8997e1123816f6d0af8ef1cea840106dba916812d9319"
+          },
+          {
+            "file": "env00001.obs",
+            "bytes": 214263977,
+            "sha256": "77e7731775f86dd7e45565e00ac9d59821920a38fb97cab032f24dafbb8d40b1"
+          },
+          {
+            "file": "env00002.obs",
+            "bytes": 202878449,
+            "sha256": "2ad9ca9636a8c12b800c36e72866eaad8ed3c6c9bc1b4de3f2e34f3359f09669"
+          },
+          {
+            "file": "env00003.obs",
+            "bytes": 200492373,
+            "sha256": "11abe5d3fc9e6514a70cad7b64baeb536d53edd7b9b522229961dea278535049"
+          },
+          {
+            "file": "env00004.obs",
+            "bytes": 202206778,
+            "sha256": "0bd8543e62a31dd21a5c6adc85b4c3e65f7125cdbdaace27a1b45d3faa5124fc"
+          },
+          {
+            "file": "env00005.obs",
+            "bytes": 199877066,
+            "sha256": "ea9c01a0ecf707c92ebb63d3c9f3b1a3d52b3697b475177443822ee4b5332152"
+          },
+          {
+            "file": "env00006.obs",
+            "bytes": 205842256,
+            "sha256": "b35c440fe21e7e76d345605e361c79e35f8f1767d86850598c95ea2ba298c028"
+          },
+          {
+            "file": "env00007.obs",
+            "bytes": 206772262,
+            "sha256": "548c4b11e149f425cd27ce4e79dfd11fb6fe7fb072d511d0cede9aa1d1c9edfa"
+          }
+        ]
+      }
+    ]
+  }
+]

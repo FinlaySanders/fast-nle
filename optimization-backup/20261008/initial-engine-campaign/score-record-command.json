@@ -1,0 +1,17 @@
+[
+  "/puffertank/experiments/nethack-perf-20260917/score/source/puffer",
+  "eval",
+  "--headless",
+  "--base.load_model_path=/puffertank/pufferlib/resources/nethack/fixwt4b_s705.bin",
+  "--policy.hidden_size=1024",
+  "--policy.num_layers=4",
+  "--env.multi_role=1",
+  "--env.mask_search20=0",
+  "--env.mask_run=0",
+  "--base.seed=7",
+  "--base.async=0",
+  "--vec.num_buffers=1",
+  "--base.eval_agents=512",
+  "--base.eval_episodes=14000",
+  "--vec.num_threads=24"
+]

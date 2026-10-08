@@ -1,0 +1,30 @@
+[
+  {
+    "command": [
+      "cc",
+      "-O2",
+      "-DNH_TLS_INITIAL_EXEC",
+      "-I/puffertank/experiments/nethack-perf-20260917/engine-glyph-simd/include",
+      "-I/puffertank/experiments/nethack-perf-20260917/engine-glyph-simd/build-lto-local/include",
+      "/puffertank/experiments/nethack-perf-20260917/floor_cursor_test.c",
+      "-L/puffertank/experiments/nethack-perf-20260917/variants/candidate14-lto-local",
+      "-Wl,-rpath,/puffertank/experiments/nethack-perf-20260917/variants/candidate14-lto-local",
+      "-lnethack",
+      "-o",
+      "/puffertank/experiments/nethack-perf-20260917/tight-loop/campaign2h/cursor14"
+    ],
+    "rc": 0,
+    "seconds": 0.08420562744140625,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "/puffertank/experiments/nethack-perf-20260917/tight-loop/campaign2h/cursor14"
+    ],
+    "rc": 0,
+    "seconds": 0.005442619323730469,
+    "stdout": "PASS 380292 cursor comparisons: ordered bounds, shrink, mutation continuation, empty and overflow\n",
+    "stderr": ""
+  }
+]

@@ -480,6 +480,14 @@ struct nh_ctx {
     boolean g_files_c_chosen_symset_start; /* files.c: chosen_symset_start */
     boolean g_files_c_chosen_symset_end; /* files.c: chosen_symset_end */
     boolean g_dlb_c_initialized; /* dlb.c: initialized */
+    unsigned long g_nh_fobj_generation; /* global: nh_fobj_generation */
+    int g_nh_fobj_valid; /* global: nh_fobj_valid */
+    int g_nh_fobj_count; /* global: nh_fobj_count */
+    short g_nh_fobj_x[2048]; /* global: nh_fobj_x */
+    short g_nh_fobj_y[2048]; /* global: nh_fobj_y */
+    struct obj * g_nh_fobj_ptr[2048]; /* global: nh_fobj_ptr */
+    unsigned char g_nh_track_near[COLNO][ROWNO]; /* global: nh_track_near */
+    unsigned char g_nh_no_hero_gold; /* global: nh_no_hero_gold */
     /* lazily-allocated per-env blobs whose types are private to one
      * .c file (e.g. options.c boolopt copy); freed by nh_ctx_free.
      * Slot assignments are documented at the allocation sites. */
@@ -641,5 +649,13 @@ void nh_ctx_fixup(struct nh_ctx *);
 #define nle_hero_path (nh_cur->g_nle_hero_path)
 #define nle_hero_path_n (nh_cur->g_nle_hero_path_n)
 #define symset_list (nh_cur->g_symset_list)
+#define nh_fobj_generation (nh_cur->g_nh_fobj_generation)
+#define nh_fobj_valid (nh_cur->g_nh_fobj_valid)
+#define nh_fobj_count (nh_cur->g_nh_fobj_count)
+#define nh_fobj_x (nh_cur->g_nh_fobj_x)
+#define nh_fobj_y (nh_cur->g_nh_fobj_y)
+#define nh_fobj_ptr (nh_cur->g_nh_fobj_ptr)
+#define nh_track_near (nh_cur->g_nh_track_near)
+#define nh_no_hero_gold (nh_cur->g_nh_no_hero_gold)
 
 #endif /* NH_CTX_GEN_H */

@@ -1,0 +1,22 @@
+--- a/src/env_pool.h
++++ b/src/env_pool.h
+@@ -26,6 +26,7 @@
+ };
+ 
+ static void ep_claim(EnvPool* p, EPRegion* r, int id) {
++    int completed = 0;
+     for (int k = 0; k < p->workers; k++) {
+         int home = (id + k) % p->workers;
+         for (;;) {
+@@ -33,9 +34,10 @@
+             int offset = home + n * p->workers;
+             if (offset >= r->count) break;
+             p->step(p->context, r->start + offset);
+-            __atomic_fetch_add(&r->done, 1, __ATOMIC_RELEASE);
++            completed++;
+         }
+     }
++    if (completed) __atomic_fetch_add(&r->done, completed, __ATOMIC_RELEASE);
+ }
+ 
+ static void* ep_worker(void* arg) {

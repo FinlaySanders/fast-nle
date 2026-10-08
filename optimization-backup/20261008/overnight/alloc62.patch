@@ -1,0 +1,47 @@
+--- a/include/monst.h
++++ b/include/monst.h
+@@ -172,7 +172,7 @@
+     struct mextra *mextra; /* point to mextra struct */
+ };
+ 
+-#define newmonst() (struct monst *) alloc(sizeof (struct monst))
++#define newmonst() (struct monst *) nh_mon_alloc(sizeof (struct monst))
+ 
+ /* these are in mspeed */
+ #define MSLOW 1 /* slowed monster */
+--- a/include/extern.h
++++ b/include/extern.h
+@@ -12,6 +12,7 @@
+ #if 0
+ E long *FDECL(alloc, (unsigned int));
+ #endif
++E long *FDECL(nh_mon_alloc, (unsigned int));
+ E char *FDECL(fmt_ptr, (const genericptr));
+ 
+ /* This next pre-processor directive covers almost the entire file,
+--- a/src/alloc.c
++++ b/src/alloc.c
+@@ -9,6 +9,7 @@
+    function declarations for all of nethack */
+ #define EXTERN_H /* comment line for pre-compiled headers */
+ #include "config.h"
++#include <stdlib.h>
+ 
+ char *FDECL(fmt_ptr, (const genericptr));
+ 
+@@ -50,6 +51,15 @@
+ #endif
+     return (long *) ptr;
+ #endif
++}
++
++long *
++nh_mon_alloc(unsigned int lth)
++{
++    void *ptr = aligned_alloc(64, ((size_t) lth + 63) & ~(size_t) 63);
++    if (!ptr)
++        panic("Monster allocation failure; cannot get %u bytes", lth);
++    return (long *) ptr;
+ }
+ 
+ #ifdef HAS_PTR_FMT

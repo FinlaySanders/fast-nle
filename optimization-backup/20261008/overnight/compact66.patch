@@ -1,0 +1,13 @@
+--- a/src/display.c
++++ b/src/display.c
+@@ -1507,8 +1507,9 @@
+ 
+ typedef struct {
+     xchar new; /* perhaps move this bit into the rm structure. */
+-    int glyph;
++    short glyph;
+ } gbuf_entry;
++_Static_assert(MAX_GLYPH < 32767, "glyph IDs must fit in signed short");
+ 
+ /* gbuf — per-env display buffer migrated to nle_ctx_t.
+  * ROWNO*COLNO entries; macro casts the flat allocation to a 2D pointer. */

@@ -1,0 +1,22 @@
+--- a/src/monmove.c
++++ b/src/monmove.c
+@@ -451,7 +451,8 @@
+         return 0; /* uses up monster's turn */
+     }
+ 
+-    set_apparxy(mtmp);
++    if (mtmp->mux != u.ux || mtmp->muy != u.uy)
++        set_apparxy(mtmp);
+     /* Must be done after you move and before the monster does.  The
+      * set_apparxy() call in m_move() doesn't suffice since the variables
+      * inrange, etc. all depend on stuff set by set_apparxy().
+@@ -917,7 +918,8 @@
+     if (hides_under(ptr) && OBJ_AT(mtmp->mx, mtmp->my) && rn2(10))
+         return 0; /* do not leave hiding place */
+ 
+-    set_apparxy(mtmp);
++    if (mtmp->mux != u.ux || mtmp->muy != u.uy)
++        set_apparxy(mtmp);
+     /* where does mtmp think you are? */
+     /* Not necessary if m_move called from this file, but necessary in
+      * other calls of m_move (ex. leprechauns dodging)

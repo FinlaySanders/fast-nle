@@ -1,0 +1,7 @@
+{
+  "cases": 1000,
+  "seed": 7391,
+  "source_sha256": "26efa5831451858d9cf649a5901a9e0a0f710d0b4d8b421951dd26c0fac022cf",
+  "library_sha256": "7bc216296e949f953c33164f268f47b1ea05cd2e2b764926fe972aae12ea2c36",
+  "scope": "native unsigned FNV matches Python for arbitrary initial hashes and byte arrays including empty"
+}

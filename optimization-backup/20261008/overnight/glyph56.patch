@@ -1,0 +1,14 @@
+--- a/src/display.c
++++ b/src/display.c
+@@ -1939,9 +1939,10 @@
+ nle_copy_glyphs(short *dst)
+ {
+     int x, y;
++    const gbuf_entry (*screen)[COLNO] = gbuf;
+     for (y = 0; y < ROWNO; y++)
+         for (x = 1; x < COLNO; x++)
+-            *dst++ = (short) gbuf[y][x].glyph;
++            *dst++ = (short) screen[y][x].glyph;
+ }
+ 
+ int
