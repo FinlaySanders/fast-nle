@@ -1,0 +1,27 @@
+[
+  {
+    "name": "globals",
+    "rc": 1,
+    "seconds": 0.0988912582397461
+  },
+  {
+    "name": "golden",
+    "rc": 1,
+    "seconds": 0.5143718719482422
+  },
+  {
+    "name": "interleaved",
+    "rc": 1,
+    "seconds": 0.5286269187927246
+  },
+  {
+    "name": "shuffled",
+    "rc": 1,
+    "seconds": 2.583824396133423
+  },
+  {
+    "name": "status",
+    "rc": 1,
+    "seconds": 0.48352980613708496
+  }
+]

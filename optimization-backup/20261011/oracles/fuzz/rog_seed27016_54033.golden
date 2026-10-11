@@ -1,0 +1,77 @@
+# fast-nle golden v1
+meta core=27016 disp=54033 reseed=0
+meta options=autopickup,color,disclose:+i +a +v +g +c +o,mention_walls,nobones,nocmdassist,nolegacy,nosparkle,pickup_burden:unencumbered,pickup_types:$?!/,runmode:teleport,showexp,showscore,time,name:Agent-rog-orc-cha-fem
+meta fix_moon_phase=1
+init 1e8fb3fa182e45d7
+step 110 a17dfb1c54082344
+step 106 57f155c6ec202cbe
+step 107 08e8494098bfc49a
+step 112 4f263d02bcff1cbc
+step 121 a2142fc575f6e7ff
+step 104 5929873189d1b470
+step 110 c9fc3123e75cdd8a
+step 106 7cdef39bc2df24fa
+step 70 7cdef39bc2df24fa
+step 62 52066205e22cdd32
+step 104 6da0fc13bd011e14
+step 115 dcc393e61c7911d0
+step 106 30d78d7382a79ecf
+step 46 18134a4421782b1c
+step 121 0d886ee9a346aeb6
+step 115 d93c277280cf05a7
+step 107 9a767f8372ce44a3
+step 117 13d6d1032e89647d
+step 110 3d1f6f01befbbd75
+step 110 69a6fb2609983362
+step 70 69a6fb2609983362
+step 104 e58d809c737c1649
+step 117 8a80c3f3e9ffd0c6
+step 69 791423a153d83035
+step 121 b68ea65590377265
+step 32 791423a153d83035
+step 27 da108d380d05ec56
+step 70 da108d380d05ec56
+step 115 fa26d44af59e5f4d
+step 106 397c92d0efd4dd8c
+step 117 cce801953def1113
+step 117 876ee06b46bbb54a
+step 108 4b4533cdb4113576
+step 121 c1c6d7769567207b
+step 110 6164cf875cbee99e
+step 104 fe8814bbef01f118
+step 107 1b9f9521d0c4907d
+step 106 321b7dd3a9bc0162
+step 84 70610a1580f29365
+step 32 395e06ca68ffbaab
+step 32 2b25433bdc7b98d8
+step 27 43fe90056d564611
+step 107 ef755cd34baabd57
+step 121 0c12c2776974288c
+step 107 b106f8eca1dd8546
+step 117 b106f8eca1dd8546
+step 98 26ebe5b02eaaa12c
+step 115 6dea5627ca380616
+step 107 72bdf9c268445c5f
+step 110 958eb5211207ba07
+step 46 e5ec3c5f72cba2c6
+step 115 577a1aede98e9987
+step 110 310f164bd2b2b3bd
+step 104 aa0ff5e171417960
+step 110 c934de1f57157a61
+step 115 57754915148a6b36
+step 104 bc2ec37fccde7efe
+step 121 5e93228bde4f9147
+step 44 09aabbd0b72e61f7
+step 4 12d2e9e945ad8b9c
+step 121 617551ee9553d7ad
+step 32 af3fe6c6783e2a78
+step 32 612f7cc5a4755615
+step 32 612f7cc5a4755615
+step 32 612f7cc5a4755615
+step 27 d7eb7857484ee7fb
+step 32 d7eb7857484ee7fb
+step 32 d7eb7857484ee7fb
+step 27 a2d5eaaced980af7
+step 32 a2d5eaaced980af7
+step 32 a2d5eaaced980af7
+end done
