@@ -1,0 +1,91 @@
+--- /puffertank/pufferlib/ocean/nethack/nethack.h	2026-09-17 22:15:25.496608277 +0000
++++ /puffertank/experiments/nethack-engine-scaling-20261010/harness_incpack/source/ocean/nethack/nethack.h	2026-10-10 13:29:01.335447013 +0000
+@@ -28,6 +28,7 @@
+ extern nle_ctx_t* nle_start(nle_obs*, FILE*, nle_settings*);
+ extern nle_ctx_t* nle_step(nle_ctx_t*, nle_obs*);
+ extern nle_ctx_t* nle_obs_refresh(nle_ctx_t*, nle_obs*);
++extern unsigned nle_glyph_dirty_rows(void); // rows rewritten by the last full fill (bit y)
+ extern int nle_path_drain(nle_ctx_t*, short*, int);
+ extern long nle_shop_price(nle_ctx_t*);
+ extern int nle_terrain_underfoot(nle_ctx_t*);
+@@ -117,6 +118,7 @@
+     unsigned long long engid_tested; // letters engrave-tested this episode
+     unsigned short obj_mem[NH_GRID]; // v3: remembered floor object (item row+1; 0 none)
+     unsigned terr_floor; // dnum<<8|dlevel the memory belongs to
++    unsigned long long mon_bits[2 * NH_ROWS], it_bits[2 * NH_ROWS]; // per-row cell masks (lo, hi): monster glyph / remembered object
+ 
+     // reward coefs
+     float gold_coef;
+@@ -631,31 +633,57 @@
+     }
+     { // typed level planes: floor-object memory, two token lists
+         unsigned fl = (unsigned)((env->blstats[NLE_BL_DNUM] << 8) | env->blstats[NLE_BL_DLEVEL]);
++        unsigned dirty = nle_glyph_dirty_rows(); // only these rows changed since the last pack
+         if (fl != env->terr_floor) {
+             memset(env->obj_mem, 0, sizeof(env->obj_mem));
+             env->terr_floor = fl;
++            dirty = ~0u;
+         }
+         long hx = env->blstats[NLE_BL_X], hy = env->blstats[NLE_BL_Y];
+         int mon_cell[256], mon_g[256], nmon = 0;
+         int it_cell[256], nit = 0; // cells with a remembered object, in cell order (first 256)
+         long hero_cell = (hx >= 0 && hx < NH_COLS && hy >= 0 && hy < NH_ROWS) ? hy * NH_COLS + hx : -1;
+-        for (int cell = 0; cell < NH_GRID; cell++) {
+-            int g = env->glyphs[cell];
+-            if (g >= NETHACK_GLYPH_CMAP_OFF && g < NETHACK_GLYPH_CMAP_OFF + 96) {
+-                if (env->obj_mem[cell]) env->obj_mem[cell] = 0; // bare floor shown: no object here
+-            } else if (g >= NETHACK_GLYPH_OBJ_LO && g < NETHACK_GLYPH_OBJ_HI) {
+-                unsigned short nv = (unsigned short)(g - NETHACK_GLYPH_OBJ_LO + 1);
+-                if (env->obj_mem[cell] != nv) env->obj_mem[cell] = nv;
+-            } else if (g >= NETHACK_GLYPH_BODY_OFF && g < NETHACK_GLYPH_BODY_HI) {
+-                unsigned short nv = (unsigned short)(g - NETHACK_GLYPH_BODY_OFF + 454);
+-                if (env->obj_mem[cell] != nv) env->obj_mem[cell] = nv;
+-            } else if (g >= 0 && g < NETHACK_GLYPH_BODY_OFF && cell != hero_cell
+-                       && nmon < 256) { // monsters, pets and detected alike
+-                mon_cell[nmon] = cell; mon_g[nmon] = g; nmon++;
+-                // monster on top: obj_mem stays as last seen
++        // per-cell update on changed rows only (idempotent for unchanged glyphs), keeping row-major
++        // bitmasks of monster-glyph cells and remembered-object cells
++        for (int row = 0; row < NH_ROWS; row++) {
++            if (!(dirty & (1u << row))) continue;
++            unsigned long long mlo = 0, mhi = 0, ilo = 0, ihi = 0;
++            for (int col = 0; col < NH_COLS; col++) {
++                int cell = row * NH_COLS + col;
++                int g = env->glyphs[cell];
++                if (g >= NETHACK_GLYPH_CMAP_OFF && g < NETHACK_GLYPH_CMAP_OFF + 96) {
++                    if (env->obj_mem[cell]) env->obj_mem[cell] = 0; // bare floor shown: no object here
++                } else if (g >= NETHACK_GLYPH_OBJ_LO && g < NETHACK_GLYPH_OBJ_HI) {
++                    unsigned short nv = (unsigned short)(g - NETHACK_GLYPH_OBJ_LO + 1);
++                    if (env->obj_mem[cell] != nv) env->obj_mem[cell] = nv;
++                } else if (g >= NETHACK_GLYPH_BODY_OFF && g < NETHACK_GLYPH_BODY_HI) {
++                    unsigned short nv = (unsigned short)(g - NETHACK_GLYPH_BODY_OFF + 454);
++                    if (env->obj_mem[cell] != nv) env->obj_mem[cell] = nv;
++                } else if (g >= 0 && g < NETHACK_GLYPH_BODY_OFF) { // monsters, pets, detected and the hero
++                    if (col < 64) mlo |= 1ull << col; else mhi |= 1ull << (col - 64);
++                    // monster on top: obj_mem stays as last seen
++                }
++                if (env->obj_mem[cell]) { if (col < 64) ilo |= 1ull << col; else ihi |= 1ull << (col - 64); }
+             }
+-            if (env->obj_mem[cell] && nit < 256) it_cell[nit++] = cell;
++            env->mon_bits[2 * row] = mlo; env->mon_bits[2 * row + 1] = mhi;
++            env->it_bits[2 * row] = ilo; env->it_bits[2 * row + 1] = ihi;
+         }
++        for (int row = 0; row < NH_ROWS; row++) // gather in cell order, same caps as the full pass
++            for (int half = 0; half < 2; half++) {
++                unsigned long long m = env->mon_bits[2 * row + half];
++                while (m) {
++                    int cell = row * NH_COLS + half * 64 + __builtin_ctzll(m); m &= m - 1;
++                    if (cell != hero_cell && nmon < 256) { mon_cell[nmon] = cell; mon_g[nmon] = env->glyphs[cell]; nmon++; }
++                }
++            }
++        for (int row = 0; row < NH_ROWS; row++)
++            for (int half = 0; half < 2; half++) {
++                unsigned long long m = env->it_bits[2 * row + half];
++                while (m) {
++                    int cell = row * NH_COLS + half * 64 + __builtin_ctzll(m); m &= m - 1;
++                    if (nit < 256) it_cell[nit++] = cell;
++                }
++            }
+         // lean token block: lists only, memory planes stay env-internal
+         unsigned char* mp = ((obs_t*)env->agents[0].observations) + NETHACK_OFF_TOKM;
+         // monster tokens: K nearest by Chebyshev (selection sort)

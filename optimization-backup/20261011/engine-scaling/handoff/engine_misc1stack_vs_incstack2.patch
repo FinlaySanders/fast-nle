@@ -1,0 +1,2421 @@
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/include/hack.h /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/include/hack.h
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/include/hack.h	2026-10-10 14:50:16.077130438 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/include/hack.h	2026-10-10 19:21:49.243386501 +0000
+@@ -493,6 +493,10 @@
+      - min((int) greatest_erosion(obj), object_defaults[(obj)->otyp].a_ac))
+ 
+ #define makeknown(x) discover_object((x), TRUE, TRUE)
++/* inventory-weight cache (hack.c inv_weight): invalidate when the hero's top-level inventory changes */
++#define nh_invwt_dirty() ((void) (nh_invwt_valid = 0))
++#define nh_deepest_dirty() ((void) (nh_deepest_valid = 0))
++#define nh_set_owt(o) ((o)->owt = weight(o), ((o)->where == OBJ_INVENT ? nh_invwt_dirty() : (void) 0))
+ #define distu(xx, yy) dist2((int)(xx), (int)(yy), (int) u.ux, (int) u.uy)
+ #define onlineu(xx, yy) online2((int)(xx), (int)(yy), (int) u.ux, (int) u.uy)
+ 
+@@ -612,6 +616,8 @@
+ extern void NDECL(nh_typ_sync);
+ struct nh_fobj_cursor { unsigned long generation; int index, fallback; unsigned int mask; int base, lx, hx, ly, hy; };
+ extern void NDECL(nh_fobj_invalidate);
++extern void FDECL(nh_fobj_placed, (struct obj *));
++extern void FDECL(nh_fobj_removed, (struct obj *));
+ extern struct obj *FDECL(nh_fobj_next, (struct nh_fobj_cursor *, struct obj *, int, int, int, int));
+ extern void FDECL(nh_typ_verify, (const char *));
+ 
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/include/nh_ctx_files/botl_c.h /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/include/nh_ctx_files/botl_c.h
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/include/nh_ctx_files/botl_c.h	2026-10-09 18:12:39.969925391 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/include/nh_ctx_files/botl_c.h	2026-10-10 19:21:49.276397298 +0000
+@@ -4,11 +4,11 @@
+  * Include ONLY from botl.c, after hack.h. */
+ #ifndef NH_CTX_FILE_BOTL_C_H
+ #define NH_CTX_FILE_BOTL_C_H
+-#define strength_buf (nh_cur->g_botl_c_strength_buf)
+-#define blinit (nh_cur->g_botl_c_blinit)
+-#define update_all (nh_cur->g_botl_c_update_all)
+ #define valset (nh_cur->g_botl_c_valset)
++#define update_all (nh_cur->g_botl_c_update_all)
++#define blinit (nh_cur->g_botl_c_blinit)
+ #define bl_hilite_moves (nh_cur->g_botl_c_bl_hilite_moves)
++#define strength_buf (nh_cur->g_botl_c_strength_buf)
+ #define cond_hilites (nh_cur->g_botl_c_cond_hilites)
+ #define now_or_before_idx (nh_cur->g_botl_c_now_or_before_idx)
+ #define status_hilite_str_id (nh_cur->g_botl_c_status_hilite_str_id)
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/include/nh_ctx_files/cmd_c.h /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/include/nh_ctx_files/cmd_c.h
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/include/nh_ctx_files/cmd_c.h	2026-10-09 18:12:39.970001123 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/include/nh_ctx_files/cmd_c.h	2026-10-10 19:21:49.276416316 +0000
+@@ -4,16 +4,16 @@
+  * Include ONLY from cmd.c, after hack.h. */
+ #ifndef NH_CTX_FILE_CMD_C_H
+ #define NH_CTX_FILE_CMD_C_H
+-#define alt_esc (nh_cur->g_cmd_c_alt_esc)
+-#define timed_occ_fn (nh_cur->g_cmd_c_timed_occ_fn)
+-#define pushq (nh_cur->g_cmd_c_pushq)
+-#define saveq (nh_cur->g_cmd_c_saveq)
+ #define phead (nh_cur->g_cmd_c_phead)
+ #define ptail (nh_cur->g_cmd_c_ptail)
+ #define shead (nh_cur->g_cmd_c_shead)
+ #define stail (nh_cur->g_cmd_c_stail)
++#define pushq (nh_cur->g_cmd_c_pushq)
++#define saveq (nh_cur->g_cmd_c_saveq)
++#define readchar_queue (nh_cur->g_cmd_c_readchar_queue)
++#define alt_esc (nh_cur->g_cmd_c_alt_esc)
++#define timed_occ_fn (nh_cur->g_cmd_c_timed_occ_fn)
+ #define en_win (nh_cur->g_cmd_c_en_win)
+ #define en_via_menu (nh_cur->g_cmd_c_en_via_menu)
+-#define readchar_queue (nh_cur->g_cmd_c_readchar_queue)
+ #define travelcmd (nh_cur->g_cmd_c_travelcmd)
+ #endif /* NH_CTX_FILE_CMD_C_H */
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/include/nh_ctx_files/display_c.h /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/include/nh_ctx_files/display_c.h
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/include/nh_ctx_files/display_c.h	2026-10-09 18:12:39.970158712 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/include/nh_ctx_files/display_c.h	2026-10-10 19:21:49.276466974 +0000
+@@ -4,19 +4,19 @@
+  * Include ONLY from display.c, after hack.h. */
+ #ifndef NH_CTX_FILE_DISPLAY_C_H
+ #define NH_CTX_FILE_DISPLAY_C_H
++#define flushing (nh_cur->g_display_c_flushing)
++#define delay_flushing (nh_cur->g_display_c_delay_flushing)
++#define in_cls (nh_cur->g_display_c_in_cls)
++#define nul_gbuf_new (nh_cur->g_display_c_nul_gbuf_new)
++#define nul_gbuf_glyph (nh_cur->g_display_c_nul_gbuf_glyph)
+ #define gbuf_start (nh_cur->g_display_c_gbuf_start)
+ #define gbuf_stop (nh_cur->g_display_c_gbuf_stop)
+ #define bad_count (nh_cur->g_display_c_bad_count)
+ #define tglyph_p (nh_cur->g_display_c_tglyph_p)
+-#define in_cls (nh_cur->g_display_c_in_cls)
+-#define flushing (nh_cur->g_display_c_flushing)
+-#define delay_flushing (nh_cur->g_display_c_delay_flushing)
+ #define swallowed_lastx (nh_cur->g_display_c_swallowed_lastx)
+ #define swallowed_lasty (nh_cur->g_display_c_swallowed_lasty)
+ #define under_water_lastx (nh_cur->g_display_c_under_water_lastx)
+ #define under_water_lasty (nh_cur->g_display_c_under_water_lasty)
+ #define under_water_dela (nh_cur->g_display_c_under_water_dela)
+ #define under_ground_dela (nh_cur->g_display_c_under_ground_dela)
+-#define nul_gbuf_new (nh_cur->g_display_c_nul_gbuf_new)
+-#define nul_gbuf_glyph (nh_cur->g_display_c_nul_gbuf_glyph)
+ #endif /* NH_CTX_FILE_DISPLAY_C_H */
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/include/nh_ctx_files/drawing_c.h /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/include/nh_ctx_files/drawing_c.h
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/include/nh_ctx_files/drawing_c.h	2026-10-09 18:12:39.970628555 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/include/nh_ctx_files/drawing_c.h	2026-10-10 19:21:49.276766841 +0000
+@@ -4,9 +4,9 @@
+  * Include ONLY from drawing.c, after hack.h. */
+ #ifndef NH_CTX_FILE_DRAWING_C_H
+ #define NH_CTX_FILE_DRAWING_C_H
++#define showsyms (nh_cur->g_drawing_c_showsyms)
+ #define currentgraphics (nh_cur->g_drawing_c_currentgraphics)
+ #define symset_store (nh_cur->g_drawing_c_symset_store)
+-#define showsyms (nh_cur->g_drawing_c_showsyms)
+ #define primary_syms (nh_cur->g_drawing_c_primary_syms)
+ #define rogue_syms (nh_cur->g_drawing_c_rogue_syms)
+ #define ov_primary_syms (nh_cur->g_drawing_c_ov_primary_syms)
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/include/nh_ctx_files/hack_c.h /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/include/nh_ctx_files/hack_c.h
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/include/nh_ctx_files/hack_c.h	2026-10-09 18:12:39.971217951 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/include/nh_ctx_files/hack_c.h	2026-10-10 19:21:49.276941266 +0000
+@@ -4,15 +4,15 @@
+  * Include ONLY from hack.c, after hack.h. */
+ #ifndef NH_CTX_FILE_HACK_C_H
+ #define NH_CTX_FILE_HACK_C_H
+-#define domove_skates (nh_cur->g_hack_c_domove_skates)
+-#define in_rooms_buf (nh_cur->g_hack_c_in_rooms_buf)
+-#define inspoteffects (nh_cur->g_hack_c_inspoteffects)
+-#define moverock_lastmovetime (nh_cur->g_hack_c_moverock_lastmovetime)
+ #define spotloc_x (nh_cur->g_hack_c_spotloc_x)
+ #define spotloc_y (nh_cur->g_hack_c_spotloc_y)
+ #define spotterrain (nh_cur->g_hack_c_spotterrain)
+ #define spottrap (nh_cur->g_hack_c_spottrap)
+ #define spottraptyp (nh_cur->g_hack_c_spottraptyp)
+-#define tmp_anything_p (nh_cur->g_hack_c_tmp_anything_p)
+ #define wc (nh_cur->g_hack_c_wc)
++#define moverock_lastmovetime (nh_cur->g_hack_c_moverock_lastmovetime)
++#define inspoteffects (nh_cur->g_hack_c_inspoteffects)
++#define domove_skates (nh_cur->g_hack_c_domove_skates)
++#define in_rooms_buf (nh_cur->g_hack_c_in_rooms_buf)
++#define tmp_anything_p (nh_cur->g_hack_c_tmp_anything_p)
+ #endif /* NH_CTX_FILE_HACK_C_H */
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/include/nh_ctx_files/mon_c.h /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/include/nh_ctx_files/mon_c.h
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/include/nh_ctx_files/mon_c.h	2026-10-09 18:12:39.972039301 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/include/nh_ctx_files/mon_c.h	2026-10-10 19:21:49.278154074 +0000
+@@ -5,8 +5,8 @@
+ #ifndef NH_CTX_FILE_MON_C_H
+ #define NH_CTX_FILE_MON_C_H
+ #define mon_pool (nh_cur->g_mon_c_mon_pool)
+-#define animal_list_count (nh_cur->g_mon_c_animal_list_count)
+ #define disintegested (nh_cur->g_mon_c_disintegested)
++#define animal_list_count (nh_cur->g_mon_c_animal_list_count)
+ #define elemental_clog_msgmv (nh_cur->g_mon_c_elemental_clog_msgmv)
+ #define vamp_rise_msg (nh_cur->g_mon_c_vamp_rise_msg)
+ #endif /* NH_CTX_FILE_MON_C_H */
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/include/nh_ctx_files/rnd_c.h /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/include/nh_ctx_files/rnd_c.h
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/include/nh_ctx_files/rnd_c.h	2026-10-09 18:12:39.973105057 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/include/nh_ctx_files/rnd_c.h	2026-10-10 19:21:49.279552767 +0000
+@@ -4,7 +4,7 @@
+  * Include ONLY from rnd.c, after hack.h. */
+ #ifndef NH_CTX_FILE_RND_C_H
+ #define NH_CTX_FILE_RND_C_H
++#define rn2disprng_seed (nh_cur->g_rnd_c_rn2disprng_seed)
+ #define rng_state (nh_cur->g_rnd_c_rng_state)
+ #define rng_init (nh_cur->g_rnd_c_rng_init)
+-#define rn2disprng_seed (nh_cur->g_rnd_c_rn2disprng_seed)
+ #endif /* NH_CTX_FILE_RND_C_H */
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/include/nh_ctx_files/trap_c.h /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/include/nh_ctx_files/trap_c.h
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/include/nh_ctx_files/trap_c.h	2026-10-09 18:12:39.973853267 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/include/nh_ctx_files/trap_c.h	2026-10-10 19:21:49.281108571 +0000
+@@ -4,7 +4,7 @@
+  * Include ONLY from trap.c, after hack.h. */
+ #ifndef NH_CTX_FILE_TRAP_C_H
+ #define NH_CTX_FILE_TRAP_C_H
+-#define tnbuf (nh_cur->g_trap_c_tnbuf)
+ #define force_mintrap (nh_cur->g_trap_c_force_mintrap)
+ #define recursive_mine (nh_cur->g_trap_c_recursive_mine)
++#define tnbuf (nh_cur->g_trap_c_tnbuf)
+ #endif /* NH_CTX_FILE_TRAP_C_H */
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/include/nh_ctx_files/vision_c.h /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/include/nh_ctx_files/vision_c.h
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/include/nh_ctx_files/vision_c.h	2026-10-09 18:12:39.973947376 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/include/nh_ctx_files/vision_c.h	2026-10-10 19:21:49.281140903 +0000
+@@ -4,19 +4,6 @@
+  * Include ONLY from vision.c, after hack.h. */
+ #ifndef NH_CTX_FILE_VISION_C_H
+ #define NH_CTX_FILE_VISION_C_H
+-#define could_see (nh_cur->g_vision_c_could_see)
+-#define viz_clear (nh_cur->g_vision_c_viz_clear)
+-#define left_ptrs (nh_cur->g_vision_c_left_ptrs)
+-#define right_ptrs (nh_cur->g_vision_c_right_ptrs)
+-#define viz_clear_rows (nh_cur->g_vision_c_viz_clear_rows)
+-#define cs_rows0 (nh_cur->g_vision_c_cs_rows0)
+-#define cs_rows1 (nh_cur->g_vision_c_cs_rows1)
+-#define cs_rmin0 (nh_cur->g_vision_c_cs_rmin0)
+-#define cs_rmax0 (nh_cur->g_vision_c_cs_rmax0)
+-#define cs_rmin1 (nh_cur->g_vision_c_cs_rmin1)
+-#define cs_rmax1 (nh_cur->g_vision_c_cs_rmax1)
+-#define viz_rmin (nh_cur->g_vision_c_viz_rmin)
+-#define viz_rmax (nh_cur->g_vision_c_viz_rmax)
+ #define vis_start_row (nh_cur->g_vision_c_vis_start_row)
+ #define vis_start_col (nh_cur->g_vision_c_vis_start_col)
+ #define vis_step (nh_cur->g_vision_c_vis_step)
+@@ -26,5 +13,18 @@
+ #define vis_func (nh_cur->g_vision_c_vis_func)
+ #define vis_varg (nh_cur->g_vision_c_vis_varg)
+ #define vision_recur_depth (nh_cur->g_vision_c_vision_recur_depth)
++#define viz_rmin (nh_cur->g_vision_c_viz_rmin)
++#define viz_rmax (nh_cur->g_vision_c_viz_rmax)
++#define viz_clear_rows (nh_cur->g_vision_c_viz_clear_rows)
++#define cs_rows0 (nh_cur->g_vision_c_cs_rows0)
++#define cs_rows1 (nh_cur->g_vision_c_cs_rows1)
++#define cs_rmin0 (nh_cur->g_vision_c_cs_rmin0)
++#define cs_rmax0 (nh_cur->g_vision_c_cs_rmax0)
++#define cs_rmin1 (nh_cur->g_vision_c_cs_rmin1)
++#define cs_rmax1 (nh_cur->g_vision_c_cs_rmax1)
+ #define vision_colbump (nh_cur->g_vision_c_vision_colbump)
++#define could_see (nh_cur->g_vision_c_could_see)
++#define viz_clear (nh_cur->g_vision_c_viz_clear)
++#define left_ptrs (nh_cur->g_vision_c_left_ptrs)
++#define right_ptrs (nh_cur->g_vision_c_right_ptrs)
+ #endif /* NH_CTX_FILE_VISION_C_H */
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/include/nh_ctx_gen.h /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/include/nh_ctx_gen.h
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/include/nh_ctx_gen.h	2026-10-09 18:12:39.969522279 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/include/nh_ctx_gen.h	2026-10-10 19:21:49.276238878 +0000
+@@ -9,18 +9,84 @@
+      * per-step working set spans the fewest cache lines. */
+     /* --- hot --- */
+     long g_moves; /* global: moves */
++    int g_nh_invwt_valid; /* global: nh_invwt_valid */
++    long g_nh_invwt_nb; /* global: nh_invwt_nb */
++    long g_nh_invwt_boulder; /* global: nh_invwt_boulder */
+     long g_monstermoves; /* global: monstermoves */
+     int g_multi; /* global: multi */
+-    schar g_nh_typ_plane[COLNO][ROWNO]; /* global: nh_typ_plane */
+-    boolean g_vision_full_recalc; /* global: vision_full_recalc */
+-    char ** g_viz_array; /* global: viz_array */
+     struct sinfo g_program_state; /* global: program_state */
+     int (*g_occupation)(void); /* global: occupation */
+     int (*g_afternmv)(void); /* global: afternmv */
+-    char g_vision_c_could_see[2][ROWNO][COLNO]; /* vision.c: could_see */
+-    char g_vision_c_viz_clear[ROWNO][COLNO]; /* vision.c: viz_clear */
+-    char g_vision_c_left_ptrs[ROWNO][COLNO]; /* vision.c: left_ptrs */
+-    char g_vision_c_right_ptrs[ROWNO][COLNO]; /* vision.c: right_ptrs */
++    boolean g_vision_full_recalc; /* global: vision_full_recalc */
++    int g_xwaitingforspace; /* global: xwaitingforspace */
++    coord g_bhitpos; /* global: bhitpos */
++    struct u_realtime g_urealtime; /* global: urealtime */
++    struct obj * g_invent; /* global: invent */
++    struct trap * g_ftrap; /* global: ftrap */
++    struct obj * g_migrating_objs; /* global: migrating_objs */
++    void * g_light_c_light_base; /* light.c: light_base */
++    void * g_timeout_c_timer_base; /* timeout.c: timer_base */
++    unsigned long g_timeout_c_timer_id; /* timeout.c: timer_id */
++    struct engr * g_engrave_c_head_engr; /* engrave.c: head_engr */
++    void * g_region_c_regions_p; /* region.c: regions_p */
++    int g_region_c_n_regions; /* region.c: n_regions */
++    int g_dungeon_c_n_dgns; /* dungeon.c: n_dgns */
++    void * g_mon_c_mon_pool; /* mon.c: mon_pool */
++    boolean g_mon_c_disintegested; /* mon.c: disintegested */
++    schar g_hack_c_spotloc_x; /* hack.c: spotloc_x */
++    schar g_hack_c_spotloc_y; /* hack.c: spotloc_y */
++    int g_hack_c_spotterrain; /* hack.c: spotterrain */
++    struct trap * g_hack_c_spottrap; /* hack.c: spottrap */
++    unsigned g_hack_c_spottraptyp; /* hack.c: spottraptyp */
++    int g_hack_c_wc; /* hack.c: wc */
++    long g_hack_c_moverock_lastmovetime; /* hack.c: moverock_lastmovetime */
++    int g_hack_c_inspoteffects; /* hack.c: inspoteffects */
++    int g_hack_c_domove_skates; /* hack.c: domove_skates */
++    char g_hack_c_in_rooms_buf[5]; /* hack.c: in_rooms_buf */
++    schar g_dogmove_c_gtyp; /* dogmove.c: gtyp */
++    schar g_dogmove_c_gx; /* dogmove.c: gx */
++    schar g_dogmove_c_gy; /* dogmove.c: gy */
++    int g_mhitu_c_dieroll; /* mhitu.c: dieroll */
++    struct obj * g_mhitu_c_mon_currwep; /* mhitu.c: mon_currwep */
++    struct obj * g_weapon_c_propellor; /* weapon.c: propellor */
++    int g_trap_c_force_mintrap; /* trap.c: force_mintrap */
++    boolean g_trap_c_recursive_mine; /* trap.c: recursive_mine */
++    unsigned g_rnd_c_rn2disprng_seed; /* rnd.c: rn2disprng_seed */
++    int g_display_c_flushing; /* display.c: flushing */
++    int g_display_c_delay_flushing; /* display.c: delay_flushing */
++    boolean g_display_c_in_cls; /* display.c: in_cls */
++    int g_display_c_nul_gbuf_new; /* display.c: nul_gbuf_new */
++    int g_display_c_nul_gbuf_glyph; /* display.c: nul_gbuf_glyph */
++    char g_display_c_gbuf_start[ROWNO]; /* display.c: gbuf_start */
++    char g_display_c_gbuf_stop[ROWNO]; /* display.c: gbuf_stop */
++    boolean g_botl_c_valset[23]; /* botl.c: valset */
++    boolean g_botl_c_update_all; /* botl.c: update_all */
++    boolean g_botl_c_blinit; /* botl.c: blinit */
++    long g_botl_c_bl_hilite_moves; /* botl.c: bl_hilite_moves */
++    int g_cmd_c_phead; /* cmd.c: phead */
++    int g_cmd_c_ptail; /* cmd.c: ptail */
++    int g_cmd_c_shead; /* cmd.c: shead */
++    int g_cmd_c_stail; /* cmd.c: stail */
++    char g_cmd_c_pushq[20]; /* cmd.c: pushq */
++    char g_cmd_c_saveq[20]; /* cmd.c: saveq */
++    const char * g_cmd_c_readchar_queue; /* cmd.c: readchar_queue */
++    int g_cmd_c_alt_esc; /* cmd.c: alt_esc */
++    int (*g_cmd_c_timed_occ_fn)(void); /* cmd.c: timed_occ_fn */
++    int g_track_c_utcnt; /* track.c: utcnt */
++    int g_track_c_utpnt; /* track.c: utpnt */
++    coord g_track_c_utrack[50]; /* track.c: utrack */
++    int g_vision_c_vis_start_row; /* vision.c: vis_start_row */
++    int g_vision_c_vis_start_col; /* vision.c: vis_start_col */
++    int g_vision_c_vis_step; /* vision.c: vis_step */
++    char ** g_vision_c_vis_cs_rows; /* vision.c: vis_cs_rows */
++    char * g_vision_c_vis_cs_left; /* vision.c: vis_cs_left */
++    char * g_vision_c_vis_cs_right; /* vision.c: vis_cs_right */
++    void (*g_vision_c_vis_func)(); /* vision.c: vis_func */
++    void * g_vision_c_vis_varg; /* vision.c: vis_varg */
++    int g_vision_c_vision_recur_depth; /* vision.c: vision_recur_depth */
++    char ** g_viz_array; /* global: viz_array */
++    char * g_vision_c_viz_rmin; /* vision.c: viz_rmin */
++    char * g_vision_c_viz_rmax; /* vision.c: viz_rmax */
+     char * g_vision_c_viz_clear_rows[ROWNO]; /* vision.c: viz_clear_rows */
+     char * g_vision_c_cs_rows0[ROWNO]; /* vision.c: cs_rows0 */
+     char * g_vision_c_cs_rows1[ROWNO]; /* vision.c: cs_rows1 */
+@@ -28,18 +94,32 @@
+     char g_vision_c_cs_rmax0[ROWNO]; /* vision.c: cs_rmax0 */
+     char g_vision_c_cs_rmin1[ROWNO]; /* vision.c: cs_rmin1 */
+     char g_vision_c_cs_rmax1[ROWNO]; /* vision.c: cs_rmax1 */
+-    char * g_vision_c_viz_rmin; /* vision.c: viz_rmin */
+-    char * g_vision_c_viz_rmax; /* vision.c: viz_rmax */
+-    char g_display_c_gbuf_start[ROWNO]; /* display.c: gbuf_start */
+-    char g_display_c_gbuf_stop[ROWNO]; /* display.c: gbuf_stop */
+-    int g_xwaitingforspace; /* global: xwaitingforspace */
++    struct you g_u; /* global: u */
++    struct monst g_youmonst; /* global: youmonst */
++    struct flag g_flags; /* global: flags */
++    struct instance_flags g_iflags; /* global: iflags */
++    struct context_info g_context; /* global: context */
++    dungeon g_dungeons[MAXDUNGEON]; /* global: dungeons */
++    unsigned char g_vision_c_vision_colbump[COLNO + 1]; /* vision.c: vision_colbump */
++    unsigned char g_nh_track_near[COLNO][ROWNO]; /* global: nh_track_near */
++    schar g_nh_typ_plane[COLNO][ROWNO]; /* global: nh_typ_plane */
++    char g_vision_c_could_see[2][ROWNO][COLNO]; /* vision.c: could_see */
++    char g_vision_c_viz_clear[ROWNO][COLNO]; /* vision.c: viz_clear */
++    char g_vision_c_left_ptrs[ROWNO][COLNO]; /* vision.c: left_ptrs */
++    char g_vision_c_right_ptrs[ROWNO][COLNO]; /* vision.c: right_ptrs */
++    nhsym g_drawing_c_showsyms[SYM_MAX]; /* drawing.c: showsyms */
+     isaac64_ctx g_rnd_c_rng_state[2]; /* rnd.c: rng_state */
+     int g_rnd_c_rng_init[2]; /* rnd.c: rng_init */
+-    nhsym g_drawing_c_showsyms[SYM_MAX]; /* drawing.c: showsyms */
++    unsigned long g_nh_invgen; /* global: nh_invgen */
++    unsigned long g_nh_hgold_gen; /* global: nh_hgold_gen */
++    long g_nh_hgold_val; /* global: nh_hgold_val */
++    unsigned long g_nh_leash_gen; /* global: nh_leash_gen */
++    unsigned char g_nh_hgold_valid; /* global: nh_hgold_valid */
++    unsigned char g_nh_leash_valid; /* global: nh_leash_valid */
++    unsigned char g_nh_leash_cnt; /* global: nh_leash_cnt */
++    unsigned char g_nh_deepest_valid; /* global: nh_deepest_valid */
++    schar g_nh_deepest_val[2]; /* global: nh_deepest_val */
+     /* --- cold --- */
+-    int g_track_c_utcnt; /* track.c: utcnt */
+-    int g_track_c_utpnt; /* track.c: utpnt */
+-    coord g_track_c_utrack[50]; /* track.c: utrack */
+     const char * g_hname; /* global: hname */
+     int g_hackpid; /* global: hackpid */
+     int g_locknum; /* global: locknum */
+@@ -75,7 +155,6 @@
+     schar g_tbx; /* global: tbx */
+     schar g_tby; /* global: tby */
+     struct multishot g_m_shot; /* global: m_shot */
+-    dungeon g_dungeons[MAXDUNGEON]; /* global: dungeons */
+     s_level * g_sp_levchn; /* global: sp_levchn */
+     stairway g_upstair; /* global: upstair */
+     stairway g_dnstair; /* global: dnstair */
+@@ -92,7 +171,6 @@
+     boolean g_mrg_to_wielded; /* global: mrg_to_wielded */
+     boolean g_in_steed_dismounting; /* global: in_steed_dismounting */
+     boolean g_has_strong_rngseed; /* global: has_strong_rngseed */
+-    coord g_bhitpos; /* global: bhitpos */
+     coord g_doors[DOORMAX]; /* global: doors */
+     struct mkroom g_rooms[(MAXNROFROOMS + 1) * 2]; /* global: rooms */
+     struct mkroom * g_subrooms; /* global: subrooms */
+@@ -100,16 +178,8 @@
+     struct mkroom * g_dnstairs_room; /* global: dnstairs_room */
+     struct mkroom * g_sstairs_room; /* global: sstairs_room */
+     dlevel_t g_level; /* global: level */
+-    struct trap * g_ftrap; /* global: ftrap */
+-    struct monst g_youmonst; /* global: youmonst */
+-    struct context_info g_context; /* global: context */
+-    struct flag g_flags; /* global: flags */
+-    struct instance_flags g_iflags; /* global: iflags */
+-    struct you g_u; /* global: u */
+     time_t g_ubirthday; /* global: ubirthday */
+-    struct u_realtime g_urealtime; /* global: urealtime */
+     schar g_lastseentyp[COLNO][ROWNO]; /* global: lastseentyp */
+-    struct obj * g_invent; /* global: invent */
+     struct obj * g_uwep; /* global: uwep */
+     struct obj * g_uarm; /* global: uarm */
+     struct obj * g_uswapwep; /* global: uswapwep */
+@@ -132,7 +202,6 @@
+     struct obj * g_kickedobj; /* global: kickedobj */
+     struct spell g_spl_book[MAXSPELL + 1]; /* global: spl_book */
+     long g_wailmsg; /* global: wailmsg */
+-    struct obj * g_migrating_objs; /* global: migrating_objs */
+     struct obj * g_billobjs; /* global: billobjs */
+     char g_dogname[PL_PSIZ]; /* global: dogname */
+     char g_catname[PL_PSIZ]; /* global: catname */
+@@ -160,32 +229,9 @@
+     short g_options_c_n_menu_mapped; /* options.c: n_menu_mapped */
+     char g_attrib_c_from_what_buf[256]; /* attrib.c: from_what_buf */
+     struct cmd g_Cmd; /* global: Cmd */
+-    int g_cmd_c_alt_esc; /* cmd.c: alt_esc */
+-    int (*g_cmd_c_timed_occ_fn)(void); /* cmd.c: timed_occ_fn */
+-    char g_cmd_c_pushq[20]; /* cmd.c: pushq */
+-    char g_cmd_c_saveq[20]; /* cmd.c: saveq */
+-    int g_cmd_c_phead; /* cmd.c: phead */
+-    int g_cmd_c_ptail; /* cmd.c: ptail */
+-    int g_cmd_c_shead; /* cmd.c: shead */
+-    int g_cmd_c_stail; /* cmd.c: stail */
+     short g_cmd_c_en_win; /* cmd.c: en_win */
+     boolean g_cmd_c_en_via_menu; /* cmd.c: en_via_menu */
+-    const char * g_cmd_c_readchar_queue; /* cmd.c: readchar_queue */
+-    int g_vision_c_vis_start_row; /* vision.c: vis_start_row */
+-    int g_vision_c_vis_start_col; /* vision.c: vis_start_col */
+-    int g_vision_c_vis_step; /* vision.c: vis_step */
+-    char ** g_vision_c_vis_cs_rows; /* vision.c: vis_cs_rows */
+-    char * g_vision_c_vis_cs_left; /* vision.c: vis_cs_left */
+-    char * g_vision_c_vis_cs_right; /* vision.c: vis_cs_right */
+-    void (*g_vision_c_vis_func)(); /* vision.c: vis_func */
+-    void * g_vision_c_vis_varg; /* vision.c: vis_varg */
+-    int g_vision_c_vision_recur_depth; /* vision.c: vision_recur_depth */
+-    unsigned char g_vision_c_vision_colbump[COLNO + 1]; /* vision.c: vision_colbump */
+     char g_botl_c_strength_buf[32]; /* botl.c: strength_buf */
+-    boolean g_botl_c_blinit; /* botl.c: blinit */
+-    boolean g_botl_c_update_all; /* botl.c: update_all */
+-    boolean g_botl_c_valset[23]; /* botl.c: valset */
+-    long g_botl_c_bl_hilite_moves; /* botl.c: bl_hilite_moves */
+     unsigned long g_botl_c_cond_hilites[21]; /* botl.c: cond_hilites */
+     int g_botl_c_now_or_before_idx; /* botl.c: now_or_before_idx */
+     int g_botl_c_status_hilite_str_id; /* botl.c: status_hilite_str_id */
+@@ -221,17 +267,12 @@
+     struct trap * g_mkmaze_c_wportal; /* mkmaze.c: wportal */
+     int g_display_c_bad_count[36]; /* display.c: bad_count */
+     void * g_display_c_tglyph_p; /* display.c: tglyph_p */
+-    boolean g_display_c_in_cls; /* display.c: in_cls */
+-    int g_display_c_flushing; /* display.c: flushing */
+-    int g_display_c_delay_flushing; /* display.c: delay_flushing */
+     schar g_display_c_swallowed_lastx; /* display.c: swallowed_lastx */
+     schar g_display_c_swallowed_lasty; /* display.c: swallowed_lasty */
+     schar g_display_c_under_water_lastx; /* display.c: under_water_lastx */
+     schar g_display_c_under_water_lasty; /* display.c: under_water_lasty */
+     boolean g_display_c_under_water_dela; /* display.c: under_water_dela */
+     boolean g_display_c_under_ground_dela; /* display.c: under_ground_dela */
+-    int g_display_c_nul_gbuf_new; /* display.c: nul_gbuf_new */
+-    int g_display_c_nul_gbuf_glyph; /* display.c: nul_gbuf_glyph */
+     int g_invent_c_lastinvnr; /* invent.c: lastinvnr */
+     unsigned g_invent_c_sortlootmode; /* invent.c: sortlootmode */
+     int g_invent_c_cached_pickinv_win; /* invent.c: cached_pickinv_win */
+@@ -269,7 +310,6 @@
+     char g_files_c_fqn_fname[2048]; /* files.c: fqn_fname */
+     int g_files_c_lockptr; /* files.c: lockptr */
+     char g_files_c_wizkit[128]; /* files.c: wizkit */
+-    int g_dungeon_c_n_dgns; /* dungeon.c: n_dgns */
+     long g_shk_c_pickmovetime; /* shk.c: pickmovetime */
+     char g_shk_c_empty_shops[5]; /* shk.c: empty_shops */
+     boolean g_muse_c_m_using; /* muse.c: m_using */
+@@ -286,17 +326,7 @@
+     long g_pickup_c_val_for_n_or_more; /* pickup.c: val_for_n_or_more */
+     char g_pickup_c_valid_menu_classes[24]; /* pickup.c: valid_menu_classes */
+     int g_pickup_c_vmc_count; /* pickup.c: vmc_count */
+-    int g_hack_c_domove_skates; /* hack.c: domove_skates */
+-    char g_hack_c_in_rooms_buf[5]; /* hack.c: in_rooms_buf */
+-    int g_hack_c_inspoteffects; /* hack.c: inspoteffects */
+-    long g_hack_c_moverock_lastmovetime; /* hack.c: moverock_lastmovetime */
+-    schar g_hack_c_spotloc_x; /* hack.c: spotloc_x */
+-    schar g_hack_c_spotloc_y; /* hack.c: spotloc_y */
+-    int g_hack_c_spotterrain; /* hack.c: spotterrain */
+-    struct trap * g_hack_c_spottrap; /* hack.c: spottrap */
+-    unsigned g_hack_c_spottraptyp; /* hack.c: spottraptyp */
+     void * g_hack_c_tmp_anything_p; /* hack.c: tmp_anything_p */
+-    int g_hack_c_wc; /* hack.c: wc */
+     char g_do_name_c_dxdy_buf[30]; /* do_name.c: dxdy_buf */
+     char g_do_name_c_rndmonnam_buf[256]; /* do_name.c: rndmonnam_buf */
+     int g_do_name_c_gloc_filter_match_glyph; /* do_name.c: gloc_filter_match_glyph */
+@@ -305,8 +335,6 @@
+     char g_do_name_c_mbufs[5 * 256]; /* do_name.c: mbufs */
+     int g_do_name_c_via_naming; /* do_name.c: via_naming */
+     char g_trap_c_tnbuf[12]; /* trap.c: tnbuf */
+-    int g_trap_c_force_mintrap; /* trap.c: force_mintrap */
+-    boolean g_trap_c_recursive_mine; /* trap.c: recursive_mine */
+     int g_drawing_c_currentgraphics; /* drawing.c: currentgraphics */
+     char g_files_c_lock[46]; /* files.c: lock */
+     boolean g_restoring; /* global: restoring */
+@@ -381,9 +409,7 @@
+     unsigned g_pline_c_pline_flags; /* pline.c: pline_flags */
+     int g_pline_c_in_pline; /* pline.c: in_pline */
+     char g_pline_c_prevmsg[256]; /* pline.c: prevmsg */
+-    void * g_mon_c_mon_pool; /* mon.c: mon_pool */
+     int g_mon_c_animal_list_count; /* mon.c: animal_list_count */
+-    boolean g_mon_c_disintegested; /* mon.c: disintegested */
+     long g_mon_c_elemental_clog_msgmv; /* mon.c: elemental_clog_msgmv */
+     boolean g_mon_c_vamp_rise_msg; /* mon.c: vamp_rise_msg */
+     int g_mhitm_c_dieroll; /* mhitm.c: dieroll */
+@@ -395,18 +421,11 @@
+     void * g_makemon_c_align_shift_lev_p; /* makemon.c: align_shift_lev_p */
+     long g_makemon_c_align_shift_oldmoves; /* makemon.c: align_shift_oldmoves */
+     int g_end_c_vanq_sortmode; /* end.c: vanq_sortmode */
+-    unsigned g_rnd_c_rn2disprng_seed; /* rnd.c: rn2disprng_seed */
+     isaac64_ctx g_nlernd_c_lgen_base; /* nlernd.c: lgen_base */
+     isaac64_ctx g_nlernd_c_lgen_state[8]; /* nlernd.c: lgen_state */
+     isaac64_ctx g_nlernd_c_core_state; /* nlernd.c: core_state */
+     int g_nlernd_c_lgen_initialised; /* nlernd.c: lgen_initialised */
+     int g_nlernd_c_lgen_active; /* nlernd.c: lgen_active */
+-    struct engr * g_engrave_c_head_engr; /* engrave.c: head_engr */
+-    void * g_light_c_light_base; /* light.c: light_base */
+-    void * g_timeout_c_timer_base; /* timeout.c: timer_base */
+-    unsigned long g_timeout_c_timer_id; /* timeout.c: timer_id */
+-    void * g_region_c_regions_p; /* region.c: regions_p */
+-    int g_region_c_n_regions; /* region.c: n_regions */
+     int g_region_c_max_regions; /* region.c: max_regions */
+     struct wseg * g_worm_c_wheads[32]; /* worm.c: wheads */
+     struct wseg * g_worm_c_wtails[32]; /* worm.c: wtails */
+@@ -418,14 +437,9 @@
+     schar g_mklev_c_vault_x; /* mklev.c: vault_x */
+     schar g_mklev_c_vault_y; /* mklev.c: vault_y */
+     int g_rect_c_rect_cnt; /* rect.c: rect_cnt */
+-    schar g_dogmove_c_gtyp; /* dogmove.c: gtyp */
+-    schar g_dogmove_c_gx; /* dogmove.c: gx */
+-    schar g_dogmove_c_gy; /* dogmove.c: gy */
+     int g_mthrowu_c_mesg_given; /* mthrowu.c: mesg_given */
+     struct monst * g_mthrowu_c_archer; /* mthrowu.c: archer */
+     struct monst * g_mthrowu_c_target; /* mthrowu.c: target */
+-    int g_mhitu_c_dieroll; /* mhitu.c: dieroll */
+-    struct obj * g_mhitu_c_mon_currwep; /* mhitu.c: mon_currwep */
+     struct symsetentry g_drawing_c_symset_store[2]; /* drawing.c: symset_store */
+     nhsym g_drawing_c_primary_syms[SYM_MAX]; /* drawing.c: primary_syms */
+     nhsym g_drawing_c_rogue_syms[SYM_MAX]; /* drawing.c: rogue_syms */
+@@ -435,7 +449,6 @@
+     int g_mkmap_c_n_loc_filled; /* mkmap.c: n_loc_filled */
+     unsigned g_steal_c_stealmid; /* steal.c: stealmid */
+     unsigned g_steal_c_stealoid; /* steal.c: stealoid */
+-    struct obj * g_weapon_c_propellor; /* weapon.c: propellor */
+     schar g_pray_c_p_aligntyp; /* pray.c: p_aligntyp */
+     int g_pray_c_p_trouble; /* pray.c: p_trouble */
+     int g_pray_c_p_type; /* pray.c: p_type */
+@@ -485,10 +498,10 @@
+     unsigned long g_nh_fobj_generation; /* global: nh_fobj_generation */
+     int g_nh_fobj_valid; /* global: nh_fobj_valid */
+     int g_nh_fobj_count; /* global: nh_fobj_count */
++    int g_nh_fobj_lo; /* global: nh_fobj_lo */
+     short g_nh_fobj_x[2048]; /* global: nh_fobj_x */
+     short g_nh_fobj_y[2048]; /* global: nh_fobj_y */
+     struct obj * g_nh_fobj_ptr[2048]; /* global: nh_fobj_ptr */
+-    unsigned char g_nh_track_near[COLNO][ROWNO]; /* global: nh_track_near */
+     unsigned char g_nh_no_hero_gold; /* global: nh_no_hero_gold */
+     struct nh_tile_summary g_nh_move_summary[COLNO][ROWNO]; /* global: nh_move_summary */
+     /* lazily-allocated per-env blobs whose types are private to one
+@@ -519,14 +532,30 @@
+ 
+ /* accessors: true globals (statics get per-file headers) */
+ #define moves (nh_cur->g_moves)
++#define nh_invwt_valid (nh_cur->g_nh_invwt_valid)
++#define nh_invwt_nb (nh_cur->g_nh_invwt_nb)
++#define nh_invwt_boulder (nh_cur->g_nh_invwt_boulder)
+ #define monstermoves (nh_cur->g_monstermoves)
+ #define multi (nh_cur->g_multi)
+-#define nh_typ_plane (nh_cur->g_nh_typ_plane)
+-#define vision_full_recalc (nh_cur->g_vision_full_recalc)
+-#define viz_array (nh_cur->g_viz_array)
+ #define program_state (nh_cur->g_program_state)
+ #define occupation (nh_cur->g_occupation)
+ #define afternmv (nh_cur->g_afternmv)
++#define vision_full_recalc (nh_cur->g_vision_full_recalc)
++#define xwaitingforspace (nh_cur->g_xwaitingforspace)
++#define bhitpos (nh_cur->g_bhitpos)
++#define urealtime (nh_cur->g_urealtime)
++#define invent (nh_cur->g_invent)
++#define ftrap (nh_cur->g_ftrap)
++#define migrating_objs (nh_cur->g_migrating_objs)
++#define viz_array (nh_cur->g_viz_array)
++#define u (nh_cur->g_u)
++#define youmonst (nh_cur->g_youmonst)
++#define flags (nh_cur->g_flags)
++#define iflags (nh_cur->g_iflags)
++#define context (nh_cur->g_context)
++#define dungeons (nh_cur->g_dungeons)
++#define nh_track_near (nh_cur->g_nh_track_near)
++#define nh_typ_plane (nh_cur->g_nh_typ_plane)
+ #define hname (nh_cur->g_hname)
+ #define hackpid (nh_cur->g_hackpid)
+ #define locknum (nh_cur->g_locknum)
+@@ -562,7 +591,6 @@
+ #define tbx (nh_cur->g_tbx)
+ #define tby (nh_cur->g_tby)
+ #define m_shot (nh_cur->g_m_shot)
+-#define dungeons (nh_cur->g_dungeons)
+ #define sp_levchn (nh_cur->g_sp_levchn)
+ #define upstair (nh_cur->g_upstair)
+ #define dnstair (nh_cur->g_dnstair)
+@@ -579,7 +607,6 @@
+ #define mrg_to_wielded (nh_cur->g_mrg_to_wielded)
+ #define in_steed_dismounting (nh_cur->g_in_steed_dismounting)
+ #define has_strong_rngseed (nh_cur->g_has_strong_rngseed)
+-#define bhitpos (nh_cur->g_bhitpos)
+ #define doors (nh_cur->g_doors)
+ #define rooms (nh_cur->g_rooms)
+ #define subrooms (nh_cur->g_subrooms)
+@@ -587,16 +614,8 @@
+ #define dnstairs_room (nh_cur->g_dnstairs_room)
+ #define sstairs_room (nh_cur->g_sstairs_room)
+ #define level (nh_cur->g_level)
+-#define ftrap (nh_cur->g_ftrap)
+-#define youmonst (nh_cur->g_youmonst)
+-#define context (nh_cur->g_context)
+-#define flags (nh_cur->g_flags)
+-#define iflags (nh_cur->g_iflags)
+-#define u (nh_cur->g_u)
+ #define ubirthday (nh_cur->g_ubirthday)
+-#define urealtime (nh_cur->g_urealtime)
+ #define lastseentyp (nh_cur->g_lastseentyp)
+-#define invent (nh_cur->g_invent)
+ #define uwep (nh_cur->g_uwep)
+ #define uarm (nh_cur->g_uarm)
+ #define uswapwep (nh_cur->g_uswapwep)
+@@ -619,7 +638,6 @@
+ #define kickedobj (nh_cur->g_kickedobj)
+ #define spl_book (nh_cur->g_spl_book)
+ #define wailmsg (nh_cur->g_wailmsg)
+-#define migrating_objs (nh_cur->g_migrating_objs)
+ #define billobjs (nh_cur->g_billobjs)
+ #define dogname (nh_cur->g_dogname)
+ #define catname (nh_cur->g_catname)
+@@ -645,7 +663,6 @@
+ #define plinemsg_types (nh_cur->g_plinemsg_types)
+ #define nhUse_dummy (nh_cur->g_nhUse_dummy)
+ #define Cmd (nh_cur->g_Cmd)
+-#define xwaitingforspace (nh_cur->g_xwaitingforspace)
+ #define restoring (nh_cur->g_restoring)
+ #define notonhead (nh_cur->g_notonhead)
+ #define nle_seeds (nh_cur->g_nle_seeds)
+@@ -655,10 +672,19 @@
+ #define nh_fobj_generation (nh_cur->g_nh_fobj_generation)
+ #define nh_fobj_valid (nh_cur->g_nh_fobj_valid)
+ #define nh_fobj_count (nh_cur->g_nh_fobj_count)
++#define nh_fobj_lo (nh_cur->g_nh_fobj_lo)
++#define nh_invgen (nh_cur->g_nh_invgen)
++#define nh_hgold_gen (nh_cur->g_nh_hgold_gen)
++#define nh_hgold_val (nh_cur->g_nh_hgold_val)
++#define nh_leash_gen (nh_cur->g_nh_leash_gen)
++#define nh_hgold_valid (nh_cur->g_nh_hgold_valid)
++#define nh_leash_valid (nh_cur->g_nh_leash_valid)
++#define nh_leash_cnt (nh_cur->g_nh_leash_cnt)
++#define nh_deepest_valid (nh_cur->g_nh_deepest_valid)
++#define nh_deepest_val (nh_cur->g_nh_deepest_val)
+ #define nh_fobj_x (nh_cur->g_nh_fobj_x)
+ #define nh_fobj_y (nh_cur->g_nh_fobj_y)
+ #define nh_fobj_ptr (nh_cur->g_nh_fobj_ptr)
+-#define nh_track_near (nh_cur->g_nh_track_near)
+ #define nh_no_hero_gold (nh_cur->g_nh_no_hero_gold)
+ #define nh_move_summary (nh_cur->g_nh_move_summary)
+ 
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/apply.c /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/apply.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/apply.c	2026-10-10 14:50:16.077690478 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/apply.c	2026-10-10 19:21:49.256622713 +0000
+@@ -763,6 +763,26 @@
+     register struct obj *otmp;
+     register struct monst *mtmp;
+ 
++    /* no leash carried: nothing to check (count cached per inventory generation) */
++    if (nh_leash_valid && nh_leash_gen == nh_invgen && nh_leash_cnt == 0) {
++#ifdef NLE_MISC_VERIFY
++        for (otmp = invent; otmp; otmp = otmp->nobj)
++            if (otmp->otyp == LEASH) {
++                fprintf(stderr, "LEASH_MISMATCH turn=%ld\n", moves);
++                break;
++            }
++#endif
++        return;
++    }
++    {
++        int n = 0;
++        for (otmp = invent; otmp; otmp = otmp->nobj)
++            if (otmp->otyp == LEASH)
++                n++;
++        nh_leash_cnt = n > 255 ? 255 : n; nh_leash_gen = nh_invgen; nh_leash_valid = 1;
++        if (!n)
++            return;
++    }
+     for (otmp = invent; otmp; otmp = otmp->nobj) {
+         if (otmp->otyp != LEASH || otmp->leashmon == 0)
+             continue;
+@@ -1261,7 +1281,7 @@
+         /* candles are now gone */
+         useupall(obj);
+         /* candelabrum's weight is changing */
+-        otmp->owt = weight(otmp);
++        nh_set_owt(otmp);
+         update_inventory();
+     }
+ }
+@@ -1890,7 +1910,7 @@
+         can->corpsenm = corpse->corpsenm;
+         can->cursed = obj->cursed;
+         can->blessed = obj->blessed;
+-        can->owt = weight(can);
++        nh_set_owt(can);
+         can->known = 1;
+         /* Mark tinned tins. No spinach allowed... */
+         set_tin_variety(can, HOMEMADE_TIN);
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/artifact.c /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/artifact.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/artifact.c	2026-10-10 14:50:16.078432942 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/artifact.c	2026-10-10 18:25:02.692536989 +0000
+@@ -1631,7 +1631,7 @@
+                     otmp->spe = 0;
+             } else
+                 otmp->quan += rnd(5);
+-            otmp->owt = weight(otmp);
++            nh_set_owt(otmp);
+             otmp = hold_another_object(otmp, "Suddenly %s out.",
+                                        aobjnam(otmp, "fall"), (char *) 0);
+             nhUse(otmp);
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/bones.c /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/bones.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/bones.c	2026-10-10 14:50:16.078831355 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/bones.c	2026-10-10 18:25:02.724564453 +0000
+@@ -190,7 +190,7 @@
+                 if (otmp->spe > 0)
+                     otmp->quan = (long) otmp->spe;
+                 otmp->spe = 0;
+-                otmp->owt = weight(otmp);
++                nh_set_owt(otmp);
+                 curse(otmp);
+             } else if (otmp->otyp == BELL_OF_OPENING) {
+                 NH_PILE_WRITE(otmp, (otmp->otyp = BELL));
+@@ -267,7 +267,7 @@
+             place_object(otmp, x, y);
+     }
+     if (cont)
+-        cont->owt = weight(cont);
++        nh_set_owt(cont);
+ }
+ 
+ /* possibly restore oracle's room and/or put her back inside it; returns
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/do.c /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/do.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/do.c	2026-10-09 16:51:05.052572516 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/do.c	2026-10-10 19:21:49.256972156 +0000
+@@ -1434,11 +1434,11 @@
+     u.utotype = 0;
+     if (!builds_up(&u.uz)) { /* usual case */
+         if (dunlev(&u.uz) > dunlev_reached(&u.uz))
+-            dunlev_reached(&u.uz) = dunlev(&u.uz);
++            dunlev_reached(&u.uz) = dunlev(&u.uz), nh_deepest_dirty();
+     } else {
+         if (dunlev_reached(&u.uz) == 0
+             || dunlev(&u.uz) < dunlev_reached(&u.uz))
+-            dunlev_reached(&u.uz) = dunlev(&u.uz);
++            dunlev_reached(&u.uz) = dunlev(&u.uz), nh_deepest_dirty();
+     }
+     reset_rndmonst(NON_PM); /* u.uz change affects monster generation */
+ 
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/dokick.c /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/dokick.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/dokick.c	2026-10-10 14:50:16.085594823 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/dokick.c	2026-10-10 18:25:02.761291352 +0000
+@@ -1136,7 +1136,7 @@
+                 short frtype = treefruit->otyp;
+ 
+                 treefruit->quan = nfruit;
+-                treefruit->owt = weight(treefruit);
++                nh_set_owt(treefruit);
+                 if (is_plural(treefruit))
+                     pline("Some %s fall from the tree!", xname(treefruit));
+                 else
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/dungeon.c /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/dungeon.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/dungeon.c	2026-10-09 16:51:04.866443360 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/dungeon.c	2026-10-10 19:21:49.258932627 +0000
+@@ -213,6 +213,7 @@
+ 
+     mread(fd, (genericptr_t) &n_dgns, sizeof(n_dgns));
+     mread(fd, (genericptr_t) dungeons, sizeof(dungeon) * (unsigned) n_dgns);
++    nh_deepest_dirty();
+     mread(fd, (genericptr_t) &dungeon_topology, sizeof dungeon_topology);
+     mread(fd, (genericptr_t) tune, sizeof tune);
+ 
+@@ -867,6 +868,7 @@
+                 dungeons[i - 1].ledger_start + dungeons[i - 1].num_dunlevs;
+             dungeons[i].dunlev_ureached = 0;
+         }
++        nh_deepest_dirty();
+ 
+         dungeons[i].dflags.hellish = !!(pd.tmpdungeon[i].tflags & HELLISH);
+         dungeons[i].dflags.maze_like = !!(pd.tmpdungeon[i].tflags & MAZELIKE);
+@@ -1076,7 +1078,26 @@
+     register int i;
+     d_level tmp;
+     register schar ret = 0;
++    int slot = noquest ? 1 : 0;
+ 
++    if (nh_deepest_valid & (1 << slot)) {
++#ifdef NLE_MISC_VERIFY
++        for (i = 0; i < n_dgns; i++) {
++            if (noquest && i == quest_dnum)
++                continue;
++            tmp.dlevel = dungeons[i].dunlev_ureached;
++            if (tmp.dlevel == 0)
++                continue;
++            tmp.dnum = i;
++            if (depth(&tmp) > ret)
++                ret = depth(&tmp);
++        }
++        if (ret != nh_deepest_val[slot])
++            fprintf(stderr, "DEEPEST_MISMATCH turn=%ld cached=%d walked=%d\n", moves, nh_deepest_val[slot], ret);
++        nh_deepest_val[slot] = ret;
++#endif
++        return (xchar) nh_deepest_val[slot];
++    }
+     for (i = 0; i < n_dgns; i++) {
+         if (noquest && i == quest_dnum)
+             continue;
+@@ -1087,6 +1108,7 @@
+         if (depth(&tmp) > ret)
+             ret = depth(&tmp);
+     }
++    nh_deepest_val[slot] = ret; nh_deepest_valid |= 1 << slot;
+     return (xchar) ret;
+ }
+ 
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/eat.c /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/eat.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/eat.c	2026-10-10 14:50:16.086334890 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/eat.c	2026-10-10 18:25:02.690713437 +0000
+@@ -306,7 +306,7 @@
+     debugpline1("Old weight = %d", piece->owt);
+     debugpline2("Used time = %d, Req'd time = %d", context.victual.usedtime,
+                 context.victual.reqtime);
+-    piece->owt = weight(piece);
++    nh_set_owt(piece);
+     debugpline1("New weight = %d", piece->owt);
+ }
+ 
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/extralev.c /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/extralev.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/extralev.c	2026-10-09 16:51:05.007612825 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/extralev.c	2026-10-10 18:25:02.713103600 +0000
+@@ -332,7 +332,7 @@
+     if (rn2(4)) {
+         ghostobj = mksobj_at(FOOD_RATION, x, y, FALSE, FALSE);
+         ghostobj->quan = (long) rnd(7);
+-        ghostobj->owt = weight(ghostobj);
++        nh_set_owt(ghostobj);
+     }
+     if (rn2(2)) {
+         ghostobj = mksobj_at(MACE, x, y, FALSE, FALSE);
+@@ -353,7 +353,7 @@
+     ghostobj = mksobj_at(ARROW, x, y, FALSE, FALSE);
+     ghostobj->spe = 0;
+     ghostobj->quan = (long) rn1(10, 25);
+-    ghostobj->owt = weight(ghostobj);
++    nh_set_owt(ghostobj);
+     if (rn2(4))
+         curse(ghostobj);
+ 
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/hack.c /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/hack.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/hack.c	2026-10-09 17:03:12.190184518 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/hack.c	2026-10-10 18:25:02.680065239 +0000
+@@ -3113,16 +3113,44 @@
+ int
+ inv_weight()
+ {
+-    register struct obj *otmp = invent;
+-    register int wt = 0;
++    register struct obj *otmp;
++    register int wt;
+ 
+-    while (otmp) {
+-        if (otmp->oclass == COIN_CLASS)
+-            wt += (int) (((long) otmp->quan + 50L) / 100L);
+-        else if (otmp->otyp != BOULDER || !throws_rocks(youmonst.data))
+-            wt += otmp->owt;
+-        otmp = otmp->nobj;
++    /* Cached across steps: the walk touches one cold line per item. The cache
++       is invalidated by nh_invwt_dirty() at every top-level inventory change
++       (addinv, extract from invent, replace_object, merged, nh_set_owt). The
++       boulder term depends on the hero's form, so it is kept separate. */
++    if (!nh_invwt_valid) {
++        long nb = 0, b = 0;
++        for (otmp = invent; otmp; otmp = otmp->nobj) {
++            if (otmp->oclass == COIN_CLASS)
++                nb += (long) (((long) otmp->quan + 50L) / 100L);
++            else if (otmp->otyp == BOULDER)
++                b += (long) otmp->owt;
++            else
++                nb += (long) otmp->owt;
++        }
++        nh_invwt_nb = nb;
++        nh_invwt_boulder = b;
++        nh_invwt_valid = 1;
+     }
++    wt = (int) (nh_invwt_nb + (throws_rocks(youmonst.data) ? 0L : nh_invwt_boulder));
++#ifdef NLE_INVWT_VERIFY
++    {
++        int ref = 0;
++        for (otmp = invent; otmp; otmp = otmp->nobj) {
++            if (otmp->oclass == COIN_CLASS)
++                ref += (int) (((long) otmp->quan + 50L) / 100L);
++            else if (otmp->otyp != BOULDER || !throws_rocks(youmonst.data))
++                ref += otmp->owt;
++        }
++        if (ref != wt) {
++            fprintf(stderr, "INVWT_MISMATCH turn=%ld cached=%d walked=%d\n", moves, wt, ref);
++            wt = ref;
++            nh_invwt_valid = 0;
++        }
++    }
++#endif
+     wc = weight_cap();
+     return (wt - wc);
+ }
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/invent.c /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/invent.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/invent.c	2026-10-10 14:50:16.087482152 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/invent.c	2026-10-10 19:21:49.243890311 +0000
+@@ -653,7 +653,7 @@
+     struct obj *otmp, *prev, *next;
+     boolean need_more_sorting;
+ 
+-    nh_no_hero_gold = 0;
++    nh_no_hero_gold = 0; nh_invgen++;
+     do {
+         /*
+          * We expect at most one item to be out of order, so this
+@@ -747,10 +747,11 @@
+             otmp->quan += obj->quan;
+         /* temporary special case for gold objects!!!! */
+         if (otmp->oclass == COIN_CLASS)
+-            otmp->owt = weight(otmp), otmp->bknown = 0;
++            nh_set_owt(otmp), otmp->bknown = 0;
+         /* and puddings!!!1!!one! */
+         else if (!Is_pudding(otmp))
+             otmp->owt += obj->owt;
++            if (otmp->where == OBJ_INVENT) nh_invwt_dirty();
+         if (!has_oname(otmp) && has_oname(obj))
+             otmp = *potmp = oname(otmp, ONAME(obj));
+         obj_extract_self(obj);
+@@ -945,7 +946,7 @@
+     if (flags.invlet_constant || !prev) {
+         obj->nobj = invent; /* insert at beginning */
+         invent = obj;
+-        nh_no_hero_gold = 0;
++        nh_no_hero_gold = 0; nh_invgen++;
+         if (flags.invlet_constant)
+             reorder_invent();
+     } else {
+@@ -964,8 +965,9 @@
+         && (throwing_weapon(obj) || is_ammo(obj)))
+         setuqwep(obj);
+  added:
+-    nh_no_hero_gold = 0;
++    nh_no_hero_gold = 0; nh_invgen++;
+     addinv_core2(obj);
++    nh_invwt_dirty();
+     carry_obj_effects(obj); /* carrying affects the obj */
+     update_inventory();
+     return obj;
+@@ -1100,7 +1102,7 @@
+     if (obj->quan > 1L) {
+         obj->in_use = FALSE; /* no longer in use */
+         obj->quan--;
+-        obj->owt = weight(obj);
++        nh_set_owt(obj);
+         update_inventory();
+     } else {
+         useupall(obj);
+@@ -4025,7 +4027,7 @@
+         goldobj->invlet = GOLD_SYM;
+         goldobj->nobj = invent;
+         invent = goldobj;
+-        nh_no_hero_gold = 0;
++        nh_no_hero_gold = 0; nh_invgen++;
+     }
+     if (i >= 52)
+         i = 52 - 1;
+@@ -4280,7 +4282,7 @@
+     obj->nobj = invent;
+     obj->where = OBJ_INVENT;
+     invent = obj;
+-    nh_no_hero_gold = 0;
++    nh_no_hero_gold = 0; nh_invgen++;
+     reorder_invent();
+     if (bumped) {
+         /* splitting the 'from' stack is causing an incompatible
+@@ -4290,7 +4292,7 @@
+         bumped->nobj = invent;
+         bumped->where = OBJ_INVENT;
+         invent = bumped;
+-        nh_no_hero_gold = 0;
++        nh_no_hero_gold = 0; nh_invgen++;
+         reorder_invent();
+     }
+ 
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/makemon.c /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/makemon.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/makemon.c	2026-10-09 16:51:05.092002800 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/makemon.c	2026-10-10 18:25:02.730865723 +0000
+@@ -153,7 +153,7 @@
+ 
+     otmp = mksobj(otyp, TRUE, FALSE);
+     otmp->quan = (long) rn1(oquan, 3);
+-    otmp->owt = weight(otmp);
++    nh_set_owt(otmp);
+     if (otyp == ORCISH_ARROW)
+         otmp->opoisoned = TRUE;
+     (void) mpickobj(mtmp, otmp);
+@@ -712,7 +712,7 @@
+                 otmp = mksobj(rnd_class(DILITHIUM_CRYSTAL, LUCKSTONE - 1),
+                               FALSE, FALSE);
+                 otmp->quan = (long) rn1(2, 3);
+-                otmp->owt = weight(otmp);
++                nh_set_owt(otmp);
+                 (void) mpickobj(mtmp, otmp);
+             }
+         }
+@@ -761,7 +761,7 @@
+                 set_corpsenm(catcorpse, PM_HOUSECAT);
+                 (void) stop_timer(ROT_CORPSE, obj_to_any(catcorpse));
+                 add_to_container(otmp, catcorpse);
+-                otmp->owt = weight(otmp);
++                nh_set_owt(otmp);
+             }
+             (void) mpickobj(mtmp, otmp);
+         }
+@@ -783,7 +783,7 @@
+         if (!rn2((In_mines(&u.uz) && in_mklev) ? 20 : 60)) {
+             otmp = mksobj(rn2(4) ? TALLOW_CANDLE : WAX_CANDLE, TRUE, FALSE);
+             otmp->quan = 1;
+-            otmp->owt = weight(otmp);
++            nh_set_owt(otmp);
+             if (!mpickobj(mtmp, otmp) && !NH_TILE(mtmp->mx, mtmp->my).lit)
+                 begin_burn(otmp, FALSE);
+         }
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/mklev.c /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/mklev.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/mklev.c	2026-10-09 18:35:32.772938445 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/mklev.c	2026-10-10 18:25:02.766963305 +0000
+@@ -1044,7 +1044,7 @@
+                     if ((otmp = mksobj(GOLD_PIECE, FALSE, FALSE)) != 0) {
+                         otmp->ox = x, otmp->oy = y;
+                         otmp->quan = 1L + rnd(goldprob * 3);
+-                        otmp->owt = weight(otmp);
++                        nh_set_owt(otmp);
+                         if (!rn2(3))
+                             add_to_buried(otmp);
+                         else
+@@ -1585,7 +1585,7 @@
+             if (otmp) {
+                 otmp->blessed = 0;
+                 otmp->cursed = 1;
+-                otmp->owt = weight(otmp);
++                nh_set_owt(otmp);
+                 place_object(otmp, m.x, m.y);
+             }
+ 
+@@ -1620,7 +1620,7 @@
+                 otmp->quan = 1;
+                 otmp->blessed = 0;
+                 otmp->cursed = 1;
+-                otmp->owt = weight(otmp);
++                nh_set_owt(otmp);
+                 place_object(otmp, m.x, m.y);
+             }
+             break;
+@@ -1774,7 +1774,7 @@
+         struct obj *gold = mksobj(GOLD_PIECE, TRUE, FALSE);
+ 
+         gold->quan = (long) (rnd(20) + level_difficulty() * rnd(5));
+-        gold->owt = weight(gold);
++        nh_set_owt(gold);
+         gold->ox = m.x, gold->oy = m.y;
+         add_to_buried(gold);
+     }
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/mkmaze.c /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/mkmaze.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/mkmaze.c	2026-10-09 16:54:31.091991559 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/mkmaze.c	2026-10-10 18:25:02.725550010 +0000
+@@ -719,7 +719,7 @@
+     if (rn2(1000) < goldprob) {
+         if ((otmp = mksobj(GOLD_PIECE, TRUE, FALSE)) != 0) {
+             otmp->quan = 1L + rnd(goldprob);
+-            otmp->owt = weight(otmp);
++            nh_set_owt(otmp);
+             add_to_minv(mtmp, otmp);
+         }
+     }
+@@ -753,7 +753,7 @@
+                 otmp->spe = fruitadd((char *) orcfruit[rn2(SIZE(orcfruit))],
+                                      (struct fruit *) 0);
+             otmp->quan += (long) rn2(3);
+-            otmp->owt = weight(otmp);
++            nh_set_owt(otmp);
+         }
+     }
+ }
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/mkobj.c /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/mkobj.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/mkobj.c	2026-10-10 14:50:16.088751953 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/mkobj.c	2026-10-10 19:21:49.256468572 +0000
+@@ -5,6 +5,16 @@
+ 
+ #include "hack.h"
+ 
++/* contents of a container the hero carries count toward hidden gold */
++static void
++nh_cont_dirty(struct obj *c)
++{
++    while (c && c->where == OBJ_CONTAINED)
++        c = c->ocontainer;
++    if (c && c->where == OBJ_INVENT)
++        nh_invgen++;
++}
++
+ /* Object addresses stay stable; storage belongs to the game, not its worker. */
+ #define NH_OBJ_BLOCK_SIZE 128
+ struct nh_obj_block {
+@@ -396,19 +406,19 @@
+             if (otmp->oclass == COIN_CLASS) {
+                 /* 2.5 x level's usual amount; weight adjusted below */
+                 otmp->quan = (long) (rnd(level_difficulty() + 2) * rnd(75));
+-                otmp->owt = weight(otmp);
++                nh_set_owt(otmp);
+             } else
+                 while (otmp->otyp == ROCK) {
+                     NH_PILE_WRITE(otmp, (otmp->otyp = rnd_class(DILITHIUM_CRYSTAL, LOADSTONE)));
+                     if (otmp->quan > 2L)
+                         otmp->quan = 1L;
+-                    otmp->owt = weight(otmp);
++                    nh_set_owt(otmp);
+                 }
+             if (box->otyp == BAG_OF_HOLDING) {
+                 if (Is_mbag(otmp)) {
+                     NH_PILE_WRITE(otmp, (otmp->otyp = SACK));
+                     otmp->spe = 0;
+-                    otmp->owt = weight(otmp);
++                    nh_set_owt(otmp);
+                 } else
+                     while (otmp->otyp == WAN_CANCELLATION)
+                         NH_PILE_WRITE(otmp, (otmp->otyp = rnd_class(WAN_LIGHT, WAN_LIGHTNING)));
+@@ -507,9 +517,9 @@
+     otmp->lamplit = 0;                /* ditto */
+     otmp->owornmask = 0L;             /* new object isn't worn */
+     obj->quan -= num;
+-    obj->owt = weight(obj);
++    nh_set_owt(obj);
+     otmp->quan = num;
+-    otmp->owt = weight(otmp); /* -= obj->owt ? */
++    nh_set_owt(otmp); /* -= obj->owt ? */
+ 
+     context.objsplit.parent_oid = obj->o_id;
+     context.objsplit.child_oid = otmp->o_id;
+@@ -651,7 +661,8 @@
+         /* do nothing */
+         break;
+     case OBJ_INVENT:
+-        nh_no_hero_gold = 0;
++        nh_invwt_dirty();
++        nh_no_hero_gold = 0; nh_invgen++;
+         otmp->nobj = obj->nobj;
+         obj->nobj = otmp;
+         extract_nobj(obj, &invent);
+@@ -660,6 +671,7 @@
+         otmp->nobj = obj->nobj;
+         otmp->ocontainer = obj->ocontainer;
+         obj->nobj = otmp;
++        nh_cont_dirty(obj->ocontainer);
+         extract_nobj(obj, &obj->ocontainer->cobj);
+         break;
+     case OBJ_MINVENT:
+@@ -1178,7 +1190,7 @@
+     /* unique objects may have an associated artifact entry */
+     if (object_defaults[otyp].oc_unique && !otmp->oartifact)
+         otmp = mk_artifact(otmp, (aligntyp) A_NONE);
+-    otmp->owt = weight(otmp);
++    nh_set_owt(otmp);
+     return otmp;
+ }
+ 
+@@ -1221,20 +1233,20 @@
+     switch (obj->otyp) {
+     case CORPSE:
+         start_corpse_timeout(obj);
+-        obj->owt = weight(obj);
++        nh_set_owt(obj);
+         break;
+     case FIGURINE:
+         if (obj->corpsenm != NON_PM && !dead_species(obj->corpsenm, TRUE)
+             && (carried(obj) || mcarried(obj)))
+             attach_fig_transform_timeout(obj);
+-        obj->owt = weight(obj);
++        nh_set_owt(obj);
+         break;
+     case EGG:
+         if (obj->corpsenm != NON_PM && !dead_species(obj->corpsenm, TRUE))
+             attach_egg_hatch_timeout(obj, when);
+         break;
+     default: /* tin, etc. */
+-        obj->owt = weight(obj);
++        nh_set_owt(obj);
+         break;
+     }
+ }
+@@ -1352,7 +1364,7 @@
+     if (carried(otmp) && confers_luck(otmp))
+         set_moreluck();
+     else if (otmp->otyp == BAG_OF_HOLDING)
+-        otmp->owt = weight(otmp);
++        nh_set_owt(otmp);
+     else if (otmp->otyp == FIGURINE && otmp->timed)
+         (void) stop_timer(FIG_TRANSFORM, obj_to_any(otmp));
+     if (otmp->lamplit)
+@@ -1372,7 +1384,7 @@
+     if (carried(otmp) && confers_luck(otmp))
+         set_moreluck();
+     else if (otmp->otyp == BAG_OF_HOLDING)
+-        otmp->owt = weight(otmp);
++        nh_set_owt(otmp);
+     if (otmp->lamplit)
+         maybe_adjust_light(otmp, old_light);
+ }
+@@ -1402,7 +1414,7 @@
+     if (carried(otmp) && confers_luck(otmp)) {
+         set_moreluck();
+     } else if (otmp->otyp == BAG_OF_HOLDING) {
+-        otmp->owt = weight(otmp);
++        nh_set_owt(otmp);
+     } else if (otmp->otyp == FIGURINE) {
+         if (otmp->corpsenm != NON_PM && !dead_species(otmp->corpsenm, TRUE)
+             && (carried(otmp) || mcarried(otmp)))
+@@ -1429,7 +1441,7 @@
+     if (carried(otmp) && confers_luck(otmp))
+         set_moreluck();
+     else if (otmp->otyp == BAG_OF_HOLDING)
+-        otmp->owt = weight(otmp);
++        nh_set_owt(otmp);
+     else if (otmp->otyp == FIGURINE && otmp->timed)
+         (void) stop_timer(FIG_TRANSFORM, obj_to_any(otmp));
+     if (otmp->lamplit)
+@@ -1571,7 +1583,7 @@
+         gold = mksobj_at(GOLD_PIECE, x, y, TRUE, FALSE);
+         gold->quan = amount;
+     }
+-    gold->owt = weight(gold);
++    nh_set_owt(gold);
+     return gold;
+ }
+ 
+@@ -1627,7 +1639,7 @@
+         int old_corpsenm = otmp->corpsenm;
+ 
+         otmp->corpsenm = monsndx(ptr);
+-        otmp->owt = weight(otmp);
++        nh_set_owt(otmp);
+         if (otmp->otyp == CORPSE && (special_corpse(old_corpsenm)
+                                      || special_corpse(otmp->corpsenm))) {
+             obj_stop_timers(otmp);
+@@ -1859,7 +1871,7 @@
+     /* add to floor chain */
+     otmp->nobj = fobj;
+     fobj = otmp;
+-    nh_fobj_invalidate();
++    nh_fobj_placed(otmp);
+     nh_pile_update(x, y);
+     if (otmp->timed)
+         obj_timer_checks(otmp, x, y, 0);
+@@ -1995,7 +2007,7 @@
+         panic("remove_object: obj not on floor");
+     extract_nexthere(otmp, &level.objs[x][y]);
+     nh_pile_update(x, y);
+-    nh_fobj_invalidate();
++    nh_fobj_removed(otmp);
+     extract_nobj(otmp, &fobj);
+     /* update vision iff this was the only boulder at its spot */
+     if (otmp->otyp == BOULDER && !sobj_at(BOULDER, x, y))
+@@ -2054,6 +2066,7 @@
+         remove_object(obj);
+         break;
+     case OBJ_CONTAINED:
++        nh_cont_dirty(obj->ocontainer);
+         extract_nobj(obj, &obj->ocontainer->cobj);
+         container_weight(obj->ocontainer);
+         obj->ocontainer = (struct obj *) 0; /* clear stale back-link */
+@@ -2087,6 +2100,11 @@
+ {
+     struct obj *curr, *prev;
+ 
++    if (head_ptr == &invent) {
++        nh_invwt_dirty();
++        nh_invgen++;
++    }
++
+     curr = *head_ptr;
+     for (prev = (struct obj *) 0; curr; prev = curr, curr = curr->nobj) {
+         if (curr == obj) {
+@@ -2181,6 +2199,7 @@
+     obj->ocontainer = container;
+     obj->nobj = container->cobj;
+     container->cobj = obj;
++    nh_cont_dirty(container);
+     return obj;
+ }
+ 
+@@ -2217,7 +2236,7 @@
+ container_weight(container)
+ struct obj *container;
+ {
+-    container->owt = weight(container);
++    nh_set_owt(container);
+     if (container->where == OBJ_CONTAINED)
+         container_weight(container->ocontainer);
+     /*
+@@ -2300,7 +2319,7 @@
+         pline("%s %s out.", what, vtense(what, "spill"));
+         obj->blessed = horn->blessed;
+         obj->cursed = horn->cursed;
+-        obj->owt = weight(obj);
++        nh_set_owt(obj);
+         /* using a shop's horn of plenty entails a usage fee and also
+            confers ownership of the created item to the shopkeeper */
+         if (horn->unpaid)
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/mkroom.c /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/mkroom.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/mkroom.c	2026-10-09 16:51:05.002094947 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/mkroom.c	2026-10-10 18:25:02.711076002 +0000
+@@ -396,7 +396,7 @@
+                         for (i = rn2(5); i; i--)
+                             (void) add_to_container(
+                                 sobj, mkobj(RANDOM_CLASS, FALSE));
+-                        sobj->owt = weight(sobj);
++                        nh_set_owt(sobj);
+                     }
+                 }
+                 break;
+@@ -413,11 +413,11 @@
+         (void) somexy(sroom, &mm);
+         gold = mksobj(GOLD_PIECE, TRUE, FALSE);
+         gold->quan = (long) rn1(50 * level_difficulty(), 10);
+-        gold->owt = weight(gold);
++        nh_set_owt(gold);
+         /* the royal coffers */
+         chest = mksobj_at(CHEST, mm.x, mm.y, TRUE, FALSE);
+         add_to_container(chest, gold);
+-        chest->owt = weight(chest);
++        nh_set_owt(chest);
+         chest->spe = 2; /* so it can be found later */
+         level.lflags.has_court = 1;
+         break;
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/mon.c /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/mon.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/mon.c	2026-10-10 14:50:16.089322151 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/mon.c	2026-10-10 18:25:02.759395662 +0000
+@@ -466,7 +466,7 @@
+     case PM_CLAY_GOLEM:
+         obj = mksobj_at(ROCK, x, y, FALSE, FALSE);
+         obj->quan = (long) (rn2(20) + 50);
+-        obj->owt = weight(obj);
++        nh_set_owt(obj);
+         free_mname(mtmp);
+         break;
+     case PM_STONE_GOLEM:
+@@ -2789,7 +2789,7 @@
+         /* Archeologists should not break unique statues */
+         if (mdef->data->geno & G_UNIQ)
+             otmp->spe = 1;
+-        otmp->owt = weight(otmp);
++        nh_set_owt(otmp);
+     } else
+         otmp = mksobj_at(ROCK, x, y, TRUE, FALSE);
+ 
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/monmove.c /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/monmove.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/monmove.c	2026-10-09 18:35:32.775395371 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/monmove.c	2026-10-10 18:54:50.895768916 +0000
+@@ -793,6 +793,9 @@
+     nh_fobj_generation++;
+ }
+ 
++/* The index lives in the window [nh_fobj_lo, nh_fobj_lo + nh_fobj_count) parked
++ * at the top of the arrays, so place_object (a chain prepend) is one store and
++ * remove_object shifts only the newer prefix. Other chain edits still invalidate. */
+ static void
+ nh_fobj_build(void)
+ {
+@@ -804,7 +807,40 @@
+         nh_fobj_x[n] = o->ox; nh_fobj_y[n] = o->oy;
+         n++;
+     }
+-    nh_fobj_count = n; nh_fobj_valid = 1;
++    if (n && n < 2048) {
++        memmove(nh_fobj_ptr + 2048 - n, nh_fobj_ptr, n * sizeof nh_fobj_ptr[0]);
++        memmove(nh_fobj_x + 2048 - n, nh_fobj_x, n * sizeof nh_fobj_x[0]);
++        memmove(nh_fobj_y + 2048 - n, nh_fobj_y, n * sizeof nh_fobj_y[0]);
++    }
++    nh_fobj_lo = 2048 - n; nh_fobj_count = n; nh_fobj_valid = 1;
++}
++
++void
++nh_fobj_placed(struct obj *o)
++{
++    nh_fobj_generation++;
++    if (!nh_fobj_valid || nh_fobj_count < 0) return;
++    if (nh_fobj_lo == 0) { nh_fobj_valid = 0; return; }
++    nh_fobj_lo--;
++    nh_fobj_ptr[nh_fobj_lo] = o;
++    nh_fobj_x[nh_fobj_lo] = o->ox; nh_fobj_y[nh_fobj_lo] = o->oy;
++    nh_fobj_count++;
++}
++
++void
++nh_fobj_removed(struct obj *o)
++{
++    int i, lo = nh_fobj_lo, hi;
++    nh_fobj_generation++;
++    if (!nh_fobj_valid || nh_fobj_count < 0) return;
++    hi = lo + nh_fobj_count;
++    for (i = lo; i < hi; i++)
++        if (nh_fobj_ptr[i] == o) break;
++    if (i == hi) { nh_fobj_valid = 0; return; }
++    memmove(nh_fobj_ptr + lo + 1, nh_fobj_ptr + lo, (i - lo) * sizeof nh_fobj_ptr[0]);
++    memmove(nh_fobj_x + lo + 1, nh_fobj_x + lo, (i - lo) * sizeof nh_fobj_x[0]);
++    memmove(nh_fobj_y + lo + 1, nh_fobj_y + lo, (i - lo) * sizeof nh_fobj_y[0]);
++    nh_fobj_lo++; nh_fobj_count--;
+ }
+ 
+ struct obj *
+@@ -815,7 +851,7 @@
+     if (!prev) {
+         if (!nh_fobj_valid) nh_fobj_build();
+         cursor->generation = nh_fobj_generation;
+-        cursor->index = 0;
++        cursor->index = nh_fobj_lo;
+         cursor->mask = 0;
+         cursor->fallback = nh_fobj_count < 0;
+     } else if (cursor->generation != nh_fobj_generation) {
+@@ -828,13 +864,18 @@
+         return (struct obj *) 0;
+     }
+ #ifdef NLE_FOBJ_VERIFY
+-    {
+-        int n = 0;
++    if (!prev && nh_fobj_count >= 0) {
++        int n = 0, bad = 0;
+         for (o = fobj; o; o = o->nobj, n++)
+-            if (n >= nh_fobj_count || nh_fobj_ptr[n] != o
+-                || nh_fobj_x[n] != o->ox || nh_fobj_y[n] != o->oy)
+-                panic("floor index mismatch at %d", n);
+-        if (n != nh_fobj_count) panic("floor index count mismatch");
++            if (n >= nh_fobj_count || nh_fobj_ptr[nh_fobj_lo + n] != o
++                || nh_fobj_x[nh_fobj_lo + n] != o->ox || nh_fobj_y[nh_fobj_lo + n] != o->oy) { bad = 1; break; }
++        if (bad || n != nh_fobj_count) {
++            fprintf(stderr, "FOBJ_MISMATCH turn=%ld n=%d count=%d lo=%d\n", moves, n, nh_fobj_count, nh_fobj_lo);
++            nh_fobj_build();
++            cursor->generation = nh_fobj_generation;
++            cursor->index = nh_fobj_lo;
++            cursor->fallback = nh_fobj_count < 0;
++        }
+     }
+ #endif
+ #ifdef __SSE2__
+@@ -852,7 +893,7 @@
+         cursor->mask = 0;
+         __m128i xl = _mm_set1_epi16((short) lx), xh = _mm_set1_epi16((short) hx);
+         __m128i yl = _mm_set1_epi16((short) ly), yh = _mm_set1_epi16((short) hy);
+-        while (cursor->index + 8 <= nh_fobj_count) {
++        while (cursor->index + 8 <= nh_fobj_lo + nh_fobj_count) {
+             int i = cursor->index;
+             __m128i x = _mm_loadu_si128((const __m128i *) (nh_fobj_x + i));
+             __m128i y = _mm_loadu_si128((const __m128i *) (nh_fobj_y + i));
+@@ -875,7 +916,7 @@
+     }
+ #endif
+     cursor->mask = 0;
+-    while (cursor->index < nh_fobj_count) {
++    while (cursor->index < nh_fobj_lo + nh_fobj_count) {
+         int i = cursor->index++;
+         if (nh_fobj_x[i] >= lx && nh_fobj_x[i] <= hx
+             && nh_fobj_y[i] >= ly && nh_fobj_y[i] <= hy)
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/mthrowu.c /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/mthrowu.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/mthrowu.c	2026-10-10 14:50:16.090161695 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/mthrowu.c	2026-10-10 18:25:02.756354917 +0000
+@@ -884,7 +884,7 @@
+ {
+     if (obj->quan > 1L) {
+         obj->quan--;
+-        obj->owt = weight(obj);
++        nh_set_owt(obj);
+     } else {
+         m_useupall(mon, obj);
+     }
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/objnam.c /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/objnam.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/objnam.c	2026-10-10 14:50:16.091523035 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/objnam.c	2026-10-10 18:25:02.765780228 +0000
+@@ -3396,7 +3396,7 @@
+             cnt = 1;
+         otmp = mksobj(GOLD_PIECE, FALSE, FALSE);
+         otmp->quan = (long) cnt;
+-        otmp->owt = weight(otmp);
++        nh_set_owt(otmp);
+         context.botl = 1;
+         return otmp;
+     }
+@@ -4054,7 +4054,7 @@
+             /* this assumes that artifacts can't be randomly generated
+                inside containers */
+             delete_contents(otmp);
+-            otmp->owt = weight(otmp);
++            nh_set_owt(otmp);
+         }
+     }
+     /* set locked/unlocked/broken */
+@@ -4124,7 +4124,7 @@
+         /* (do this adjustment before setting up object's weight) */
+         consume_oeaten(otmp, 1);
+     }
+-    otmp->owt = weight(otmp);
++    nh_set_owt(otmp);
+     if (very && otmp->otyp == HEAVY_IRON_BALL)
+         otmp->owt += IRON_BALL_W_INCR;
+     else if (gsize > 1 && otmp->globby)
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/pickup.c /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/pickup.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/pickup.c	2026-10-10 14:50:16.092953942 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/pickup.c	2026-10-10 18:25:02.772104215 +0000
+@@ -2012,7 +2012,7 @@
+             verbalize("Thank you for your contribution to reduce the debt.");
+             freeinv(goldob);
+             (void) add_to_container(coffers, goldob);
+-            coffers->owt = weight(coffers);
++            nh_set_owt(coffers);
+             coffers->cknown = 0;
+             if (!coffers->olocked) {
+                 boxdummy = zeroobj, boxdummy.otyp = SPE_WIZARD_LOCK;
+@@ -2289,7 +2289,7 @@
+         if (floor_container && obj->oclass == COIN_CLASS)
+             sellobj(obj, current_container->ox, current_container->oy);
+         (void) add_to_container(current_container, obj);
+-        current_container->owt = weight(current_container);
++        nh_set_owt(current_container);
+     }
+     /* gold needs this, and freeinv() many lines above may cause
+      * the encumbrance to disappear from the status, so just always
+@@ -2325,7 +2325,7 @@
+         impossible("<out> no current_container?");
+         return -1;
+     } else if (is_gold) {
+-        obj->owt = weight(obj);
++        nh_set_owt(obj);
+     }
+ 
+     if (obj->oartifact && !touch_artifact(obj, &youmonst))
+@@ -2343,7 +2343,7 @@
+ 
+     /* Remove the object from the list. */
+     obj_extract_self(obj);
+-    current_container->owt = weight(current_container);
++    nh_set_owt(current_container);
+ 
+     if (Icebox)
+         removed_from_icebox(obj);
+@@ -2448,7 +2448,7 @@
+                 obj_extract_self(deadcat);
+                 obfree(deadcat, (struct obj *) 0), deadcat = 0;
+             }
+-            box->owt = weight(box);
++            nh_set_owt(box);
+             box->spe = 0;
+         }
+     } else {
+@@ -2591,7 +2591,7 @@
+         && (loss = boh_loss(current_container, held)) != 0) {
+         used = 1;
+         You("owe %ld %s for lost merchandise.", loss, currency(loss));
+-        current_container->owt = weight(current_container);
++        nh_set_owt(current_container);
+     }
+     inokay = (invent != 0
+               && !(invent == current_container && !current_container->nobj));
+@@ -3283,7 +3283,7 @@
+         }
+         if (loss) /* magic bag lost some shop goods */
+             You("owe %ld %s for lost merchandise.", loss, currency(loss));
+-        box->owt = weight(box); /* mbag_item_gone() doesn't update this */
++        nh_set_owt(box); /* mbag_item_gone() doesn't update this */
+         if (held)
+             (void) encumber_msg();
+     }
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/read.c /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/read.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/read.c	2026-10-10 14:50:16.094397824 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/read.c	2026-10-10 18:25:02.738730113 +0000
+@@ -1756,7 +1756,7 @@
+     if (!otmp2)
+         return;
+     otmp2->quan = confused ? rn1(5, 2) : 1;
+-    otmp2->owt = weight(otmp2);
++    nh_set_owt(otmp2);
+     if (!amorphous(youmonst.data) && !Passes_walls
+         && !noncorporeal(youmonst.data) && !unsolid(youmonst.data)) {
+         You("are hit by %s!", doname(otmp2));
+@@ -1796,7 +1796,7 @@
+     if (!otmp2)
+         return FALSE; /* Shouldn't happen */
+     otmp2->quan = confused ? rn1(5, 2) : 1;
+-    otmp2->owt = weight(otmp2);
++    nh_set_owt(otmp2);
+ 
+     /* Find the monster here (won't be player) */
+     mtmp = m_at(x, y);
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/restore.c /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/restore.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/restore.c	2026-10-09 16:51:05.009016839 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/restore.c	2026-10-10 19:21:49.244306234 +0000
+@@ -349,7 +349,7 @@
+                 set_corpsenm(catcorpse, PM_HOUSECAT);
+                 (void) stop_timer(ROT_CORPSE, obj_to_any(catcorpse));
+                 add_to_container(otmp, catcorpse);
+-                otmp->owt = weight(otmp);
++                nh_set_owt(otmp);
+             }
+         }
+         if (otmp->bypass)
+@@ -705,7 +705,7 @@
+     restore_timers(fd, RANGE_GLOBAL, FALSE, 0L);
+     restore_light_sources(fd);
+     invent = restobjchn(fd, FALSE, FALSE);
+-    nh_no_hero_gold = 0;
++    nh_no_hero_gold = 0; nh_invgen++;
+ 
+     /* restore dangling (not on floor or in inventory) ball and/or chain */
+     bc_obj = restobjchn(fd, FALSE, FALSE);
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/shk.c /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/shk.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/shk.c	2026-10-10 14:50:16.095025025 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/shk.c	2026-10-10 18:25:02.742511670 +0000
+@@ -3747,7 +3747,7 @@
+             otmp = mksobj((ttmp->ttyp == LANDMINE) ? LAND_MINE : BEARTRAP,
+                           TRUE, FALSE);
+             otmp->quan = 1L;
+-            otmp->owt = weight(otmp);
++            nh_set_owt(otmp);
+             (void) mpickobj(shkp, otmp);
+         }
+         deltrap(ttmp);
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/sit.c /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/sit.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/sit.c	2026-10-10 14:50:16.095558489 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/sit.c	2026-10-10 18:25:02.767214749 +0000
+@@ -318,7 +318,7 @@
+         uegg = mksobj(EGG, FALSE, FALSE);
+         uegg->spe = 1;
+         uegg->quan = 1L;
+-        uegg->owt = weight(uegg);
++        nh_set_owt(uegg);
+         /* this sets hatch timers if appropriate */
+         set_corpsenm(uegg, egg_type_from_parent(u.umonnum, FALSE));
+         uegg->known = uegg->dknown = 1;
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/sp_lev.c /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/sp_lev.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/sp_lev.c	2026-10-10 14:50:16.096066273 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/sp_lev.c	2026-10-10 18:25:02.705221565 +0000
+@@ -1980,7 +1980,7 @@
+ 
+     if (o->quan > 0 && object_defaults[otmp->otyp].oc_merge) {
+         otmp->quan = o->quan;
+-        otmp->owt = weight(otmp);
++        nh_set_owt(otmp);
+     }
+ 
+     /* contents (of a container or monster's inventory) */
+@@ -2006,7 +2006,7 @@
+             remove_object(otmp);
+             if (cobj) {
+                 (void) add_to_container(cobj, otmp);
+-                cobj->owt = weight(cobj);
++                nh_set_owt(cobj);
+             } else {
+                 obj_extract_self(otmp);
+                 obfree(otmp, NULL);
+@@ -2058,7 +2058,7 @@
+                 obj_extract_self(obj);
+                 (void) add_to_container(otmp, obj);
+             }
+-            otmp->owt = weight(otmp);
++            nh_set_owt(otmp);
+             mongone(was);
+         }
+     }
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/timeout.c /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/timeout.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/timeout.c	2026-10-09 16:51:05.097164323 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/timeout.c	2026-10-10 18:25:02.732305390 +0000
+@@ -1149,7 +1149,7 @@
+ 
+             if (menorah) {
+                 obj->spe = 0; /* no more candles */
+-                obj->owt = weight(obj);
++                nh_set_owt(obj);
+             } else if (Is_candle(obj) || obj->otyp == POT_OIL) {
+                 /* get rid of candles and burning oil potions;
+                    we know this object isn't carried by hero,
+@@ -1368,7 +1368,7 @@
+ 
+             if (menorah) {
+                 obj->spe = 0;
+-                obj->owt = weight(obj);
++                nh_set_owt(obj);
+             } else {
+                 if (carried(obj)) {
+                     useupall(obj);
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/trap.c /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/trap.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/trap.c	2026-10-10 14:50:16.097266101 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/trap.c	2026-10-10 18:25:02.736324905 +0000
+@@ -400,7 +400,7 @@
+             obj_extract_self(otmp);
+             (void) add_to_container(statue, otmp);
+         }
+-        statue->owt = weight(statue);
++        nh_set_owt(statue);
+         mongone(mtmp);
+         break;
+     }
+@@ -869,7 +869,7 @@
+     struct obj *otmp = mksobj(otyp, TRUE, FALSE);
+ 
+     otmp->quan = 1L;
+-    otmp->owt = weight(otmp);
++    nh_set_owt(otmp);
+     otmp->opoisoned = 0;
+     otmp->ox = trap->tx, otmp->oy = trap->ty;
+     return otmp;
+@@ -2116,7 +2116,7 @@
+     } else {
+         otmp = mksobj(otyp, TRUE, FALSE);
+         otmp->quan = ocount;
+-        otmp->owt = weight(otmp);
++        nh_set_owt(otmp);
+         place_object(otmp, cc.x, cc.y);
+         stackobj(otmp);
+     }
+@@ -4027,7 +4027,7 @@
+     struct obj *otmp = mksobj(otyp, TRUE, FALSE);
+ 
+     otmp->quan = cnt;
+-    otmp->owt = weight(otmp);
++    nh_set_owt(otmp);
+     /* Only dart traps are capable of being poisonous */
+     if (otyp != DART)
+         otmp->opoisoned = 0;
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/u_init.c /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/u_init.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/u_init.c	2026-10-10 14:50:16.097746213 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/u_init.c	2026-10-10 18:25:02.708664077 +0000
+@@ -1212,7 +1212,7 @@
+                 obj->blessed = trop->trbless;
+         }
+         /* defined after setting otyp+quan + blessedness */
+-        obj->owt = weight(obj);
++        nh_set_owt(obj);
+         obj = addinv(obj);
+ 
+         /* Make the type known if necessary */
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/uhitm.c /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/uhitm.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/uhitm.c	2026-10-10 14:50:16.098043774 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/uhitm.c	2026-10-10 18:25:02.686112860 +0000
+@@ -994,7 +994,7 @@
+                             obj->oartifact = 0;
+                             obj->spe = 0;
+                             obj->known = obj->dknown = obj->bknown = 0;
+-                            obj->owt = weight(obj);
++                            nh_set_owt(obj);
+                             if (thrown)
+                                 place_object(obj, mon->mx, mon->my);
+                         } else {
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/vault.c /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/vault.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/vault.c	2026-10-10 14:50:16.098484372 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/vault.c	2026-10-10 19:21:49.256530995 +0000
+@@ -1116,11 +1116,26 @@
+     long value = 0L;
+     struct obj *obj;
+ 
++    /* cached until the set of objects reachable from invent changes */
++    if (nh_hgold_valid && nh_hgold_gen == nh_invgen) {
++#ifdef NLE_MISC_VERIFY
++        for (obj = invent; obj; obj = obj->nobj)
++            if (Has_contents(obj))
++                value += contained_gold(obj);
++        if (value != nh_hgold_val) {
++            fprintf(stderr, "HGOLD_MISMATCH turn=%ld cached=%ld walked=%ld\n", moves, nh_hgold_val, value);
++            nh_hgold_val = value;
++        }
++        return value;
++#else
++        return nh_hgold_val;
++#endif
++    }
+     for (obj = invent; obj; obj = obj->nobj)
+         if (Has_contents(obj))
+             value += contained_gold(obj);
+     /* unknown gold stuck inside statues may cause some consternation... */
+-
++    nh_hgold_val = value; nh_hgold_gen = nh_invgen; nh_hgold_valid = 1;
+     return value;
+ }
+ 
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/wield.c /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/wield.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/wield.c	2026-10-10 14:50:16.098932294 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/wield.c	2026-10-10 18:25:02.742999668 +0000
+@@ -764,7 +764,7 @@
+         uwep->oerodeproof = 0;
+         if (multiple) {
+             uwep->quan = 1L;
+-            uwep->owt = weight(uwep);
++            nh_set_owt(uwep);
+         }
+         if (uwep->cursed)
+             uncurse(uwep);
+@@ -786,7 +786,7 @@
+         uwep->oerodeproof = 0;
+         if (multiple) {
+             uwep->quan = 1L;
+-            uwep->owt = weight(uwep);
++            nh_set_owt(uwep);
+         }
+         if (otyp != STRANGE_OBJECT && otmp->bknown)
+             makeknown(otyp);
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/zap.c /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/zap.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/src/zap.c	2026-10-10 14:50:16.099737765 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/src/zap.c	2026-10-10 18:25:02.763741422 +0000
+@@ -1484,7 +1484,7 @@
+             kill_egg(otmp);
+         else {
+             NH_PILE_WRITE(otmp, (otmp->otyp = EGG));
+-            otmp->owt = weight(otmp);
++            nh_set_owt(otmp);
+         }
+         otmp->corpsenm = NON_PM;
+         otmp->spe = 0;
+@@ -1598,7 +1598,7 @@
+     }
+ 
+     /* update the weight */
+-    otmp->owt = weight(otmp);
++    nh_set_owt(otmp);
+ 
+     /*
+      * ** we are now done adjusting the object (except possibly wearing it) **
+@@ -4748,7 +4748,7 @@
+     NH_PILE_WRITE(obj, (obj->otyp = ROCK));
+     obj->oclass = GEM_CLASS;
+     obj->quan = (long) rn1(60, 7);
+-    obj->owt = weight(obj);
++    nh_set_owt(obj);
+     obj->dknown = obj->bknown = obj->rknown = 0;
+     obj->known = object_defaults[obj->otyp].oc_uses_known ? 0 : 1;
+     dealloc_oextra(obj);
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/tools/globals.def /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/tools/globals.def
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/incstack2/source/tools/globals.def	2026-10-09 18:12:39.936214810 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/misc1/source/tools/globals.def	2026-10-10 19:21:49.243290832 +0000
+@@ -35,23 +35,176 @@
+ #
+ # ---------------------------------------------------------------------------
+ # track.c — hero movement ring (first migrated slice)
+-track.c | cold | int   | utcnt  |      | 0
+-track.c | cold | int   | utpnt  |      | 0
+-track.c | cold | coord | utrack | [50] | 0
+-
+ # ---------------------------------------------------------------------------
+ # decl.c — the central globals file. Heat: step-hot scalars/pointers first;
+ # the big structs (u, level, youmonst, flags) are hot too but dominate their
+ # own cache lines regardless of placement.
++# c_color_names / c_common_strings / c_obj_colors / materialnm /
++# fqn_prefix_names: never written -> const-ified in decl.c/decl.h instead of
++# migrated (drops them from the writable sections entirely).
++# cmd.c (ported wholesale from old fork; lazy slots 3=cmd_state 4=clicklook_cc)
++# vision.c (ported from old fork; lazy slots 6=close_dy 7=far_dy)
++# botl.c (ported from old fork; lazy slots 8=blstats 9=status_hilites 10=state)
++# sp_lev.c (lazy slot 12 = function-local state; lregions shared with mkmaze.c)
++# mkmaze.c (lazy slot 13 = bughack lev_region)
++# display.c (lazy slots 14=state 15=gbuf)
++# invent.c (lazy slot 16 = let_to_name scratch buffer)
++# windows.c (lazy slot 22 = state) — status arrays shared with wintty.c
++# wintty.c (lazy slots 17=tty_status 18=state)
++# topl.c (lazy slot 21 = state)
++# getline.c
++# NLE-layer flag read by both getline.c and winrl.cc
++# files.c (lazy slot 23 = state)
++# dungeon.c cross-TU counter (files.c also uses it)
++# shk.c (lazy slot 24 = state)
++# muse.c (lazy slot 25 = struct musable)
++# pickup.c
++# hack.c
++# do_name.c (lazy slot 26 = state)
++# trap.c (lazy slots 27=acid_ctx 28=launchplace)
++# restoring flag (decl.h global, defined in restore.c in stock)
++# notonhead (decl.h global; cross-TU: artifact/apply/potion etc.)
++# NLE RNG seed record (hacklib.c / nlernd.c)
++# rumors.c (lazy slots 29=oracle_loc 30=state)
++# artifact.c (lazy slot 31 = artilist copy)
++# apply.c (lazy slot 11 = state)
++# save.c
++# role.c
++# lock.c
++# restore.c
++# hacklib.c
++# eat.c (lazy slot 33 = eatmbuf)
++# potion.c
++# do.c
++# questpgr.c (lazy slot 34 = qt_list)
++# pline.c (lazy slot 35 = state)
++# mon.c (lazy slot 36 = animal_list)
++# mhitm.c
++# spell.c (lazy slot 37 = orderindx)
++# makemon.c (lazy slot 38 = rndmonst state)
++# end.c (lazy slot 39 = Schroedingers_cat)
++# rnd.c — ISAAC64 RNG state, THE per-env determinism core (fixup: disprng seed = 1)
++# nlernd.c — level-generation RNG (heiner/nle feature; not in old fork)
++# engrave.c / light.c / timeout.c — per-level chains and timers
++# region.c (regions array is realloc'd, keep as raw pointer field)
++# worm.c — MAXWORM=32 arrays inline
++# dungeon.c
++# mklev.c
++# rect.c (lazy slot 42 = rect array)
++# dogmove.c (lazy slot 43 = dokick state)
++# mthrowu.c
++# mhitu.c
++# drawing.c — per-env symbol tables (symset options are per-env)
++# steal.c / weapon.c / pray.c / zap.c / uhitm.c (slot 45=state) etc.
++# options.c residuals (slot 49 = next_opt buffer)
++# Ordered floor-object search cache. Cold section avoids shifting hot state.
++# Locally maintained movement summaries; terrain layout remains original.
++
++# ---- hot: touched every step (ordered by access pattern; re-annotated 2026-10-10 from the callgrind footprint) ----
+ global | hot | long | moves | | 1
++global | hot | int | nh_invwt_valid | | 0
++global | hot | long | nh_invwt_nb | | 0
++global | hot | long | nh_invwt_boulder | | 0
+ global | hot | long | monstermoves | | 1
+ global | hot | int | multi | | 0
+-global | hot | schar | nh_typ_plane | [COLNO][ROWNO] | 0
+-global | hot | boolean | vision_full_recalc | | 0
+-global | hot | char ** | viz_array | | 0
+ global | hot | struct sinfo | program_state | | 0
+ global | hot | int (*{NAME})(void) | occupation | | 0
+ global | hot | int (*{NAME})(void) | afternmv | | 0
++global | hot | boolean | vision_full_recalc | | 0
++global | hot | int | xwaitingforspace | | 0
++global | hot | coord | bhitpos | | 0
++global | hot | struct u_realtime | urealtime | | 0
++global | hot | struct obj * | invent | | 0
++global | hot | struct trap * | ftrap | | 0
++global | hot | struct obj * | migrating_objs | | 0
++light.c | hot | void * | light_base | | 0
++timeout.c | hot | void * | timer_base | | 0
++timeout.c | hot | unsigned long | timer_id | | 0
++engrave.c | hot | struct engr * | head_engr | | 0
++region.c | hot | void * | regions_p | | 0
++region.c | hot | int | n_regions | | 0
++dungeon.c | hot | int | n_dgns | | 0
++mon.c | hot | void * | mon_pool | | 0
++mon.c | hot | boolean | disintegested | | 0
++hack.c | hot | schar | spotloc_x | | 0
++hack.c | hot | schar | spotloc_y | | 0
++hack.c | hot | int | spotterrain | | 0
++hack.c | hot | struct trap * | spottrap | | 0
++hack.c | hot | unsigned | spottraptyp | | 0
++hack.c | hot | int | wc | | 0
++hack.c | hot | long | moverock_lastmovetime | | 0
++hack.c | hot | int | inspoteffects | | 0
++hack.c | hot | int | domove_skates | | 0
++hack.c | hot | char | in_rooms_buf | [5] | 0
++dogmove.c | hot | schar | gtyp | | 0
++dogmove.c | hot | schar | gx | | 0
++dogmove.c | hot | schar | gy | | 0
++mhitu.c | hot | int | dieroll | | 0
++mhitu.c | hot | struct obj * | mon_currwep | | 0
++weapon.c | hot | struct obj * | propellor | | 0
++trap.c | hot | int | force_mintrap | | 0
++trap.c | hot | boolean | recursive_mine | | 0
++rnd.c | hot | unsigned | rn2disprng_seed | | 0
++display.c | hot | int | flushing | | 0
++display.c | hot | int | delay_flushing | | 0
++display.c | hot | boolean | in_cls | | 0
++display.c | hot | int | nul_gbuf_new | | 0
++display.c | hot | int | nul_gbuf_glyph | | 0
++display.c | hot | char | gbuf_start | [ROWNO] | 0
++display.c | hot | char | gbuf_stop | [ROWNO] | 0
++botl.c | hot | boolean | valset | [23] | 0        # MAXBLSTATS
++botl.c | hot | boolean | update_all | | 0
++botl.c | hot | boolean | blinit | | 0
++botl.c | hot | long | bl_hilite_moves | | 0
++cmd.c | hot | int | phead | | 0
++cmd.c | hot | int | ptail | | 0
++cmd.c | hot | int | shead | | 0
++cmd.c | hot | int | stail | | 0
++cmd.c | hot | char | pushq | [20] | 0   # BSIZE
++cmd.c | hot | char | saveq | [20] | 0   # BSIZE
++cmd.c | hot | const char * | readchar_queue | | 0   # fixup: ""
++cmd.c | hot | int | alt_esc | | 0
++cmd.c | hot | int (*{NAME})(void) | timed_occ_fn | | 0
++track.c | hot | int   | utcnt  |      | 0
++track.c | hot | int   | utpnt  |      | 0
++track.c | hot | coord | utrack | [50] | 0
++vision.c | hot | int | vis_start_row | | 0
++vision.c | hot | int | vis_start_col | | 0
++vision.c | hot | int | vis_step | | 0
++vision.c | hot | char ** | vis_cs_rows | | 0
++vision.c | hot | char * | vis_cs_left | | 0
++vision.c | hot | char * | vis_cs_right | | 0
++vision.c | hot | void (*{NAME})() | vis_func | | 0
++vision.c | hot | void * | vis_varg | | 0
++vision.c | hot | int | vision_recur_depth | | 0
++global | hot | char ** | viz_array | | 0
++vision.c | hot | char * | viz_rmin | | 0
++vision.c | hot | char * | viz_rmax | | 0
++vision.c | hot | char * | viz_clear_rows | [ROWNO] | 0
++vision.c | hot | char * | cs_rows0 | [ROWNO] | 0
++vision.c | hot | char * | cs_rows1 | [ROWNO] | 0
++vision.c | hot | char | cs_rmin0 | [ROWNO] | 0
++vision.c | hot | char | cs_rmax0 | [ROWNO] | 0
++vision.c | hot | char | cs_rmin1 | [ROWNO] | 0
++vision.c | hot | char | cs_rmax1 | [ROWNO] | 0
++global | hot | struct you | u | | 0
++global | hot | struct monst | youmonst | | 0
++global | hot | struct flag | flags | | 0
++global | hot | struct instance_flags | iflags | | 0
++global | hot | struct context_info | context | | 0
++global | hot | dungeon | dungeons | [MAXDUNGEON] | 0
++vision.c | hot | unsigned char | vision_colbump | [COLNO + 1] | 0
++global | hot | unsigned char | nh_track_near | [COLNO][ROWNO] | 0
++global | hot | schar | nh_typ_plane | [COLNO][ROWNO] | 0
++vision.c | hot | char | could_see | [2][ROWNO][COLNO] | 0
++vision.c | hot | char | viz_clear | [ROWNO][COLNO] | 0
++vision.c | hot | char | left_ptrs | [ROWNO][COLNO] | 0
++vision.c | hot | char | right_ptrs | [ROWNO][COLNO] | 0
++drawing.c | hot | nhsym | showsyms | [SYM_MAX] | 0
++rnd.c | hot | isaac64_ctx | rng_state | [2] | 0
++rnd.c | hot | int | rng_init | [2] | 0
++
++# ---- cold ----
+ global | cold | const char * | hname | | 0
+ global | cold | int | hackpid | | 0
+ global | cold | int | locknum | | 0
+@@ -87,7 +240,6 @@
+ global | cold | schar | tbx | | 0
+ global | cold | schar | tby | | 0
+ global | cold | struct multishot | m_shot | | 0
+-global | cold | dungeon | dungeons | [MAXDUNGEON] | 0
+ global | cold | s_level * | sp_levchn | | 0
+ global | cold | stairway | upstair | | 0
+ global | cold | stairway | dnstair | | 0
+@@ -104,7 +256,6 @@
+ global | cold | boolean | mrg_to_wielded | | 0
+ global | cold | boolean | in_steed_dismounting | | 0
+ global | cold | boolean | has_strong_rngseed | | 0
+-global | cold | coord | bhitpos | | 0
+ global | cold | coord | doors | [DOORMAX] | 0
+ global | cold | struct mkroom | rooms | [(MAXNROFROOMS + 1) * 2] | 0
+ global | cold | struct mkroom * | subrooms | | 0
+@@ -112,16 +263,8 @@
+ global | cold | struct mkroom * | dnstairs_room | | 0
+ global | cold | struct mkroom * | sstairs_room | | 0
+ global | cold | dlevel_t | level | | 0
+-global | cold | struct trap * | ftrap | | 0
+-global | cold | struct monst | youmonst | | 0
+-global | cold | struct context_info | context | | 0
+-global | cold | struct flag | flags | | 0
+-global | cold | struct instance_flags | iflags | | 0
+-global | cold | struct you | u | | 0
+ global | cold | time_t | ubirthday | | 0
+-global | cold | struct u_realtime | urealtime | | 0
+ global | cold | schar | lastseentyp | [COLNO][ROWNO] | 0
+-global | cold | struct obj * | invent | | 0
+ global | cold | struct obj * | uwep | | 0
+ global | cold | struct obj * | uarm | | 0
+ global | cold | struct obj * | uswapwep | | 0
+@@ -144,7 +287,6 @@
+ global | cold | struct obj * | kickedobj | | 0
+ global | cold | struct spell | spl_book | [MAXSPELL + 1] | 0
+ global | cold | long | wailmsg | | 0
+-global | cold | struct obj * | migrating_objs | | 0
+ global | cold | struct obj * | billobjs | | 0
+ global | cold | char | dogname | [PL_PSIZ] | 0
+ global | cold | char | catname | [PL_PSIZ] | 0
+@@ -156,9 +298,6 @@
+ global | cold | struct mvitals | mvitals | [NUMMONS] | 0
+ global | cold | long | domove_attempting | | 0
+ global | cold | long | domove_succeeded | | 0
+-# c_color_names / c_common_strings / c_obj_colors / materialnm /
+-# fqn_prefix_names: never written -> const-ified in decl.c/decl.h instead of
+-# migrated (drops them from the writable sections entirely).
+ global | cold | struct menucoloring * | menu_colorings | | 0
+ global | cold | winid | WIN_MESSAGE | | 1
+ global | cold | winid | WIN_STATUS | | 1
+@@ -174,55 +313,15 @@
+ global | cold | unsigned | nhUse_dummy | | 0
+ options.c | cold | short | n_menu_mapped | | 0
+ attrib.c | cold | char | from_what_buf | [256] | 0   # BUFSZ; from_what() return buffer
+-# cmd.c (ported wholesale from old fork; lazy slots 3=cmd_state 4=clicklook_cc)
+ global | cold | struct cmd | Cmd | | 0
+-cmd.c | cold | int | alt_esc | | 0
+-cmd.c | cold | int (*{NAME})(void) | timed_occ_fn | | 0
+-cmd.c | cold | char | pushq | [20] | 0   # BSIZE
+-cmd.c | cold | char | saveq | [20] | 0   # BSIZE
+-cmd.c | cold | int | phead | | 0
+-cmd.c | cold | int | ptail | | 0
+-cmd.c | cold | int | shead | | 0
+-cmd.c | cold | int | stail | | 0
+ cmd.c | cold | short | en_win | | 0        # fixup: WIN_ERR
+ cmd.c | cold | boolean | en_via_menu | | 0
+-cmd.c | cold | const char * | readchar_queue | | 0   # fixup: ""
+-# vision.c (ported from old fork; lazy slots 6=close_dy 7=far_dy)
+-vision.c | hot | char | could_see | [2][ROWNO][COLNO] | 0
+-vision.c | hot | char | viz_clear | [ROWNO][COLNO] | 0
+-vision.c | hot | char | left_ptrs | [ROWNO][COLNO] | 0
+-vision.c | hot | char | right_ptrs | [ROWNO][COLNO] | 0
+-vision.c | hot | char * | viz_clear_rows | [ROWNO] | 0
+-vision.c | hot | char * | cs_rows0 | [ROWNO] | 0
+-vision.c | hot | char * | cs_rows1 | [ROWNO] | 0
+-vision.c | hot | char | cs_rmin0 | [ROWNO] | 0
+-vision.c | hot | char | cs_rmax0 | [ROWNO] | 0
+-vision.c | hot | char | cs_rmin1 | [ROWNO] | 0
+-vision.c | hot | char | cs_rmax1 | [ROWNO] | 0
+-vision.c | hot | char * | viz_rmin | | 0
+-vision.c | hot | char * | viz_rmax | | 0
+-vision.c | cold | int | vis_start_row | | 0
+-vision.c | cold | int | vis_start_col | | 0
+-vision.c | cold | int | vis_step | | 0
+-vision.c | cold | char ** | vis_cs_rows | | 0
+-vision.c | cold | char * | vis_cs_left | | 0
+-vision.c | cold | char * | vis_cs_right | | 0
+-vision.c | cold | void (*{NAME})() | vis_func | | 0
+-vision.c | cold | void * | vis_varg | | 0
+-vision.c | cold | int | vision_recur_depth | | 0
+-vision.c | cold | unsigned char | vision_colbump | [COLNO + 1] | 0
+-# botl.c (ported from old fork; lazy slots 8=blstats 9=status_hilites 10=state)
+ botl.c | cold | char | strength_buf | [32] | 0
+-botl.c | cold | boolean | blinit | | 0
+-botl.c | cold | boolean | update_all | | 0
+-botl.c | cold | boolean | valset | [23] | 0        # MAXBLSTATS
+-botl.c | cold | long | bl_hilite_moves | | 0
+ botl.c | cold | unsigned long | cond_hilites | [21] | 0  # BL_ATTCLR_MAX
+ botl.c | cold | int | now_or_before_idx | | 0
+ botl.c | cold | int | status_hilite_str_id | | 0
+ botl.c | cold | char | blstats_initalready | | 0
+ botl.c | cold | void * | status_hilite_str_p | | 0
+-# sp_lev.c (lazy slot 12 = function-local state; lregions shared with mkmaze.c)
+ sp_lev.c | cold | int | min_rx | | 0
+ sp_lev.c | cold | int | max_rx | | 0
+ sp_lev.c | cold | int | min_ry | | 0
+@@ -243,7 +342,6 @@
+ sp_lev.c | cold | int | mines_prize_count | | 0
+ sp_lev.c | cold | int | soko_prize_count | | 0
+ sp_lev.c | cold | schar | floodfillchk_match_under_typ | | 0
+-# mkmaze.c (lazy slot 13 = bughack lev_region)
+ mkmaze.c | cold | void * | bbubbles | | 0
+ mkmaze.c | cold | void * | ebubbles | | 0
+ mkmaze.c | cold | boolean | movebubbles_up | | 0
+@@ -252,23 +350,14 @@
+ mkmaze.c | cold | int | water_xmax | | 0
+ mkmaze.c | cold | int | water_ymax | | 0
+ mkmaze.c | cold | struct trap * | wportal | | 0
+-# display.c (lazy slots 14=state 15=gbuf)
+-display.c | hot | char | gbuf_start | [ROWNO] | 0
+-display.c | hot | char | gbuf_stop | [ROWNO] | 0
+ display.c | cold | int | bad_count | [36] | 0    # MAX_TYPE
+ display.c | cold | void * | tglyph_p | | 0
+-display.c | cold | boolean | in_cls | | 0
+-display.c | cold | int | flushing | | 0
+-display.c | cold | int | delay_flushing | | 0
+ display.c | cold | schar | swallowed_lastx | | 0
+ display.c | cold | schar | swallowed_lasty | | 0
+ display.c | cold | schar | under_water_lastx | | 0
+ display.c | cold | schar | under_water_lasty | | 0
+ display.c | cold | boolean | under_water_dela | | 0
+ display.c | cold | boolean | under_ground_dela | | 0
+-display.c | cold | int | nul_gbuf_new | | 0
+-display.c | cold | int | nul_gbuf_glyph | | 0
+-# invent.c (lazy slot 16 = let_to_name scratch buffer)
+ invent.c | cold | int | lastinvnr | | 0    # fixup: 51
+ invent.c | cold | unsigned | sortlootmode | | 0
+ invent.c | cold | int | cached_pickinv_win | | 0   # fixup: WIN_ERR
+@@ -281,13 +370,11 @@
+ invent.c | cold | char | armcat | [8] | 0
+ invent.c | cold | char | li | [256] | 0     # BUFSZ
+ invent.c | cold | char | altbuf | [256] | 0 # BUFSZ
+-# windows.c (lazy slot 22 = state) — status arrays shared with wintty.c
+ windows.c | cold | void * | last_winchoice | | 0
+ windows.c | cold | boolean | status_activefields | [23] | 0  # MAXBLSTATS
+ windows.c | cold | const char * | status_fieldfmt | [23] | 0
+ windows.c | cold | const char * | status_fieldnm | [23] | 0
+ windows.c | cold | char * | status_vals | [23] | 0
+-# wintty.c (lazy slots 17=tty_status 18=state)
+ wintty.c | cold | int | base_window | | 0
+ wintty.c | cold | char | compress_cbuf | [256] | 0
+ wintty.c | cold | int | hpbar_color | | 0
+@@ -295,17 +382,12 @@
+ wintty.c | cold | unsigned long * | tty_colormasks | | 0
+ wintty.c | cold | long | tty_condition_bits | | 0
+ wintty.c | cold | int | tty_nhgetch_nesting | | 0
+-# topl.c (lazy slot 21 = state)
+ topl.c | cold | boolean | initd | | 0
+ topl.c | cold | int | nxtidx | | 0
+-# getline.c
+ getline.c | cold | boolean | suppress_history | | 0
+-# NLE-layer flag read by both getline.c and winrl.cc
+-global | hot | int | xwaitingforspace | | 0
+ wintty.c | cold | struct WinDesc * | wins | [20] | 0    # MAXWIN
+ wintty.c | cold | struct DisplayDesc * | ttydisplay | | 0
+ wintty.c | cold | char | morc | | 0
+-# files.c (lazy slot 23 = state)
+ files.c | cold | char | savef | [45] | 0
+ files.c | cold | char | bones | [16] | 0
+ files.c | cold | char * | config_section_chosen | | 0
+@@ -313,17 +395,12 @@
+ files.c | cold | char | fqn_fname | [2048] | 0
+ files.c | cold | int | lockptr | | 0
+ files.c | cold | char | wizkit | [128] | 0
+-# dungeon.c cross-TU counter (files.c also uses it)
+-dungeon.c | cold | int | n_dgns | | 0
+-# shk.c (lazy slot 24 = state)
+ shk.c | cold | long | pickmovetime | | 0
+ shk.c | cold | char | empty_shops | [5] | 0
+-# muse.c (lazy slot 25 = struct musable)
+ muse.c | cold | boolean | m_using | | 0
+ muse.c | cold | int | trapx | | 0
+ muse.c | cold | int | trapy | | 0
+ muse.c | cold | boolean | zap_oseen | | 0
+-# pickup.c
+ pickup.c | cold | boolean | abort_looting | | 0
+ pickup.c | cold | boolean | autopick_costly | | 0
+ pickup.c | cold | boolean | bucx_filter | | 0
+@@ -334,19 +411,7 @@
+ pickup.c | cold | long | val_for_n_or_more | | 0
+ pickup.c | cold | char | valid_menu_classes | [24] | 0
+ pickup.c | cold | int | vmc_count | | 0
+-# hack.c
+-hack.c | cold | int | domove_skates | | 0
+-hack.c | cold | char | in_rooms_buf | [5] | 0
+-hack.c | cold | int | inspoteffects | | 0
+-hack.c | cold | long | moverock_lastmovetime | | 0
+-hack.c | cold | schar | spotloc_x | | 0
+-hack.c | cold | schar | spotloc_y | | 0
+-hack.c | cold | int | spotterrain | | 0
+-hack.c | cold | struct trap * | spottrap | | 0
+-hack.c | cold | unsigned | spottraptyp | | 0
+ hack.c | cold | void * | tmp_anything_p | | 0
+-hack.c | cold | int | wc | | 0
+-# do_name.c (lazy slot 26 = state)
+ do_name.c | cold | char | dxdy_buf | [30] | 0
+ do_name.c | cold | char | rndmonnam_buf | [256] | 0
+ do_name.c | cold | int | gloc_filter_match_glyph | | 0
+@@ -354,25 +419,17 @@
+ do_name.c | cold | int | mbuf_idx | | 0
+ do_name.c | cold | char | mbufs | [5 * 256] | 0
+ do_name.c | cold | int | via_naming | | 0
+-# trap.c (lazy slots 27=acid_ctx 28=launchplace)
+ trap.c | cold | char | tnbuf | [12] | 0
+-trap.c | cold | int | force_mintrap | | 0
+-trap.c | cold | boolean | recursive_mine | | 0
+ drawing.c | cold | int | currentgraphics | | 0
+ files.c | cold | char | lock | [46] | 0   # PL_NSIZ+14; cross-TU via decl.h macro
+-# restoring flag (decl.h global, defined in restore.c in stock)
+ global | cold | boolean | restoring | | 0
+-# notonhead (decl.h global; cross-TU: artifact/apply/potion etc.)
+ global | cold | boolean | notonhead | | 0
+-# NLE RNG seed record (hacklib.c / nlernd.c)
+ global | cold | unsigned long | nle_seeds | [3] | 0
+ global | cold | short | nle_hero_path | [256] | 0
+ global | cold | int | nle_hero_path_n | | 0
+-# rumors.c (lazy slots 29=oracle_loc 30=state)
+ rumors.c | cold | int | oracle_flg | | 0
+ rumors.c | cold | unsigned | oracle_cnt | | 0
+ rumors.c | cold | long | true_rumor_size | | 0
+-# artifact.c (lazy slot 31 = artilist copy)
+ artifact.c | cold | schar | artidisco | [33] | 0
+ artifact.c | cold | boolean | artiexist | [35] | 0
+ artifact.c | cold | int | nesting | | 0
+@@ -380,11 +437,9 @@
+ artifact.c | cold | int | mkot_trap_warn_count | | 0
+ artifact.c | cold | int | spec_dbon_applies | | 0
+ artifact.c | cold | boolean | touch_blasted | | 0
+-# apply.c (lazy slot 11 = state)
+ apply.c | cold | int | jumping_is_magic | | 0
+ apply.c | cold | int | polearm_range_max | | 0
+ apply.c | cold | int | polearm_range_min | | 0
+-# save.c
+ save.c | cold | void * | bw_file | | 0
+ save.c | cold | int | bwritefd | | 0
+ save.c | cold | boolean | compressing | | 0
+@@ -400,12 +455,9 @@
+ save.c | cold | void (*{NAME})(int, void *, unsigned int) | procs_bwrite | | 0
+ save.c | cold | unsigned | usteed_id | | 0
+ save.c | cold | unsigned | ustuck_id | | 0
+-# role.c
+ role.c | cold | char | pa | [4] | 0
+ role.c | cold | int | post_attribs | | 0
+-# lock.c
+ lock.c | cold | void * | xlock_door_p | | 0
+-# restore.c
+ restore.c | cold | void * | id_map_p | | 0
+ restore.c | cold | int | n_ids_mapped | | 0
+ restore.c | cold | struct fruit * | oldfruit | | 0
+@@ -418,112 +470,70 @@
+ restore.c | cold | unsigned char | zc_inbuf | [256] | 0
+ restore.c | cold | short | zc_inrunlength | | 0
+ restore.c | cold | int | zc_mreadfd | | 0
+-# hacklib.c
+ hacklib.c | cold | char | ing_suffix_buf | [256] | 0   # BUFSZ
+ hacklib.c | cold | char | datestr | [15] | 0
+ hacklib.c | cold | int | visctrl_nbuf | | 0
+ hacklib.c | cold | char | visctrl_bufs | [5][5] | 0
+ role.c | cold | struct Role | urole_store | | 0    # accessor 'urole' in you.h
+ role.c | cold | struct Race | urace_store | | 0    # accessor 'urace' in you.h
+-# eat.c (lazy slot 33 = eatmbuf)
+ eat.c | cold | boolean | force_save_hs | | 0
+ eat.c | cold | char | msgbuf | [256] | 0
+ eat.c | cold | long | ate_brains | | 0
+ eat.c | cold | unsigned | newuhs_save_hs | | 0
+ eat.c | cold | boolean | newuhs_saved_hs | | 0
+-# potion.c
+ potion.c | cold | int | nothing | | 0
+ potion.c | cold | int | unkn | | 0
+-# do.c
+ do.c | cold | char | at_ladder | | 0
+ do.c | cold | char * | dfr_post_msg | | 0
+ do.c | cold | char * | dfr_pre_msg | | 0
+ do.c | cold | char | dowipe_buf | [39] | 0
+ do.c | cold | d_level | save_dlevel_store | | 0
+-# questpgr.c (lazy slot 34 = qt_list)
+ questpgr.c | cold | char | cvt_buf | [64] | 0
+ questpgr.c | cold | char | nambuf | [64] | 0
+ questpgr.c | cold | void * | msg_file_p | | 0
+-# pline.c (lazy slot 35 = state)
+ pline.c | cold | unsigned | pline_flags | | 0
+ pline.c | cold | int | in_pline | | 0
+ pline.c | cold | char | prevmsg | [256] | 0
+-# mon.c (lazy slot 36 = animal_list)
+-mon.c | cold | void * | mon_pool | | 0
+ mon.c | cold | int | animal_list_count | | 0
+-mon.c | cold | boolean | disintegested | | 0
+ mon.c | cold | long | elemental_clog_msgmv | | 0
+ mon.c | cold | boolean | vamp_rise_msg | | 0
+-# mhitm.c
+ mhitm.c | cold | int | dieroll | | 0
+ mhitm.c | cold | boolean | far_noise | | 0
+ mhitm.c | cold | struct obj * | otmp | | 0
+ mhitm.c | cold | long | noisetime | | 0
+ mhitm.c | cold | boolean | vis | | 0
+-# spell.c (lazy slot 37 = orderindx)
+ spell.c | cold | int | sortmode | | 0
+-# makemon.c (lazy slot 38 = rndmonst state)
+ makemon.c | cold | void * | align_shift_lev_p | | 0
+ makemon.c | cold | long | align_shift_oldmoves | | 0
+-# end.c (lazy slot 39 = Schroedingers_cat)
+ end.c | cold | int | vanq_sortmode | | 0
+-# rnd.c — ISAAC64 RNG state, THE per-env determinism core (fixup: disprng seed = 1)
+-rnd.c | hot | isaac64_ctx | rng_state | [2] | 0
+-rnd.c | hot | int | rng_init | [2] | 0
+-rnd.c | cold | unsigned | rn2disprng_seed | | 0
+-# nlernd.c — level-generation RNG (heiner/nle feature; not in old fork)
+ nlernd.c | cold | isaac64_ctx | lgen_base | | 0
+ nlernd.c | cold | isaac64_ctx | lgen_state | [8] | 0   # NLE_NUM_DUNGEONS
+ nlernd.c | cold | isaac64_ctx | core_state | | 0
+ nlernd.c | cold | int | lgen_initialised | | 0
+ nlernd.c | cold | int | lgen_active | | 0
+-# engrave.c / light.c / timeout.c — per-level chains and timers
+-engrave.c | cold | struct engr * | head_engr | | 0
+-light.c | cold | void * | light_base | | 0
+-timeout.c | cold | void * | timer_base | | 0
+-timeout.c | cold | unsigned long | timer_id | | 0
+-# region.c (regions array is realloc'd, keep as raw pointer field)
+-region.c | cold | void * | regions_p | | 0
+-region.c | cold | int | n_regions | | 0
+ region.c | cold | int | max_regions | | 0
+-# worm.c — MAXWORM=32 arrays inline
+ worm.c | cold | struct wseg * | wheads | [32] | 0
+ worm.c | cold | struct wseg * | wtails | [32] | 0
+ worm.c | cold | long | wgrowtime | [32] | 0
+-# dungeon.c
+ dungeon.c | cold | void * | branches_p | | 0
+ dungeon.c | cold | int | branch_id_ctr | | 0
+ dungeon.c | cold | void * | mapseenchn_p | | 0
+-# mklev.c
+ mklev.c | cold | char | made_branch | | 0
+ mklev.c | cold | schar | vault_x | | 0
+ mklev.c | cold | schar | vault_y | | 0
+-# rect.c (lazy slot 42 = rect array)
+ rect.c | cold | int | rect_cnt | | 0
+-# dogmove.c (lazy slot 43 = dokick state)
+-dogmove.c | cold | schar | gtyp | | 0
+-dogmove.c | cold | schar | gx | | 0
+-dogmove.c | cold | schar | gy | | 0
+-# mthrowu.c
+ mthrowu.c | cold | int | mesg_given | | 0
+ mthrowu.c | cold | struct monst * | archer | | 0
+ mthrowu.c | cold | struct monst * | target | | 0
+-# mhitu.c
+-mhitu.c | cold | int | dieroll | | 0
+-mhitu.c | cold | struct obj * | mon_currwep | | 0
+-# drawing.c — per-env symbol tables (symset options are per-env)
+ drawing.c | cold | struct symsetentry | symset_store | [2] | 0    # NUM_GRAPHICS
+-drawing.c | hot | nhsym | showsyms | [SYM_MAX] | 0
+ drawing.c | cold | nhsym | primary_syms | [SYM_MAX] | 0
+ drawing.c | cold | nhsym | rogue_syms | [SYM_MAX] | 0
+ drawing.c | cold | nhsym | ov_primary_syms | [SYM_MAX] | 0
+ drawing.c | cold | nhsym | ov_rogue_syms | [SYM_MAX] | 0
+ drawing.c | cold | nhsym | warnsyms | [6] | 0    # WARNCOUNT
+ mkmap.c | cold | int | n_loc_filled | | 0
+-# steal.c / weapon.c / pray.c / zap.c / uhitm.c (slot 45=state) etc.
+ steal.c | cold | unsigned | stealmid | | 0
+ steal.c | cold | unsigned | stealoid | | 0
+-weapon.c | cold | struct obj * | propellor | | 0
+ pray.c | cold | schar | p_aligntyp | | 0
+ pray.c | cold | int | p_trouble | | 0
+ pray.c | cold | int | p_type | | 0
+@@ -557,7 +567,6 @@
+ priest.c | cold | char | piousness_buf | [32] | 0
+ dothrow.c | cold | long | breakobj_lastmovetime | | 0
+ dothrow.c | cold | boolean | breakobj_peaceful_shk | | 0
+-# options.c residuals (slot 49 = next_opt buffer)
+ options.c | cold | const char * | opt_intro | [10] | 0    # seeded from template at use
+ options.c | cold | char | fmtstr_doset | [24] | 0         # fixup: "%s%-15s [%s]   "
+ options.c | cold | boolean | made_fmtstr | | 0
+@@ -571,18 +580,21 @@
+ files.c | cold | boolean | chosen_symset_start | | 0
+ files.c | cold | boolean | chosen_symset_end | | 0
+ dlb.c | cold | boolean | initialized | | 0
+-
+-# Ordered floor-object search cache. Cold section avoids shifting hot state.
+ global | cold | unsigned long | nh_fobj_generation | | 0
+ global | cold | int | nh_fobj_valid | | 0
+ global | cold | int | nh_fobj_count | | 0
++global | cold | int | nh_fobj_lo | | 0
++global | hot | unsigned long | nh_invgen | | 0
++global | hot | unsigned long | nh_hgold_gen | | 0
++global | hot | long | nh_hgold_val | | 0
++global | hot | unsigned long | nh_leash_gen | | 0
++global | hot | unsigned char | nh_hgold_valid | | 0
++global | hot | unsigned char | nh_leash_valid | | 0
++global | hot | unsigned char | nh_leash_cnt | | 0
++global | hot | unsigned char | nh_deepest_valid | | 0
++global | hot | schar | nh_deepest_val | [2] | 0
+ global | cold | short | nh_fobj_x | [2048] | 0
+ global | cold | short | nh_fobj_y | [2048] | 0
+ global | cold | struct obj * | nh_fobj_ptr | [2048] | 0
+-
+-global | cold | unsigned char | nh_track_near | [COLNO][ROWNO] | 0
+-
+ global | cold | unsigned char | nh_no_hero_gold | | 0
+-
+-# Locally maintained movement summaries; terrain layout remains original.
+ global | cold | struct nh_tile_summary | nh_move_summary | [COLNO][ROWNO] | 0

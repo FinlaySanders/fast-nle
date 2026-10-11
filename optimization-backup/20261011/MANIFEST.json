@@ -1,0 +1,407 @@
+{
+ "optimization-backup/20261011/engine-scaling/BRANCH_branch_mt7.md": {
+  "bytes": 2721,
+  "sha256": "df13c256ef077708e66e5f3d540ccc4f4bc818afb8fd62ebb953b49240dfed07",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/BRANCH_branch_mt7.md"
+ },
+ "optimization-backup/20261011/engine-scaling/FOOTPRINT.md": {
+  "bytes": 7872,
+  "sha256": "5eefa35e056f4cba8afefede5f1dddfc5d1a1602fbc7a17e3597adfa05172c2d",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/FOOTPRINT.md"
+ },
+ "optimization-backup/20261011/engine-scaling/FOOTPRINT_DATA_lines_invwt.md": {
+  "bytes": 3605,
+  "sha256": "260191d200f0f54851cca804820e2220690789494f8c65cb2f2a4d7424ef51d4",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/FOOTPRINT_DATA_lines_invwt.md"
+ },
+ "optimization-backup/20261011/engine-scaling/FOOTPRINT_DATA_lines_misc1.md": {
+  "bytes": 3678,
+  "sha256": "674fce2e16a8c1b2ff9a7f4c47668b7d0ebf9b85d5c6d0867f65371f5bfdf258",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/FOOTPRINT_DATA_lines_misc1.md"
+ },
+ "optimization-backup/20261011/engine-scaling/FOOTPRINT_FOBJ2.md": {
+  "bytes": 1492,
+  "sha256": "4c57bd1dd94f048c1943a6e061143cdf45204228a14030a3315fde3122746336",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/FOOTPRINT_FOBJ2.md"
+ },
+ "optimization-backup/20261011/engine-scaling/FOOTPRINT_HEAT1.md": {
+  "bytes": 9280,
+  "sha256": "027a59aeed01aecb824f8aaf1ac188aeaf1ccd51a6bed0c2daafad7ac44c7640",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/FOOTPRINT_HEAT1.md"
+ },
+ "optimization-backup/20261011/engine-scaling/FOOTPRINT_INVWT.md": {
+  "bytes": 1494,
+  "sha256": "811bfc629e732946d0ab108bd526ddbafdd37dc815e0d8ef214ac3b10d17488e",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/FOOTPRINT_INVWT.md"
+ },
+ "optimization-backup/20261011/engine-scaling/FOOTPRINT_LINES.md": {
+  "bytes": 13347,
+  "sha256": "838901b525b139ffefe114dfb510c6531c411806f5e3305938ba163dd79e277a",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/FOOTPRINT_LINES.md"
+ },
+ "optimization-backup/20261011/engine-scaling/FOOTPRINT_LINES_lines_dv1.md": {
+  "bytes": 13023,
+  "sha256": "42d4991ca8d416a8c2f8a137ade340a2e2a1a3195985f1a5d7d405c2a1653bc5",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/FOOTPRINT_LINES_lines_dv1.md"
+ },
+ "optimization-backup/20261011/engine-scaling/FOOTPRINT_LINES_lines_dv3.md": {
+  "bytes": 13093,
+  "sha256": "0e9fa2f97a9f7cb4ab6436e50334bf1c4e607f288df15866b412f50ed64941fc",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/FOOTPRINT_LINES_lines_dv3.md"
+ },
+ "optimization-backup/20261011/engine-scaling/FOOTPRINT_LINES_lines_dv4.md": {
+  "bytes": 13023,
+  "sha256": "1c7cd3f1f9e81774a08e308882f3a67faba382eb8ae2636b76ece25f74a7ac64",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/FOOTPRINT_LINES_lines_dv4.md"
+ },
+ "optimization-backup/20261011/engine-scaling/FOOTPRINT_LINES_lines_invwt.md": {
+  "bytes": 13053,
+  "sha256": "b915c4c8847c57fd93a908c798eda1c444792e973fe6484f92a3633ac5311ac8",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/FOOTPRINT_LINES_lines_invwt.md"
+ },
+ "optimization-backup/20261011/engine-scaling/FOOTPRINT_LINES_lines_misc1.md": {
+  "bytes": 13123,
+  "sha256": "1984baed5baccfd77312b357180d0c44d93ff64cf8f60637505e9b441876e055",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/FOOTPRINT_LINES_lines_misc1.md"
+ },
+ "optimization-backup/20261011/engine-scaling/FOOTPRINT_LINES_lines_mt1.md": {
+  "bytes": 13112,
+  "sha256": "8a142ae892c8ddc47c2eb4ad1b78f7dd08a2987f462682d156372e79c03eeb3d",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/FOOTPRINT_LINES_lines_mt1.md"
+ },
+ "optimization-backup/20261011/engine-scaling/FOOTPRINT_LINES_lines_mt2.md": {
+  "bytes": 13050,
+  "sha256": "e019ac263b9c306b110abcd859ea4d4318aa7d2f0caca58c5bf2435012696229",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/FOOTPRINT_LINES_lines_mt2.md"
+ },
+ "optimization-backup/20261011/engine-scaling/FOOTPRINT_LINES_lines_mt3.md": {
+  "bytes": 13064,
+  "sha256": "6bc450fc5279fb8d049e07b71c039b3e0a817f8dd584774593f41c0e9c6d43a4",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/FOOTPRINT_LINES_lines_mt3.md"
+ },
+ "optimization-backup/20261011/engine-scaling/FOOTPRINT_LINES_lines_mt4.md": {
+  "bytes": 13216,
+  "sha256": "d8b24a7f3c12c97fe252d7a97384e6aac6713c4bfe897067b390e1ba05dbb467",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/FOOTPRINT_LINES_lines_mt4.md"
+ },
+ "optimization-backup/20261011/engine-scaling/FOOTPRINT_LINES_lines_mt5.md": {
+  "bytes": 13020,
+  "sha256": "69546a729614f2e500b1c0bf905147e6df5a48d18c2c4c20026934133b85d00e",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/FOOTPRINT_LINES_lines_mt5.md"
+ },
+ "optimization-backup/20261011/engine-scaling/FOOTPRINT_LINES_lines_mt6.md": {
+  "bytes": 12966,
+  "sha256": "3beaa9377b72650f473b302e85e86fec452dec6904e3abcdbbf430aaf3bf62c9",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/FOOTPRINT_LINES_lines_mt6.md"
+ },
+ "optimization-backup/20261011/engine-scaling/FOOTPRINT_LINES_lines_mt7.md": {
+  "bytes": 13027,
+  "sha256": "30d218276a76810b79ea708660f64e3531e5db45cc898c03e3d60864e3fb7191",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/FOOTPRINT_LINES_lines_mt7.md"
+ },
+ "optimization-backup/20261011/engine-scaling/FOOTPRINT_LINES_lines_mt8.md": {
+  "bytes": 13214,
+  "sha256": "625088ecd7722c4b78a2dd2fe8a76b700e72c7e099b0a543d420b706e428af55",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/FOOTPRINT_LINES_lines_mt8.md"
+ },
+ "optimization-backup/20261011/engine-scaling/FOOTPRINT_MISC1.md": {
+  "bytes": 1494,
+  "sha256": "b94f287d5863d56bc4fe7af30926e49b47b8b202608476677c7ad75843b7624d",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/FOOTPRINT_MISC1.md"
+ },
+ "optimization-backup/20261011/engine-scaling/FUNCTIONS_lines_mt7.txt": {
+  "bytes": 3135,
+  "sha256": "0de91036a8770a010d69855477792e5897bb5f07cde078d10e31281a42a89b67",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/FUNCTIONS_lines_mt7.txt"
+ },
+ "optimization-backup/20261011/engine-scaling/HANDOFF.md": {
+  "bytes": 18481,
+  "sha256": "28ed2c29a83b537094ae88c51aa9a9c705c7175b00dcbc990d9b7f1bdd0461e2",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/HANDOFF.md"
+ },
+ "optimization-backup/20261011/engine-scaling/PHASE3_DESIGN.md": {
+  "bytes": 7737,
+  "sha256": "5ab0c074fb612c91b107bc61b2532b2d089292702d1d1ebba62a1efc89049506",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/PHASE3_DESIGN.md"
+ },
+ "optimization-backup/20261011/engine-scaling/PHASE4_COHORT.md": {
+  "bytes": 6031,
+  "sha256": "97db9f00506792c23653e9540b78f5c20e08d654123a975c35090a29ecaa4ee9",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/PHASE4_COHORT.md"
+ },
+ "optimization-backup/20261011/engine-scaling/PROGRAM.md": {
+  "bytes": 82459,
+  "sha256": "7ee21aa5184bc15eb2e58df4a673fa9a994ad127317b9b2a7d42e4e91459ab35",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/PROGRAM.md"
+ },
+ "optimization-backup/20261011/engine-scaling/REGIME_RESULTS.md": {
+  "bytes": 17432,
+  "sha256": "42e7cc31be7ed7a00241cd5a88c40a84d091a3e05dc98bf26c502c10681db5d0",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/REGIME_RESULTS.md"
+ },
+ "optimization-backup/20261011/engine-scaling/build_candidate.py": {
+  "bytes": 1758,
+  "sha256": "7c70e2537e0e533da9edf0c9448e727b2c498ec90f187b8fe6d69c2263fcca34",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/build_candidate.py"
+ },
+ "optimization-backup/20261011/engine-scaling/build_incstack2_pgo.py": {
+  "bytes": 2930,
+  "sha256": "bb87a025195a02a04d04a945a0a6d015819623e48caf943c329ab7c3ac28f6b0",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/build_incstack2_pgo.py"
+ },
+ "optimization-backup/20261011/engine-scaling/build_incstack_pgo.py": {
+  "bytes": 2927,
+  "sha256": "a008e7d0394b2e9b9826fb9374369cb0146fe36df08182f0699f1f32eb3e2f7d",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/build_incstack_pgo.py"
+ },
+ "optimization-backup/20261011/engine-scaling/build_pgo.py": {
+  "bytes": 3024,
+  "sha256": "650b95276c0bbb56efc6099216b9031c5088fac410c9a63c390cb3dfb19dce86",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/build_pgo.py"
+ },
+ "optimization-backup/20261011/engine-scaling/chain_step.sh": {
+  "bytes": 2149,
+  "sha256": "3a4a218db5ea56b1e1be14d4a1c819be43c79ddca45b36d7dfda246b1e9db20d",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/chain_step.sh"
+ },
+ "optimization-backup/20261011/engine-scaling/chain_step2.sh": {
+  "bytes": 2170,
+  "sha256": "8446986b88230aa14d38c78dac0b0439b2704edfa69178ff9e0e2d29c34331ba",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/chain_step2.sh"
+ },
+ "optimization-backup/20261011/engine-scaling/footprint_arm.sh": {
+  "bytes": 774,
+  "sha256": "419a7840c6bc39d202eeb7cd0a245c5d96cfb3a7974ec30868eba74e0e3f61b0",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/footprint_arm.sh"
+ },
+ "optimization-backup/20261011/engine-scaling/footprint_branch.sh": {
+  "bytes": 1606,
+  "sha256": "9d49015887fc4319a1f95ace201f6a05e5c2632297826811eb836d3a8fc60d22",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/footprint_branch.sh"
+ },
+ "optimization-backup/20261011/engine-scaling/footprint_compare.py": {
+  "bytes": 1255,
+  "sha256": "dfade53185f01ebe7743883954b1c785aed4b7d3c95a6ca13d70f84df3737b4c",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/footprint_compare.py"
+ },
+ "optimization-backup/20261011/engine-scaling/footprint_data.py": {
+  "bytes": 5673,
+  "sha256": "2cfc189329a7c3d93e6fbf21ae0c4ea41fe1646c571d3f1690954b656c760d11",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/footprint_data.py"
+ },
+ "optimization-backup/20261011/engine-scaling/footprint_lines.py": {
+  "bytes": 4025,
+  "sha256": "8951f13684ddebecd8c9b3fc9e290380cbb109d49d7a515b0ab4f663c9b21e80",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/footprint_lines.py"
+ },
+ "optimization-backup/20261011/engine-scaling/footprint_lines.sh": {
+  "bytes": 1026,
+  "sha256": "84d7526d106bb6a1e6433c1f70f535c03dd82b5de8c439d7f14b21167d49aa48",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/footprint_lines.sh"
+ },
+ "optimization-backup/20261011/engine-scaling/footprint_lines2.sh": {
+  "bytes": 1195,
+  "sha256": "c489bef74bc987866e89e91f447b16041c1bf3c8c843835770b99b083311eeec",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/footprint_lines2.sh"
+ },
+ "optimization-backup/20261011/engine-scaling/footprint_report.py": {
+  "bytes": 4962,
+  "sha256": "e16caeaf0dc3137825bc15b4932799030218a739bbdacf69ef04c4c24b68dfc9",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/footprint_report.py"
+ },
+ "optimization-backup/20261011/engine-scaling/handoff/engine_dv4stack_vs_fork_HEAD.patch": {
+  "bytes": 609101,
+  "sha256": "06af1cde41360895bea13e106dd0df9e783dae351639170cbe28ce278371c8c7",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/handoff/engine_dv4stack_vs_fork_HEAD.patch"
+ },
+ "optimization-backup/20261011/engine-scaling/handoff/engine_dv4stack_vs_mt7.patch": {
+  "bytes": 12446,
+  "sha256": "ab53bcfac034a9449cb155c02d1164f4c8fe61b56a245e9cf86ca8fbabe08f30",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/handoff/engine_dv4stack_vs_mt7.patch"
+ },
+ "optimization-backup/20261011/engine-scaling/handoff/engine_incstack2_vs_fork_HEAD.patch": {
+  "bytes": 493137,
+  "sha256": "e363decf3ace3253250bbfcf69956973bb25ca0618c2ffddce1303c0f954addf",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/handoff/engine_incstack2_vs_fork_HEAD.patch"
+ },
+ "optimization-backup/20261011/engine-scaling/handoff/engine_incstack2_vs_retained.patch": {
+  "bytes": 131853,
+  "sha256": "1f428d68c3f71056c0bd3658ae293ea27773f16a5d501c71683b835adfb9d97f",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/handoff/engine_incstack2_vs_retained.patch"
+ },
+ "optimization-backup/20261011/engine-scaling/handoff/engine_misc1stack_vs_fork_HEAD.patch": {
+  "bytes": 579566,
+  "sha256": "fcbee2c97a517977d5bdd1c2d03cb182eaa709df91d3aeeb0b89c7de7ee062db",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/handoff/engine_misc1stack_vs_fork_HEAD.patch"
+ },
+ "optimization-backup/20261011/engine-scaling/handoff/engine_misc1stack_vs_incstack2.patch": {
+  "bytes": 117848,
+  "sha256": "4a5df0d669d828bcfa9d1ded01aff3f50ad8cdb6434545295af0b6e42b040b33",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/handoff/engine_misc1stack_vs_incstack2.patch"
+ },
+ "optimization-backup/20261011/engine-scaling/handoff/engine_misc1stack_vs_retained.patch": {
+  "bytes": 238155,
+  "sha256": "a595a87ed9a8e4918bec1694951e56642f6833fc8321d01360f6ed6500313e05",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/handoff/engine_misc1stack_vs_retained.patch"
+ },
+ "optimization-backup/20261011/engine-scaling/handoff/engine_mt7stack_vs_fork_HEAD.patch": {
+  "bytes": 602824,
+  "sha256": "938c723a78dee9b2af593adf30d387aff4304aab6b4e2aa1c8f848eb06a3205a",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/handoff/engine_mt7stack_vs_fork_HEAD.patch"
+ },
+ "optimization-backup/20261011/engine-scaling/handoff/engine_mt7stack_vs_misc1.patch": {
+  "bytes": 37725,
+  "sha256": "04286312b4b4ac85df94ec5c4f101a63bbaf5b2c53275b54f7702270f97c9fa7",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/handoff/engine_mt7stack_vs_misc1.patch"
+ },
+ "optimization-backup/20261011/engine-scaling/handoff/engine_mt7stack_vs_retained.patch": {
+  "bytes": 270532,
+  "sha256": "d73725d281318fb509fc12c48de1fcd8a2cd50eaab0074781f015bf9cddaa986",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/handoff/engine_mt7stack_vs_retained.patch"
+ },
+ "optimization-backup/20261011/engine-scaling/handoff/env_nethack_h_incremental_packer.patch": {
+  "bytes": 5874,
+  "sha256": "a7a6aa32e564f9d5284a30013245788e314c471ff0f52980216770ea7531c15e",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/handoff/env_nethack_h_incremental_packer.patch"
+ },
+ "optimization-backup/20261011/engine-scaling/harness_cohort/replay_cohort.c": {
+  "bytes": 6710,
+  "sha256": "d92b521a165e063ad38353ccec954d1915b447774fcff989fe54ecac1dd9a693",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/harness_cohort/replay_cohort.c"
+ },
+ "optimization-backup/20261011/engine-scaling/harness_cohort/replay_orig.c": {
+  "bytes": 4765,
+  "sha256": "612dc80ceaa1178979fbd05edb94d000617fccfa7e4fb128d5b553d62d1390e5",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/harness_cohort/replay_orig.c"
+ },
+ "optimization-backup/20261011/engine-scaling/harness_incpack/replay.c": {
+  "bytes": 4765,
+  "sha256": "612dc80ceaa1178979fbd05edb94d000617fccfa7e4fb128d5b553d62d1390e5",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/harness_incpack/replay.c"
+ },
+ "optimization-backup/20261011/engine-scaling/ir_compare.py": {
+  "bytes": 1350,
+  "sha256": "e1a486f6e852bada71938ef2d9ac44992491e2f16e2a72f5b95d4719b93e2bf9",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/ir_compare.py"
+ },
+ "optimization-backup/20261011/engine-scaling/make_dv1.py": {
+  "bytes": 4084,
+  "sha256": "886328bc39c422a567fcad10d820217dadcaf0335937fa9400a486cc197eecba",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/make_dv1.py"
+ },
+ "optimization-backup/20261011/engine-scaling/make_dv2.py": {
+  "bytes": 4962,
+  "sha256": "bad31efc6e6d0d4808fbd8f6627e1efbc61ccf32fcb25a66e4ec7165cceb0cd3",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/make_dv2.py"
+ },
+ "optimization-backup/20261011/engine-scaling/make_dv3.py": {
+  "bytes": 5825,
+  "sha256": "0f54ebb737c16b0df1777bfb1ecd8674c194c73e4bc2ffea7d487f29ba0f0e86",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/make_dv3.py"
+ },
+ "optimization-backup/20261011/engine-scaling/make_dv4.py": {
+  "bytes": 6947,
+  "sha256": "1aabd0472d3570e4dc968e05dc8e58051916b729312201d1f81d226a1db6d765",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/make_dv4.py"
+ },
+ "optimization-backup/20261011/engine-scaling/make_dv5.py": {
+  "bytes": 2510,
+  "sha256": "fc268b6b34bd7546b44a4fbbf25b568c043ecfaac35209e9b831994e7711b8fd",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/make_dv5.py"
+ },
+ "optimization-backup/20261011/engine-scaling/make_fobj2.py": {
+  "bytes": 5370,
+  "sha256": "bb4f4f1bb28d6e632c57ab9ac6eaf3242a7d1db1893389583e3d48b73681fd2f",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/make_fobj2.py"
+ },
+ "optimization-backup/20261011/engine-scaling/make_invview.py": {
+  "bytes": 3951,
+  "sha256": "6312b6a499ce904bc797cc4310ff94ff9d13dbe1ac3f498b40a28f4bf564cc40",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/make_invview.py"
+ },
+ "optimization-backup/20261011/engine-scaling/make_invview2.py": {
+  "bytes": 2942,
+  "sha256": "362de5b636d4648ecc895c2acdcb33a381421bcd5b0bdf8c95fd081d44cc284b",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/make_invview2.py"
+ },
+ "optimization-backup/20261011/engine-scaling/make_kbits.py": {
+  "bytes": 3926,
+  "sha256": "4d83d5ba0eec4951faa12e76a904449acd25534776bd03882671db0fdbb69b45",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/make_kbits.py"
+ },
+ "optimization-backup/20261011/engine-scaling/make_landing.py": {
+  "bytes": 1021,
+  "sha256": "a8117c79211b2959a6968e4114fd4e9e183c2f7d49a9ad0c9dc3bfa352a4fde6",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/make_landing.py"
+ },
+ "optimization-backup/20261011/engine-scaling/make_landing3.py": {
+  "bytes": 993,
+  "sha256": "5eb4621a0d2602be8fd87e2cf2ddf9c5a6cc93ded0e8ce2c77c3d769f9cc934d",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/make_landing3.py"
+ },
+ "optimization-backup/20261011/engine-scaling/make_mbits.py": {
+  "bytes": 4395,
+  "sha256": "98f66616f8aad1b84da9ed41894aca8965508c7e4f74a6d8a34d5df110ce90a4",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/make_mbits.py"
+ },
+ "optimization-backup/20261011/engine-scaling/make_misc1.py": {
+  "bytes": 7352,
+  "sha256": "7f4cd18be100c87cc7b5ac5624395017b498b86bc85e3a39924f5e7bde0590d7",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/make_misc1.py"
+ },
+ "optimization-backup/20261011/engine-scaling/make_mload.py": {
+  "bytes": 7417,
+  "sha256": "21690c00dbaf7898a97571de415141d15bb2ddf200d367435b75650ac4edeb7d",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/make_mload.py"
+ },
+ "optimization-backup/20261011/engine-scaling/make_mt1.py": {
+  "bytes": 8000,
+  "sha256": "dca645cbcaff61bdd3210e2d657ee6041c4262890f39a35131373b229419889e",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/make_mt1.py"
+ },
+ "optimization-backup/20261011/engine-scaling/make_mt2.py": {
+  "bytes": 6184,
+  "sha256": "bce8f9c3dd4549e6e94743e8af33b39e4ed342791277010416ef736b42e60ac0",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/make_mt2.py"
+ },
+ "optimization-backup/20261011/engine-scaling/make_mt3.py": {
+  "bytes": 1651,
+  "sha256": "dab61cce66b418cfecb6287a8edb26327d17c357f6f5a689d25b3047a35c7f28",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/make_mt3.py"
+ },
+ "optimization-backup/20261011/engine-scaling/make_mt4.py": {
+  "bytes": 10867,
+  "sha256": "86bed613db93438843425e4e034c3327b4a013d206ff9d6d0cd482816ba6f65f",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/make_mt4.py"
+ },
+ "optimization-backup/20261011/engine-scaling/make_mt5.py": {
+  "bytes": 2105,
+  "sha256": "d978010b86849bc4881770e19ccf34db02151c0d81becfbf25c85c3224404ae8",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/make_mt5.py"
+ },
+ "optimization-backup/20261011/engine-scaling/make_mt6.py": {
+  "bytes": 8653,
+  "sha256": "94d99c9e1ed22fe385f78f512e67b11215f06e2c08a9e2b62cb2e49dc26aba7e",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/make_mt6.py"
+ },
+ "optimization-backup/20261011/engine-scaling/make_mt7.py": {
+  "bytes": 4416,
+  "sha256": "4805887bde6a1ea7f953f01be9a04b42ae05589abb7204dbd455b32c8939a7d8",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/make_mt7.py"
+ },
+ "optimization-backup/20261011/engine-scaling/make_mt8.py": {
+  "bytes": 13241,
+  "sha256": "9c6c922cb9b6e28b7d79674794e63cf6761b60a9864da773358a234e26d48935",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/make_mt8.py"
+ },
+ "optimization-backup/20261011/engine-scaling/native_screen.sh": {
+  "bytes": 1018,
+  "sha256": "c5539eb2e12b167724ffd9276ec8a808c080d2b0ff442803f6c8f2503b71b178",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/native_screen.sh"
+ },
+ "optimization-backup/20261011/engine-scaling/native_screen2.sh": {
+  "bytes": 999,
+  "sha256": "4d9e33bfa6759cad407d9bf1858e15fea7550b7771be8026d3b78493f3fb3781",
+  "source": "/puffertank/experiments/nethack-engine-scaling-20261010/native_screen2.sh"
+ }
+}

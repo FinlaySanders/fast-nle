@@ -1,0 +1,222 @@
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/mt7/source/include/display.h /puffertank/experiments/nethack-compact-state-20261008/engines/dv4/source/include/display.h
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/mt7/source/include/display.h	2026-10-09 16:51:04.841509918 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/dv4/source/include/display.h	2026-10-11 12:11:25.492841723 +0000
+@@ -27,6 +27,17 @@
+  * Returns true if the hero can sense the given monster.  This includes
+  * monsters that are hiding or mimicing other monsters.
+  */
++/* nh_display_sense: hero-global sensing properties, hoisted for nh_newsym_moved() (display.c) */
++#define NH_SENSE_TPBLIND 1
++#define NH_SENSE_TP 2
++#define NH_SENSE_WARNMON 4
++#define NH_SENSE_DETECT 8
++#define NH_SENSE_INFRA 16
++#define NH_SENSE_WARNING 32
++#define NH_SENSE_SPECIAL 64
++#define NH_SENSE_ALL 127
++#define NH_SENSE_VALID 128 /* 0 = stale: behave as ALL until movemon() recomputes */
++
+ #define tp_sensemon(mon) \
+     (/* The hero can always sense a monster IF:        */  \
+      /* 1. the monster has a brain to sense            */  \
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/mt7/source/include/extern.h /puffertank/experiments/nethack-compact-state-20261008/engines/dv4/source/include/extern.h
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/mt7/source/include/extern.h	2026-10-10 13:20:33.061875657 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/dv4/source/include/extern.h	2026-10-11 12:11:25.492681449 +0000
+@@ -361,6 +361,8 @@
+ E void FDECL(feel_newsym, (XCHAR_P, XCHAR_P));
+ E void FDECL(feel_location, (XCHAR_P, XCHAR_P));
+ E void FDECL(newsym, (int, int));
++E void FDECL(nh_newsym_moved, (int, int));
++E void NDECL(nh_display_sense_recalc);
+ E void FDECL(newsym_force, (int, int));
+ E void FDECL(shieldeff, (XCHAR_P, XCHAR_P));
+ E void FDECL(tmp_at, (int, int));
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/mt7/source/include/nh_ctx_gen.h /puffertank/experiments/nethack-compact-state-20261008/engines/dv4/source/include/nh_ctx_gen.h
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/mt7/source/include/nh_ctx_gen.h	2026-10-10 23:54:24.238578624 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/dv4/source/include/nh_ctx_gen.h	2026-10-11 12:11:25.518936892 +0000
+@@ -10,6 +10,7 @@
+     /* --- hot --- */
+     long g_moves; /* global: moves */
+     int g_nh_invwt_valid; /* global: nh_invwt_valid */
++    int g_nh_display_sense; /* global: nh_display_sense */
+     long g_nh_invwt_nb; /* global: nh_invwt_nb */
+     long g_nh_invwt_boulder; /* global: nh_invwt_boulder */
+     long g_monstermoves; /* global: monstermoves */
+@@ -533,6 +534,7 @@
+ /* accessors: true globals (statics get per-file headers) */
+ #define moves (nh_cur->g_moves)
+ #define nh_invwt_valid (nh_cur->g_nh_invwt_valid)
++#define nh_display_sense (nh_cur->g_nh_display_sense)
+ #define nh_invwt_nb (nh_cur->g_nh_invwt_nb)
+ #define nh_invwt_boulder (nh_cur->g_nh_invwt_boulder)
+ #define monstermoves (nh_cur->g_monstermoves)
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/mt7/source/src/display.c /puffertank/experiments/nethack-compact-state-20261008/engines/dv4/source/src/display.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/mt7/source/src/display.c	2026-10-10 13:20:33.071182442 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/dv4/source/src/display.c	2026-10-11 12:11:25.493041345 +0000
+@@ -1525,6 +1525,77 @@
+ #define gbuf_start (nh_cur->g_display_c_gbuf_start)
+ #define gbuf_stop  (nh_cur->g_display_c_gbuf_stop)
+ 
++/* Hero-global half of newsym()'s out-of-sight branch as a bitmask; recomputed at movemon(), set to ALL whenever sight or form changes. */
++void
++nh_display_sense_recalc()
++{
++    int s = 0;
++
++    if (Blind && Blind_telepat) s |= NH_SENSE_TPBLIND;
++    if (Unblind_telepat) s |= NH_SENSE_TP;
++    if (Warn_of_mon) s |= NH_SENSE_WARNMON;
++    if (Detect_monsters) s |= NH_SENSE_DETECT;
++    if (!Blind && Infravision) s |= NH_SENSE_INFRA;
++    if (Warning) s |= NH_SENSE_WARNING;
++    if (in_mklev || iflags.use_background_glyph || Is_rogue_level(&u.uz)
++#ifdef HANGUPHANDLING
++        || program_state.done_hup
++#endif
++        ) s |= NH_SENSE_SPECIAL;
++    nh_display_sense = s | NH_SENSE_VALID;
++}
++
++/* newsym() for the square a monster just left or entered; skips when newsym() would provably change nothing. */
++void
++nh_newsym_moved(x, y)
++int x, y;
++{
++    register struct rm *lev;
++    struct monst *mon;
++    int s = nh_display_sense;
++#ifdef NLE_DISPLAY_VERIFY
++    static long nh_ns_skip, nh_ns_call;
++#endif
++
++    if (!(s & NH_SENSE_VALID) || (s & NH_SENSE_SPECIAL) || u.uswallow || Underwater || (x == u.ux && y == u.uy) || cansee(x, y))
++        goto full;
++    if (s && (mon = m_at(x, y)) != 0) {
++        if ((s & NH_SENSE_DETECT)
++            || ((s & NH_SENSE_TPBLIND) && !mindless(mon->data))
++            || ((s & NH_SENSE_TP) && !mindless(mon->data) && distu(mon->mx, mon->my) <= (BOLT_LIM * BOLT_LIM))
++            || ((s & NH_SENSE_WARNMON) && MATCH_WARN_OF_MON(mon))
++            || ((s & NH_SENSE_INFRA) && infravisible(mon->data) && couldsee(mon->mx, mon->my))
++            || ((s & NH_SENSE_WARNING) && mon_warning(mon)))
++            goto full;
++    }
++    lev = &(NH_TILE(x, y));
++    if ((!lev->waslit || (flags.dark_room && iflags.use_color))
++        && ((lev->glyph == cmap_to_glyph(S_litcorr) && lev->typ == CORR)
++            || (lev->glyph == cmap_to_glyph(S_room) && lev->typ == ROOM)))
++        goto full;
++    if (gbuf_glyph[y][x] != lev->glyph)
++        goto full;
++#ifdef NLE_DISPLAY_VERIFY
++    {
++        int g0 = gbuf_glyph[y][x], c0 = gbuf_changed[y][x], s0 = gbuf_start[y], e0 = gbuf_stop[y];
++        int lg0 = lev->glyph, wl0 = lev->waslit, sv0 = lev->seenv;
++        newsym(x, y);
++        if (g0 != gbuf_glyph[y][x] || c0 != gbuf_changed[y][x] || s0 != gbuf_start[y] || e0 != gbuf_stop[y]
++            || lg0 != lev->glyph || wl0 != lev->waslit || sv0 != lev->seenv)
++            fprintf(stderr, "NEWSYM_MISMATCH at %d,%d sense %d glyph %d->%d changed %d->%d bbox %d,%d->%d,%d lev %d->%d waslit %d->%d\n",
++                    x, y, s, g0, gbuf_glyph[y][x], c0, gbuf_changed[y][x], s0, e0, gbuf_start[y], gbuf_stop[y], lg0, lev->glyph, wl0, lev->waslit);
++        long n = __atomic_add_fetch(&nh_ns_skip, 1, __ATOMIC_RELAXED);
++        if ((n & ((1L << 22) - 1)) == 0) fprintf(stderr, "NEWSYM_STATS skip=%ld call=%ld\n", n, __atomic_load_n(&nh_ns_call, __ATOMIC_RELAXED));
++    }
++#endif
++    return;
++ full:
++#ifdef NLE_DISPLAY_VERIFY
++    __atomic_add_fetch(&nh_ns_call, 1, __ATOMIC_RELAXED);
++#endif
++    newsym(x, y);
++}
++
+ /* FIXME: This is a dirty hack, because newsym() doesn't distinguish
+  * between object piles and single objects, it doesn't mark the location
+  * for update. */
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/mt7/source/src/do_wear.c /puffertank/experiments/nethack-compact-state-20261008/engines/dv4/source/src/do_wear.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/mt7/source/src/do_wear.c	2026-10-10 14:50:16.084926642 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/dv4/source/src/do_wear.c	2026-10-11 12:11:25.500745623 +0000
+@@ -1133,6 +1133,8 @@
+ {
+     boolean already_blind = Blind, changed = FALSE;
+ 
++    nh_display_sense = 0; /* stale: sight changes; movemon() recomputes */
++
+     /* blindfold might be wielded; release it for wearing */
+     if (otmp->owornmask & W_WEAPONS)
+         remove_worn_item(otmp, FALSE);
+@@ -1169,6 +1171,8 @@
+ {
+     boolean was_blind = Blind, changed = FALSE;
+ 
++    nh_display_sense = 0; /* stale: sight changes; movemon() recomputes */
++
+     if (!otmp) {
+         impossible("Blindf_off without otmp");
+         return;
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/mt7/source/src/mon.c /puffertank/experiments/nethack-compact-state-20261008/engines/dv4/source/src/mon.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/mt7/source/src/mon.c	2026-10-10 21:59:22.652185496 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/dv4/source/src/mon.c	2026-10-11 12:11:25.493425532 +0000
+@@ -808,6 +808,8 @@
+     register struct monst *mtmp, *nmtmp;
+     register boolean somebody_can_move = FALSE;
+ 
++    nh_display_sense_recalc();
++
+     /*
+      * Some of you may remember the former assertion here that
+      * because of deaths and other actions, a simple one-pass
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/mt7/source/src/monmove.c /puffertank/experiments/nethack-compact-state-20261008/engines/dv4/source/src/monmove.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/mt7/source/src/monmove.c	2026-10-10 23:54:24.194603931 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/dv4/source/src/monmove.c	2026-10-11 12:11:25.502049677 +0000
+@@ -1467,7 +1467,7 @@
+                 }
+             }
+ 
+-            newsym(omx, omy); /* update the old position */
++            nh_newsym_moved(omx, omy); /* update the old position */
+             if (mintrap(mtmp) >= 2) {
+                 if (mtmp->mx)
+                     newsym(mtmp->mx, mtmp->my);
+@@ -1598,7 +1598,7 @@
+                 u.uy = mtmp->my;
+                 swallowed(0);
+             } else
+-                newsym(mtmp->mx, mtmp->my);
++                nh_newsym_moved(mtmp->mx, mtmp->my);
+         }
+         if (nh_move_obj_at(mtmp->mx, mtmp->my) && mtmp->mcanmove) {
+             /* recompute the likes tests, in case we polymorphed
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/mt7/source/src/polyself.c /puffertank/experiments/nethack-compact-state-20261008/engines/dv4/source/src/polyself.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/mt7/source/src/polyself.c	2026-10-09 16:51:05.190042549 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/dv4/source/src/polyself.c	2026-10-11 12:11:25.500872338 +0000
+@@ -46,6 +46,8 @@
+ {
+     struct permonst *mdat = &mons[u.umonnum];
+ 
++    nh_display_sense = 0; /* stale: form changes eyes/infravision; movemon() recomputes */
++
+     set_mon_data(&youmonst, mdat);
+ 
+ #define PROPSET(PropIndx, ON)                          \
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/mt7/source/src/potion.c /puffertank/experiments/nethack-compact-state-20261008/engines/dv4/source/src/potion.c
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/mt7/source/src/potion.c	2026-10-10 14:50:16.093435039 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/dv4/source/src/potion.c	2026-10-11 12:11:25.493629406 +0000
+@@ -258,6 +258,8 @@
+     boolean u_could_see, can_see_now;
+     const char *eyes;
+ 
++    nh_display_sense = 0; /* stale: sight changes; movemon() recomputes */
++
+     /* we need to probe ahead in case the Eyes of the Overworld
+        are or will be overriding blindness */
+     u_could_see = !Blind;
+diff -ruN '--exclude=build' '--exclude=*.orig' /puffertank/experiments/nethack-compact-state-20261008/engines/mt7/source/tools/globals.def /puffertank/experiments/nethack-compact-state-20261008/engines/dv4/source/tools/globals.def
+--- /puffertank/experiments/nethack-compact-state-20261008/engines/mt7/source/tools/globals.def	2026-10-10 23:54:24.194265880 +0000
++++ /puffertank/experiments/nethack-compact-state-20261008/engines/dv4/source/tools/globals.def	2026-10-11 12:11:25.492352124 +0000
+@@ -103,6 +103,7 @@
+ # ---- hot: touched every step (ordered by access pattern; re-annotated 2026-10-10 from the callgrind footprint) ----
+ global | hot | long | moves | | 1
+ global | hot | int | nh_invwt_valid | | 0
++global | hot | int | nh_display_sense | | 0
+ global | hot | long | nh_invwt_nb | | 0
+ global | hot | long | nh_invwt_boulder | | 0
+ global | hot | long | monstermoves | | 1
