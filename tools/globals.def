@@ -103,6 +103,7 @@
 # ---- hot: touched every step (ordered by access pattern; re-annotated 2026-10-10 from the callgrind footprint) ----
 global | hot | long | moves | | 1
 global | hot | int | nh_invwt_valid | | 0
+global | hot | int | nh_display_sense | | 0
 global | hot | long | nh_invwt_nb | | 0
 global | hot | long | nh_invwt_boulder | | 0
 global | hot | long | monstermoves | | 1

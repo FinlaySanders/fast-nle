@@ -1467,7 +1467,7 @@ register int after;
                 }
             }
 
-            newsym(omx, omy); /* update the old position */
+            nh_newsym_moved(omx, omy); /* update the old position */
             if (mintrap(mtmp) >= 2) {
                 if (mtmp->mx)
                     newsym(mtmp->mx, mtmp->my);
@@ -1598,7 +1598,7 @@ register int after;
                 u.uy = mtmp->my;
                 swallowed(0);
             } else
-                newsym(mtmp->mx, mtmp->my);
+                nh_newsym_moved(mtmp->mx, mtmp->my);
         }
         if (nh_move_obj_at(mtmp->mx, mtmp->my) && mtmp->mcanmove) {
             /* recompute the likes tests, in case we polymorphed

@@ -27,6 +27,17 @@
  * Returns true if the hero can sense the given monster.  This includes
  * monsters that are hiding or mimicing other monsters.
  */
+/* nh_display_sense: hero-global sensing properties, hoisted for nh_newsym_moved() (display.c) */
+#define NH_SENSE_TPBLIND 1
+#define NH_SENSE_TP 2
+#define NH_SENSE_WARNMON 4
+#define NH_SENSE_DETECT 8
+#define NH_SENSE_INFRA 16
+#define NH_SENSE_WARNING 32
+#define NH_SENSE_SPECIAL 64
+#define NH_SENSE_ALL 127
+#define NH_SENSE_VALID 128 /* 0 = stale: behave as ALL until movemon() recomputes */
+
 #define tp_sensemon(mon) \
     (/* The hero can always sense a monster IF:        */  \
      /* 1. the monster has a brain to sense            */  \

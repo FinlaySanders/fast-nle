@@ -258,6 +258,8 @@ boolean talk;
     boolean u_could_see, can_see_now;
     const char *eyes;
 
+    nh_display_sense = 0; /* stale: sight changes; movemon() recomputes */
+
     /* we need to probe ahead in case the Eyes of the Overworld
        are or will be overriding blindness */
     u_could_see = !Blind;

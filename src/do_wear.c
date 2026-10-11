@@ -1133,6 +1133,8 @@ struct obj *otmp;
 {
     boolean already_blind = Blind, changed = FALSE;
 
+    nh_display_sense = 0; /* stale: sight changes; movemon() recomputes */
+
     /* blindfold might be wielded; release it for wearing */
     if (otmp->owornmask & W_WEAPONS)
         remove_worn_item(otmp, FALSE);
@@ -1168,6 +1170,8 @@ Blindf_off(otmp)
 struct obj *otmp;
 {
     boolean was_blind = Blind, changed = FALSE;
+
+    nh_display_sense = 0; /* stale: sight changes; movemon() recomputes */
 
     if (!otmp) {
         impossible("Blindf_off without otmp");

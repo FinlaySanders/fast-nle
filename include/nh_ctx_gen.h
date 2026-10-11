@@ -10,6 +10,7 @@ struct nh_ctx {
     /* --- hot --- */
     long g_moves; /* global: moves */
     int g_nh_invwt_valid; /* global: nh_invwt_valid */
+    int g_nh_display_sense; /* global: nh_display_sense */
     long g_nh_invwt_nb; /* global: nh_invwt_nb */
     long g_nh_invwt_boulder; /* global: nh_invwt_boulder */
     long g_monstermoves; /* global: monstermoves */
@@ -533,6 +534,7 @@ void nh_ctx_fixup(struct nh_ctx *);
 /* accessors: true globals (statics get per-file headers) */
 #define moves (nh_cur->g_moves)
 #define nh_invwt_valid (nh_cur->g_nh_invwt_valid)
+#define nh_display_sense (nh_cur->g_nh_display_sense)
 #define nh_invwt_nb (nh_cur->g_nh_invwt_nb)
 #define nh_invwt_boulder (nh_cur->g_nh_invwt_boulder)
 #define monstermoves (nh_cur->g_monstermoves)

@@ -808,6 +808,8 @@ movemon()
     register struct monst *mtmp, *nmtmp;
     register boolean somebody_can_move = FALSE;
 
+    nh_display_sense_recalc();
+
     /*
      * Some of you may remember the former assertion here that
      * because of deaths and other actions, a simple one-pass

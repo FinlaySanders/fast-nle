@@ -46,6 +46,8 @@ set_uasmon()
 {
     struct permonst *mdat = &mons[u.umonnum];
 
+    nh_display_sense = 0; /* stale: form changes eyes/infravision; movemon() recomputes */
+
     set_mon_data(&youmonst, mdat);
 
 #define PROPSET(PropIndx, ON)                          \

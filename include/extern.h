@@ -361,6 +361,8 @@ E void FDECL(map_location, (int, int, int));
 E void FDECL(feel_newsym, (XCHAR_P, XCHAR_P));
 E void FDECL(feel_location, (XCHAR_P, XCHAR_P));
 E void FDECL(newsym, (int, int));
+E void FDECL(nh_newsym_moved, (int, int));
+E void NDECL(nh_display_sense_recalc);
 E void FDECL(newsym_force, (int, int));
 E void FDECL(shieldeff, (XCHAR_P, XCHAR_P));
 E void FDECL(tmp_at, (int, int));
