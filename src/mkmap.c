@@ -52,7 +52,7 @@ schar bg_typ, fg_typ;
     while (count < limit) {
         i = rn1(WIDTH - 1, 2);
         j = rnd(HEIGHT - 1);
-        if (levl[i][j].typ == bg_typ) {
+        if (NH_TILE(i, j).typ == bg_typ) {
             SET_TYP_XY(i, j, fg_typ);
             count++;
         }
@@ -66,7 +66,7 @@ schar bg_typ;
 {
     if (col <= 0 || row < 0 || col > WIDTH || row >= HEIGHT)
         return bg_typ;
-    return levl[col][row].typ;
+    return NH_TILE(col, row).typ;
 }
 
 static int dirs[16] = { -1, -1 /**/, -1, 0 /**/,  -1, 1 /**/, 0, -1 /**/,
@@ -158,7 +158,7 @@ schar bg_typ, fg_typ;
  * use a flooding algorithm to find all locations that should
  * have the same rm number as the current location.
  * if anyroom is TRUE, use IS_ROOM to check room membership instead of
- * exactly matching levl[sx][sy].typ and walls are included as well.
+ * exactly matching NH_TILE(sx, sy).typ and walls are included as well.
  */
 void
 flood_fill_rm(sx, sy, rmno, lit, anyroom)
@@ -170,12 +170,12 @@ boolean anyroom;
 {
     register int i;
     int nx;
-    schar fg_typ = levl[sx][sy].typ;
+    schar fg_typ = NH_TILE(sx, sy).typ;
 
     /* back up to find leftmost uninitialized location */
-    while (sx > 0 && (anyroom ? IS_ROOM(levl[sx][sy].typ)
-                              : levl[sx][sy].typ == fg_typ)
-           && (int) levl[sx][sy].roomno != rmno)
+    while (sx > 0 && (anyroom ? IS_ROOM(NH_TILE(sx, sy).typ)
+                              : NH_TILE(sx, sy).typ == fg_typ)
+           && (int) NH_TILE(sx, sy).roomno != rmno)
         sx--;
     sx++; /* compensate for extra decrement */
 
@@ -185,22 +185,22 @@ boolean anyroom;
     if (sy < min_ry)
         min_ry = sy;
 
-    for (i = sx; i <= WIDTH && levl[i][sy].typ == fg_typ; i++) {
-        levl[i][sy].roomno = rmno;
-        levl[i][sy].lit = lit;
+    for (i = sx; i <= WIDTH && NH_TILE(i, sy).typ == fg_typ; i++) {
+        NH_TILE(i, sy).roomno = rmno;
+        NH_TILE(i, sy).lit = lit;
         if (anyroom) {
             /* add walls to room as well */
             register int ii, jj;
             for (ii = (i == sx ? i - 1 : i); ii <= i + 1; ii++)
                 for (jj = sy - 1; jj <= sy + 1; jj++)
-                    if (isok(ii, jj) && (IS_WALL(levl[ii][jj].typ)
-                                         || IS_DOOR(levl[ii][jj].typ)
-                                         || levl[ii][jj].typ == SDOOR)) {
-                        levl[ii][jj].edge = 1;
+                    if (isok(ii, jj) && (IS_WALL(NH_TILE(ii, jj).typ)
+                                         || IS_DOOR(NH_TILE(ii, jj).typ)
+                                         || NH_TILE(ii, jj).typ == SDOOR)) {
+                        NH_TILE(ii, jj).edge = 1;
                         if (lit)
-                            levl[ii][jj].lit = lit;
-                        if ((int) levl[ii][jj].roomno != rmno)
-                            levl[ii][jj].roomno = SHARED;
+                            NH_TILE(ii, jj).lit = lit;
+                        if ((int) NH_TILE(ii, jj).roomno != rmno)
+                            NH_TILE(ii, jj).roomno = SHARED;
                     }
         }
         n_loc_filled++;
@@ -209,36 +209,36 @@ boolean anyroom;
 
     if (isok(sx, sy - 1)) {
         for (i = sx; i < nx; i++)
-            if (levl[i][sy - 1].typ == fg_typ) {
-                if ((int) levl[i][sy - 1].roomno != rmno)
+            if (NH_TILE(i, sy - 1).typ == fg_typ) {
+                if ((int) NH_TILE(i, sy - 1).roomno != rmno)
                     flood_fill_rm(i, sy - 1, rmno, lit, anyroom);
             } else {
                 if ((i > sx || isok(i - 1, sy - 1))
-                    && levl[i - 1][sy - 1].typ == fg_typ) {
-                    if ((int) levl[i - 1][sy - 1].roomno != rmno)
+                    && NH_TILE(i - 1, sy - 1).typ == fg_typ) {
+                    if ((int) NH_TILE(i - 1, sy - 1).roomno != rmno)
                         flood_fill_rm(i - 1, sy - 1, rmno, lit, anyroom);
                 }
                 if ((i < nx - 1 || isok(i + 1, sy - 1))
-                    && levl[i + 1][sy - 1].typ == fg_typ) {
-                    if ((int) levl[i + 1][sy - 1].roomno != rmno)
+                    && NH_TILE(i + 1, sy - 1).typ == fg_typ) {
+                    if ((int) NH_TILE(i + 1, sy - 1).roomno != rmno)
                         flood_fill_rm(i + 1, sy - 1, rmno, lit, anyroom);
                 }
             }
     }
     if (isok(sx, sy + 1)) {
         for (i = sx; i < nx; i++)
-            if (levl[i][sy + 1].typ == fg_typ) {
-                if ((int) levl[i][sy + 1].roomno != rmno)
+            if (NH_TILE(i, sy + 1).typ == fg_typ) {
+                if ((int) NH_TILE(i, sy + 1).roomno != rmno)
                     flood_fill_rm(i, sy + 1, rmno, lit, anyroom);
             } else {
                 if ((i > sx || isok(i - 1, sy + 1))
-                    && levl[i - 1][sy + 1].typ == fg_typ) {
-                    if ((int) levl[i - 1][sy + 1].roomno != rmno)
+                    && NH_TILE(i - 1, sy + 1).typ == fg_typ) {
+                    if ((int) NH_TILE(i - 1, sy + 1).roomno != rmno)
                         flood_fill_rm(i - 1, sy + 1, rmno, lit, anyroom);
                 }
                 if ((i < nx - 1 || isok(i + 1, sy + 1))
-                    && levl[i + 1][sy + 1].typ == fg_typ) {
-                    if ((int) levl[i + 1][sy + 1].roomno != rmno)
+                    && NH_TILE(i + 1, sy + 1).typ == fg_typ) {
+                    if ((int) NH_TILE(i + 1, sy + 1).roomno != rmno)
                         flood_fill_rm(i + 1, sy + 1, rmno, lit, anyroom);
                 }
             }
@@ -261,10 +261,10 @@ wallify_map()
 
     for (x = 1; x < COLNO; x++)
         for (y = 0; y < ROWNO; y++)
-            if (levl[x][y].typ == STONE) {
+            if (NH_TILE(x, y).typ == STONE) {
                 for (yy = y - 1; yy <= y + 1; yy++)
                     for (xx = x - 1; xx <= x + 1; xx++)
-                        if (isok(xx, yy) && levl[xx][yy].typ == ROOM) {
+                        if (isok(xx, yy) && NH_TILE(xx, yy).typ == ROOM) {
                             if (yy != y)
                                 SET_TYP_XY(x, y, HWALL);
                             else
@@ -287,7 +287,7 @@ schar bg_typ, fg_typ;
      */
     for (i = 2; i <= WIDTH; i++)
         for (j = 1; j < HEIGHT; j++) {
-            if (levl[i][j].typ == fg_typ && levl[i][j].roomno == NO_ROOM) {
+            if (NH_TILE(i, j).typ == fg_typ && NH_TILE(i, j).roomno == NO_ROOM) {
                 min_rx = max_rx = i;
                 min_ry = max_ry = j;
                 n_loc_filled = 0;
@@ -305,10 +305,10 @@ schar bg_typ, fg_typ;
                      */
                     for (sx = min_rx; sx <= max_rx; sx++)
                         for (sy = min_ry; sy <= max_ry; sy++)
-                            if ((int) levl[sx][sy].roomno
+                            if ((int) NH_TILE(sx, sy).roomno
                                 == nroom + ROOMOFFSET) {
                                 SET_TYP_XY(sx, sy, bg_typ);
-                                levl[sx][sy].roomno = NO_ROOM;
+                                NH_TILE(sx, sy).roomno = NO_ROOM;
                             }
                 }
             }
@@ -359,11 +359,11 @@ boolean lit, walled, icedpools;
     if (lit) {
         for (i = 1; i < COLNO; i++)
             for (j = 0; j < ROWNO; j++)
-                if ((!IS_ROCK(fg_typ) && levl[i][j].typ == fg_typ)
-                    || (!IS_ROCK(bg_typ) && levl[i][j].typ == bg_typ)
-                    || (bg_typ == TREE && levl[i][j].typ == bg_typ)
-                    || (walled && IS_WALL(levl[i][j].typ)))
-                    levl[i][j].lit = TRUE;
+                if ((!IS_ROCK(fg_typ) && NH_TILE(i, j).typ == fg_typ)
+                    || (!IS_ROCK(bg_typ) && NH_TILE(i, j).typ == bg_typ)
+                    || (bg_typ == TREE && NH_TILE(i, j).typ == bg_typ)
+                    || (walled && IS_WALL(NH_TILE(i, j).typ)))
+                    NH_TILE(i, j).lit = TRUE;
         for (i = 0; i < nroom; i++)
             rooms[i].rlit = 1;
     }
@@ -371,10 +371,10 @@ boolean lit, walled, icedpools;
        ice might be frozen pool rather than frozen moat */
     for (i = 1; i < COLNO; i++)
         for (j = 0; j < ROWNO; j++) {
-            if (levl[i][j].typ == LAVAPOOL)
-                levl[i][j].lit = TRUE;
-            else if (levl[i][j].typ == ICE)
-                levl[i][j].icedpool = icedpools ? ICED_POOL : ICED_MOAT;
+            if (NH_TILE(i, j).typ == LAVAPOOL)
+                NH_TILE(i, j).lit = TRUE;
+            else if (NH_TILE(i, j).typ == ICE)
+                NH_TILE(i, j).icedpool = icedpools ? ICED_POOL : ICED_MOAT;
         }
 }
 
@@ -440,8 +440,8 @@ unsigned roomno;
         roomno += ROOMOFFSET;
         for (i = croom->lx; i <= croom->hx; ++i)
             for (j = croom->ly; j <= croom->hy; ++j) {
-                if (levl[i][j].roomno == oroomno)
-                    levl[i][j].roomno = roomno;
+                if (NH_TILE(i, j).roomno == oroomno)
+                    NH_TILE(i, j).roomno = roomno;
             }
     }
 

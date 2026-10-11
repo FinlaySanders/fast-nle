@@ -86,7 +86,7 @@ d_level *dlev;
     for (j = 0; j < 9 - lev / 3; j++)
         objects[first + j].oc_prob = 0;
     first += j;
-    if (first > LAST_GEM || objects[first].oc_class != GEM_CLASS
+    if (first > LAST_GEM || object_defaults[first].oc_class != GEM_CLASS
         || OBJ_NAME(objects[first]) == (char *) 0) {
         raw_printf("Not enough gems? - first=%d j=%d LAST_GEM=%d", first, j,
                    LAST_GEM);
@@ -161,9 +161,9 @@ init_objects()
        otherwise compute probs */
     first = 0;
     while (first < NUM_OBJECTS) {
-        oclass = objects[first].oc_class;
+        oclass = object_defaults[first].oc_class;
         last = first + 1;
-        while (last < NUM_OBJECTS && objects[last].oc_class == oclass)
+        while (last < NUM_OBJECTS && object_defaults[last].oc_class == oclass)
             last++;
         bases[(int) oclass] = first;
 
@@ -217,7 +217,7 @@ obj_shuffle_range(otyp, lo_p, hi_p)
 int otyp;         /* input: representative item */
 int *lo_p, *hi_p; /* output: range that item belongs among */
 {
-    int i, ocls = objects[otyp].oc_class;
+    int i, ocls = object_defaults[otyp].oc_class;
 
     /* default is just the object itself */
     *lo_p = *hi_p = otyp;
@@ -243,8 +243,8 @@ int *lo_p, *hi_p; /* output: range that item belongs among */
     case SPBOOK_CLASS:
         /* exclude non-magic types and also unique ones */
         *lo_p = bases[ocls];
-        for (i = *lo_p; objects[i].oc_class == ocls; i++)
-            if (objects[i].oc_unique || !objects[i].oc_magic)
+        for (i = *lo_p; object_defaults[i].oc_class == ocls; i++)
+            if (object_defaults[i].oc_unique || !object_defaults[i].oc_magic)
                 break;
         *hi_p = i - 1;
         break;
@@ -253,7 +253,7 @@ int *lo_p, *hi_p; /* output: range that item belongs among */
     case VENOM_CLASS:
         /* entire class */
         *lo_p = bases[ocls];
-        for (i = *lo_p; objects[i].oc_class == ocls; i++)
+        for (i = *lo_p; object_defaults[i].oc_class == ocls; i++)
             continue;
         *hi_p = i - 1;
         break;
@@ -374,7 +374,7 @@ boolean mark_as_known;
 boolean credit_hero;
 {
     if (!objects[oindx].oc_name_known) {
-        register int dindx, acls = objects[oindx].oc_class;
+        register int dindx, acls = object_defaults[oindx].oc_class;
 
         /* Loop thru disco[] 'til we find the target (which may have been
            uname'd) or the next open slot; one or the other will be found
@@ -387,12 +387,13 @@ boolean credit_hero;
 
         if (mark_as_known) {
             objects[oindx].oc_name_known = 1;
+            nle_discoveries_changed();
             if (credit_hero)
                 exercise(A_WIS, TRUE);
         }
         /* moves==1L => initial inventory, gameover => final disclosure */
         if (moves > 1L && !program_state.gameover) {
-            if (objects[oindx].oc_class == GEM_CLASS)
+            if (object_defaults[oindx].oc_class == GEM_CLASS)
                 gem_learned(oindx); /* could affect price of unpaid gems */
             update_inventory();
         }
@@ -405,12 +406,12 @@ undiscover_object(oindx)
 register int oindx;
 {
     if (!objects[oindx].oc_name_known) {
-        register int dindx, acls = objects[oindx].oc_class;
+        register int dindx, acls = object_defaults[oindx].oc_class;
         register boolean found = FALSE;
 
         /* find the object; shift those behind it forward one slot */
         for (dindx = bases[acls]; dindx < NUM_OBJECTS && disco[dindx] != 0
-                                  && objects[dindx].oc_class == acls;
+                                  && object_defaults[dindx].oc_class == acls;
              dindx++)
             if (found)
                 disco[dindx - 1] = disco[dindx];
@@ -423,7 +424,7 @@ register int oindx;
         else
             impossible("named object not in disco");
 
-        if (objects[oindx].oc_class == GEM_CLASS)
+        if (object_defaults[oindx].oc_class == GEM_CLASS)
             gem_learned(oindx); /* ok, it's actually been unlearned */
         update_inventory();
     }
@@ -480,7 +481,7 @@ dodiscovered() /* free after Robert Viduya */
         oclass = *s;
         prev_class = oclass + 1; /* forced different from oclass */
         for (i = bases[(int) oclass];
-             i < NUM_OBJECTS && objects[i].oc_class == oclass; i++) {
+             i < NUM_OBJECTS && object_defaults[i].oc_class == oclass; i++) {
             if ((dis = disco[i]) != 0 && interesting_to_discover(dis)) {
                 ct++;
                 if (oclass != prev_class) {
@@ -577,7 +578,7 @@ doclassdisco()
         oclass = *s;
         c = def_oc_syms[(int) oclass].sym;
         for (i = bases[(int) oclass];
-             i < NUM_OBJECTS && objects[i].oc_class == oclass; ++i)
+             i < NUM_OBJECTS && object_defaults[i].oc_class == oclass; ++i)
             if ((dis = disco[i]) != 0 && interesting_to_discover(dis)) {
                 if (!index(discosyms, c)) {
                     Sprintf(eos(discosyms), "%c", c);
@@ -668,7 +669,7 @@ doclassdisco()
         Sprintf(buf, "Discovered %s", let_to_name(oclass, FALSE, FALSE));
         putstr(tmpwin, iflags.menu_headings, buf);
         for (i = bases[(int) oclass];
-             i < NUM_OBJECTS && objects[i].oc_class == oclass; ++i) {
+             i < NUM_OBJECTS && object_defaults[i].oc_class == oclass; ++i) {
             if ((dis = disco[i]) != 0 && interesting_to_discover(dis)) {
                 Sprintf(buf, "%s %s",
                         objects[dis].oc_pre_discovered ? "*" : " ",
@@ -714,7 +715,7 @@ rename_disco()
         oclass = *s;
         prev_class = oclass + 1; /* forced different from oclass */
         for (i = bases[(int) oclass];
-             i < NUM_OBJECTS && objects[i].oc_class == oclass; i++) {
+             i < NUM_OBJECTS && object_defaults[i].oc_class == oclass; i++) {
             dis = disco[i];
             if (!dis || !interesting_to_discover(dis))
                 continue;
@@ -752,9 +753,9 @@ rename_disco()
 
             odummy = zeroobj;
             odummy.otyp = dis;
-            odummy.oclass = objects[dis].oc_class;
+            odummy.oclass = object_defaults[dis].oc_class;
             odummy.quan = 1L;
-            odummy.known = !objects[dis].oc_uses_known;
+            odummy.known = !object_defaults[dis].oc_uses_known;
             odummy.dknown = 1;
             docall(&odummy);
         }

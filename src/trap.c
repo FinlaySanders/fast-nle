@@ -327,7 +327,7 @@ int x, y, typ;
     static union vlaunchinfo zero_vl;
     boolean oldplace;
     struct trap *ttmp;
-    struct rm *lev = &levl[x][y];
+    struct rm *lev = &NH_TILE(x, y);
 
     if ((ttmp = t_at(x, y)) != 0) {
         if (ttmp->ttyp == MAGIC_PORTAL || ttmp->ttyp == VIBRATING_SQUARE)
@@ -359,7 +359,7 @@ int x, y, typ;
     ttmp->madeby_u = 0;
     ttmp->once = 0;
     ttmp->tseen = (typ == HOLE); /* hide non-holes */
-    ttmp->ttyp = typ;
+    NH_TRAP_WRITE(ttmp, (ttmp->ttyp = typ));
 
     switch (typ) {
     case SQKY_BOARD: {
@@ -400,7 +400,7 @@ int x, y, typ;
             obj_extract_self(otmp);
             (void) add_to_container(statue, otmp);
         }
-        statue->owt = weight(statue);
+        nh_set_owt(statue);
         mongone(mtmp);
         break;
     }
@@ -441,6 +441,7 @@ int x, y, typ;
     if (!oldplace) {
         ttmp->ntrap = ftrap;
         ftrap = ttmp;
+        nh_trap_update(x, y);
     } else {
         /* oldplace;
            it shouldn't be possible to override a sokoban pit or hole
@@ -497,7 +498,7 @@ unsigned ftflags;
     if (Sokoban && Can_fall_thru(&u.uz))
         ; /* KMH -- You can't escape the Sokoban level traps */
     else if (Levitation || u.ustuck
-             || (!Can_fall_thru(&u.uz) && !levl[u.ux][u.uy].candig)
+             || (!Can_fall_thru(&u.uz) && !NH_TILE(u.ux, u.uy).candig)
              || ((Flying || is_clinger(youmonst.data)
                   || (ceiling_hider(youmonst.data) && u.uundetected))
                  && !(ftflags & TOOKPLUNGE))
@@ -868,7 +869,7 @@ struct trap *trap;
     struct obj *otmp = mksobj(otyp, TRUE, FALSE);
 
     otmp->quan = 1L;
-    otmp->owt = weight(otmp);
+    nh_set_owt(otmp);
     otmp->opoisoned = 0;
     otmp->ox = trap->tx, otmp->oy = trap->ty;
     return otmp;
@@ -1688,7 +1689,7 @@ blow_up_landmine(trap)
 struct trap *trap;
 {
     int x = trap->tx, y = trap->ty, dbx, dby;
-    struct rm *lev = &levl[x][y];
+    struct rm *lev = &NH_TILE(x, y);
 
     (void) scatter(x, y, 4,
                    MAY_DESTROY | MAY_HIT | MAY_FRACTURE | VIS_EFFECTS,
@@ -1711,7 +1712,7 @@ struct trap *trap;
             /* no pits here */
             deltrap(trap);
         } else {
-            trap->ttyp = PIT;       /* explosion creates a pit */
+            NH_TRAP_WRITE(trap, (trap->ttyp = PIT));       /* explosion creates a pit */
             trap->madeby_u = FALSE; /* resulting pit isn't yours */
             seetrap(trap);          /* and it isn't concealed */
         }
@@ -2008,7 +2009,7 @@ int style;
         if (otyp == BOULDER && closed_door(bhitpos.x, bhitpos.y)) {
             if (cansee(bhitpos.x, bhitpos.y))
                 pline_The("boulder crashes through a door.");
-            levl[bhitpos.x][bhitpos.y].doormask = D_BROKEN;
+            NH_TILE(bhitpos.x, bhitpos.y).doormask = D_BROKEN;
             if (dist)
                 unblock_point(bhitpos.x, bhitpos.y);
         }
@@ -2115,7 +2116,7 @@ long ocount;
     } else {
         otmp = mksobj(otyp, TRUE, FALSE);
         otmp->quan = ocount;
-        otmp->owt = weight(otmp);
+        nh_set_owt(otmp);
         place_object(otmp, cc.x, cc.y);
         stackobj(otmp);
     }
@@ -2197,7 +2198,7 @@ register struct monst *mtmp;
             } else if (trap->ttyp == SPIKED_PIT) {
                 if (canseemon(mtmp))
                     pline("%s munches on some spikes!", Monnam(mtmp));
-                trap->ttyp = PIT;
+                NH_TRAP_WRITE(trap, (trap->ttyp = PIT));
                 mtmp->meating = 5;
             }
         }
@@ -2446,10 +2447,18 @@ register struct monst *mtmp;
 
                 if (thitm(0, mtmp, (struct obj *) 0, num, immolate))
                     trapkilled = TRUE;
-                else
-                    /* we know mhp is at least `num' below mhpmax,
-                       so no (mhp > mhpmax) check is needed here */
-                    mtmp->mhpmax -= rn2(num + 1);
+                else {
+                    int loss = rn2(num + 1);
+
+                    /* thitm() can kill and then life-save the monster.
+                       In that case its restored HP might already equal
+                       its maximum, so don't lower the maximum below HP.
+                       A nonpositive maximum would make level catch-up
+                       mark this live monster dead without removing it
+                       from the map. */
+                    mtmp->mhpmax = max(mtmp->mhp,
+                                        mtmp->mhpmax - loss);
+                }
             }
             if (burnarmor(mtmp) || rn2(3)) {
                 (void) destroy_mitem(mtmp, SCROLL_CLASS, AD_FIRE);
@@ -3463,7 +3472,7 @@ xchar x, y;
        note: potions are glass so fall through to fire_damage() and boil */
     if (objects[otyp].oc_material < DRAGON_HIDE
         && ocls != SCROLL_CLASS && ocls != SPBOOK_CLASS
-        && objects[otyp].oc_oprop != FIRE_RES
+        && object_defaults[otyp].oc_oprop != FIRE_RES
         && otyp != WAN_FIRE && otyp != FIRE_HORN
         /* assumes oerodeproof isn't overloaded for some other purpose on
            non-eroding items */
@@ -3520,7 +3529,7 @@ struct obj *obj;
                           aobjnam(obj, "fade"));
             }
         }
-        obj->otyp = SCR_BLANK_PAPER;
+        NH_PILE_WRITE(obj, (obj->otyp = SCR_BLANK_PAPER));
         obj->spe = 0;
         obj->dknown = 0;
     } else
@@ -3611,7 +3620,7 @@ boolean force;
         if (carried(obj))
             pline("Your %s %s.", ostr, vtense(ostr, "fade"));
 
-        obj->otyp = SCR_BLANK_PAPER;
+        NH_PILE_WRITE(obj, (obj->otyp = SCR_BLANK_PAPER));
         obj->dknown = 0;
         obj->spe = 0;
         if (carried(obj))
@@ -3632,7 +3641,7 @@ boolean force;
             free_oname(obj);
         }
 
-        obj->otyp = SPE_BLANK_PAPER;
+        NH_PILE_WRITE(obj, (obj->otyp = SPE_BLANK_PAPER));
         obj->dknown = 0;
         if (carried(obj))
             update_inventory();
@@ -3678,7 +3687,7 @@ boolean force;
             if (carried(obj))
                 pline("Your %s %s further.", ostr, vtense(ostr, "dilute"));
 
-            obj->otyp = POT_WATER;
+            NH_PILE_WRITE(obj, (obj->otyp = POT_WATER));
             obj->dknown = 0;
             obj->blessed = obj->cursed = 0;
             obj->odiluted = 0;
@@ -4018,7 +4027,7 @@ boolean bury_it;
     struct obj *otmp = mksobj(otyp, TRUE, FALSE);
 
     otmp->quan = cnt;
-    otmp->owt = weight(otmp);
+    nh_set_owt(otmp);
     /* Only dart traps are capable of being poisonous */
     if (otyp != DART)
         otmp->opoisoned = 0;
@@ -4601,7 +4610,7 @@ boolean force;
         return 0;
     }
 
-    switch (levl[x][y].doormask) {
+    switch (NH_TILE(x, y).doormask) {
     case D_NODOOR:
         You("%s no door there.", Blind ? "feel" : "see");
         return 0;
@@ -4613,21 +4622,21 @@ boolean force;
         return 0;
     }
 
-    if (((levl[x][y].doormask & D_TRAPPED) != 0
+    if (((NH_TILE(x, y).doormask & D_TRAPPED) != 0
          && (force || (!confused && rn2(MAXULEV - u.ulevel + 11) < 10)))
         || (!force && confused && !rn2(3))) {
         You("find a trap on the door!");
         exercise(A_WIS, TRUE);
         if (ynq("Disarm it?") != 'y')
             return 1;
-        if (levl[x][y].doormask & D_TRAPPED) {
+        if (NH_TILE(x, y).doormask & D_TRAPPED) {
             ch = 15 + (Role_if(PM_ROGUE) ? u.ulevel * 3 : u.ulevel);
             exercise(A_DEX, TRUE);
             if (!force && (confused || Fumbling
                            || rnd(75 + level_difficulty() / 2) > ch)) {
                 You("set it off!");
                 b_trapped("door", FINGER);
-                levl[x][y].doormask = D_NODOOR;
+                NH_TILE(x, y).doormask = D_NODOOR;
                 unblock_point(x, y);
                 newsym(x, y);
                 /* (probably ought to charge for this damage...) */
@@ -4635,7 +4644,7 @@ boolean force;
                     add_damage(x, y, 0L);
             } else {
                 You("disarm it!");
-                levl[x][y].doormask &= ~D_TRAPPED;
+                NH_TILE(x, y).doormask &= ~D_TRAPPED;
             }
         } else
             pline("This door was not trapped.");
@@ -5046,6 +5055,7 @@ register struct trap *trap;
             panic("deltrap: no preceding trap!");
         ttmp->ntrap = trap->ntrap;
     }
+    nh_trap_update(trap->tx, trap->ty);
     if (Sokoban && (trap->ttyp == PIT || trap->ttyp == HOLE))
         maybe_finish_sokoban();
     dealloc_trap(trap);
@@ -5319,7 +5329,7 @@ lava_effects()
         for (obj = invent; obj; obj = obj->nobj)
             if ((is_organic(obj) || obj->oclass == POTION_CLASS)
                 && !obj->oerodeproof
-                && objects[obj->otyp].oc_oprop != FIRE_RES
+                && object_defaults[obj->otyp].oc_oprop != FIRE_RES
                 && obj->otyp != SCR_FIRE && obj->otyp != SPE_FIREBALL
                 && !obj_resists(obj, 0, 0)) /* for invocation items */
                 obj->in_use = 1;

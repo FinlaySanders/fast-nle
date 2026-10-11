@@ -370,7 +370,7 @@ dowieldquiver()
        or secondary weapon is a sling.) */
     quivee_types = (uslinging()
                     || (uswapwep
-                        && objects[uswapwep->otyp].oc_skill == P_SLING))
+                        && object_defaults[uswapwep->otyp].oc_skill == P_SLING))
                    ? bullets
                    : ready_objs;
     newquiver = getobj(quivee_types, "ready");
@@ -760,11 +760,11 @@ register int amount;
         /* order: message, transformation, shop handling */
         Your("%s %s much sharper now.", simpleonames(uwep),
              multiple ? "fuse, and become" : "is");
-        uwep->otyp = CRYSKNIFE;
+        NH_PILE_WRITE(uwep, (uwep->otyp = CRYSKNIFE));
         uwep->oerodeproof = 0;
         if (multiple) {
             uwep->quan = 1L;
-            uwep->owt = weight(uwep);
+            nh_set_owt(uwep);
         }
         if (uwep->cursed)
             uncurse(uwep);
@@ -782,11 +782,11 @@ register int amount;
         Your("%s %s much duller now.", simpleonames(uwep),
              multiple ? "fuse, and become" : "is");
         costly_alteration(uwep, COST_DEGRD); /* DECHNT? other? */
-        uwep->otyp = WORM_TOOTH;
+        NH_PILE_WRITE(uwep, (uwep->otyp = WORM_TOOTH));
         uwep->oerodeproof = 0;
         if (multiple) {
             uwep->quan = 1L;
-            uwep->owt = weight(uwep);
+            nh_set_owt(uwep);
         }
         if (otyp != STRANGE_OBJECT && otmp->bknown)
             makeknown(otyp);

@@ -89,7 +89,7 @@ E boolean FDECL(artifact_light, (struct obj *));
 E long FDECL(spec_m2, (struct obj *));
 E boolean FDECL(artifact_has_invprop, (struct obj *, UCHAR_P));
 E long FDECL(arti_cost, (struct obj *));
-E struct obj *FDECL(what_gives, (long *));
+E struct obj *FDECL(what_gives, (propbits_t *));
 E const char *FDECL(glow_color, (int));
 E const char *FDECL(glow_verb, (int, BOOLEAN_P));
 E void FDECL(Sting_effects, (int));
@@ -385,6 +385,10 @@ E int FDECL(back_to_glyph, (XCHAR_P, XCHAR_P));
 E int FDECL(zapdir_to_glyph, (int, int, int));
 E int FDECL(glyph_at, (XCHAR_P, XCHAR_P));
 E void FDECL(nle_copy_glyphs, (short *));
+E void FDECL(nle_copy_glyph_rows, (short *, unsigned));
+E unsigned NDECL(nle_gbuf_pending_rows);
+E void NDECL(nle_glyphs_cleared);
+E void NDECL(nle_discoveries_changed);
 E void NDECL(set_wall_state);
 E void FDECL(unset_seenv, (struct rm *, int, int, int, int));
 E int FDECL(warning_of, (struct monst *));
@@ -1189,6 +1193,9 @@ E void FDECL(readmail, (struct obj *));
 /* ### makemon.c ### */
 
 E void FDECL(dealloc_monst, (struct monst *));
+E struct monst *NDECL(nh_mon_alloc);
+E void FDECL(nh_mon_free, (struct monst *));
+E void FDECL(nh_mon_pool_release, (genericptr_t));
 E boolean FDECL(is_home_elemental, (struct permonst *));
 E struct monst *FDECL(clone_mon, (struct monst *, XCHAR_P, XCHAR_P));
 E int FDECL(monhp_per_lvl, (struct monst *));
@@ -1390,6 +1397,9 @@ E struct obj *FDECL(add_to_container, (struct obj *, struct obj *));
 E void FDECL(add_to_migration, (struct obj *));
 E void FDECL(add_to_buried, (struct obj *));
 E void FDECL(dealloc_obj, (struct obj *));
+E struct obj *NDECL(nh_obj_alloc);
+E void FDECL(nh_obj_free, (struct obj *));
+E void FDECL(nh_obj_pool_release, (genericptr_t));
 E void FDECL(obj_ice_effects, (int, int, BOOLEAN_P));
 E long FDECL(peek_at_iced_corpse_age, (struct obj *));
 E int FDECL(hornoplenty, (struct obj *, BOOLEAN_P));
@@ -1975,8 +1985,8 @@ E const char *NDECL(udeadinside);
 
 /* ### potion.c ### */
 
-E void FDECL(set_itimeout, (long *, long));
-E void FDECL(incr_itimeout, (long *, int));
+E void FDECL(set_itimeout, (propbits_t *, long));
+E void FDECL(incr_itimeout, (propbits_t *, int));
 E void FDECL(make_confused, (long, BOOLEAN_P));
 E void FDECL(make_stunned, (long, BOOLEAN_P));
 E void FDECL(make_sick, (long, const char *, BOOLEAN_P, int));

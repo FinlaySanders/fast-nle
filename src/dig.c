@@ -32,11 +32,11 @@ rm_waslit()
 {
     register xchar x, y;
 
-    if (TYP_AT(u.ux, u.uy) == ROOM && levl[u.ux][u.uy].waslit)
+    if (TYP_AT(u.ux, u.uy) == ROOM && NH_TILE(u.ux, u.uy).waslit)
         return TRUE;
     for (x = u.ux - 2; x < u.ux + 3; x++)
         for (y = u.uy - 1; y < u.uy + 2; y++)
-            if (isok(x, y) && levl[x][y].waslit)
+            if (isok(x, y) && NH_TILE(x, y).waslit)
                 return TRUE;
     return FALSE;
 }
@@ -55,7 +55,7 @@ boolean waslit, rockit;
 
     if (!isok(x, y))
         return;
-    lev = &levl[x][y];
+    lev = &NH_TILE(x, y);
 
     if (rockit) {
         register struct monst *mtmp;
@@ -132,7 +132,7 @@ register boolean rockit;
     if (!rockit && TYP_AT(u.ux, u.uy) == CORR) {
         SET_TYP_XY(u.ux, u.uy, ROOM); /* flags for CORR already 0 */
         if (waslit)
-            levl[u.ux][u.uy].waslit = TRUE;
+            NH_TILE(u.ux, u.uy).waslit = TRUE;
         newsym(u.ux, u.uy); /* in case player is invisible */
     }
 
@@ -216,11 +216,11 @@ int x, y;
             pline_The("%s splashes and subsides.", hliquid("water"));
         return FALSE;
     } else if ((IS_ROCK(TYP_AT(x, y)) && TYP_AT(x, y) != SDOOR
-                && (levl[x][y].wall_info & W_NONDIGGABLE) != 0)
+                && (NH_TILE(x, y).wall_info & W_NONDIGGABLE) != 0)
                || (ttmp
                    && (ttmp->ttyp == MAGIC_PORTAL
                        || ttmp->ttyp == VIBRATING_SQUARE
-                       || (!Can_dig_down(&u.uz) && !levl[x][y].candig)))) {
+                       || (!Can_dig_down(&u.uz) && !NH_TILE(x, y).candig)))) {
         if (verbose)
             pline_The("%s here is too hard to %s.", surface(x, y), verb);
         return FALSE;
@@ -246,7 +246,7 @@ dig(VOID_ARGS)
     register boolean ispick = uwep && is_pick(uwep);
     const char *verb = (!uwep || is_pick(uwep)) ? "dig into" : "chop through";
 
-    lev = &levl[dpx][dpy];
+    lev = &NH_TILE(dpx, dpy);
     /* perhaps a nymph stole your pick-axe while you were busy digging */
     /* or perhaps you teleported away */
     if (u.uswallow || !uwep || (!ispick && !is_axe(uwep))
@@ -434,7 +434,7 @@ dig(VOID_ARGS)
         } else
             return 0; /* statue or boulder got taken */
 
-        if (!does_block(dpx, dpy, &levl[dpx][dpy]))
+        if (!does_block(dpx, dpy, &NH_TILE(dpx, dpy)))
             unblock_point(dpx, dpy); /* vision:  can see through */
         feel_newsym(dpx, dpy);
         if (digtxt && !context.digging.quiet)
@@ -545,7 +545,7 @@ int ttyp;
     struct obj *oldobjs, *newobjs;
     register struct trap *ttmp;
     char surface_type[BUFSZ];
-    struct rm *lev = &levl[x][y];
+    struct rm *lev = &NH_TILE(x, y);
     boolean shopdoor;
     struct monst *mtmp = m_at(x, y); /* may be madeby */
     boolean madeby_u = (madeby == BY_YOU);
@@ -783,7 +783,7 @@ coord *cc;
     }
 
     ttmp = t_at(dig_x, dig_y);
-    lev = &levl[dig_x][dig_y];
+    lev = &NH_TILE(dig_x, dig_y);
     nohole = (!Can_dig_down(&u.uz) && !lev->candig);
 
     if ((ttmp && (ttmp->ttyp == MAGIC_PORTAL
@@ -819,7 +819,7 @@ coord *cc;
             && rn2(2)) {
             pline_The("boulder settles into the %spit.",
                       (dig_x != u.ux || dig_y != u.uy) ? "adjacent " : "");
-            ttmp->ttyp = PIT; /* crush spikes */
+            NH_TRAP_WRITE(ttmp, (ttmp->ttyp = PIT)); /* crush spikes */
         } else {
             /*
              * digging makes a hole, but the boulder immediately
@@ -950,7 +950,7 @@ coord *cc;
         pline_The("grave seems unused.  Strange....");
         break;
     }
-    { SET_TYP_XY(dig_x, dig_y, ROOM); levl[dig_x][dig_y].rmflags = 0; }
+    { SET_TYP_XY(dig_x, dig_y, ROOM); NH_TILE(dig_x, dig_y).rmflags = 0; }
     del_engr_at(dig_x, dig_y);
     newsym(dig_x, dig_y);
     return;
@@ -1063,7 +1063,7 @@ struct obj *obj;
             pline("Clash!");
             return 1;
         }
-        lev = &levl[rx][ry];
+        lev = &NH_TILE(rx, ry);
         if (MON_AT(rx, ry) && attack(m_at(rx, ry)))
             return 1;
         dig_target = dig_typ(obj, rx, ry);
@@ -1217,7 +1217,7 @@ struct monst *mtmp;
 xchar x, y;
 boolean zap;
 {
-    struct rm *lev = &levl[x][y];
+    struct rm *lev = &NH_TILE(x, y);
 
     if (in_town(x, y)
         && (closed_door(x, y) || lev->typ == SDOOR || IS_WALL(lev->typ)
@@ -1264,7 +1264,7 @@ register struct monst *mtmp;
     register struct rm *here;
     int pile = rnd(12);
 
-    here = &levl[mtmp->mx][mtmp->my];
+    here = &NH_TILE(mtmp->mx, mtmp->my);
     if (here->typ == SDOOR)
         cvt_sdoor_to_door(here); /* ->typ = DOOR */
 
@@ -1465,7 +1465,7 @@ zap_dig()
     while (--digdepth >= 0) {
         if (!isok(zx, zy))
             break;
-        room = &levl[zx][zy];
+        room = &NH_TILE(zx, zy);
         tmp_at(zx, zy);
         delay_output(); /* wait a little bit */
 
@@ -1611,7 +1611,7 @@ char *msg;
     if (!isok(cc->x, cc->y))
         return FALSE;
     *msg = '\0';
-    room = &levl[cc->x][cc->y];
+    room = &NH_TILE(cc->x, cc->y);
     ltyp = room->typ, room->rmflags = 0;
 
     if (is_pool(cc->x, cc->y) || is_lava(cc->x, cc->y)) {
@@ -1697,7 +1697,7 @@ schar filltyp;
         int idx;
 
         t = *trap;
-        { SET_TYP_XY(t.tx, t.ty, filltyp); levl[t.tx][t.ty].rmflags = 0; }
+        { SET_TYP_XY(t.tx, t.ty, filltyp); NH_TILE(t.tx, t.ty).rmflags = 0; }
         liquid_flow(t.tx, t.ty, filltyp, trap,
                     (t.tx == u.ux && t.ty == u.uy)
                         ? "Suddenly %s flows in from the adjacent pit!"

@@ -108,7 +108,7 @@ boolean restore;
         } else { /* saving */
             /* do not zero out o_ids for ghost levels anymore */
 
-            if (objects[otmp->otyp].oc_uses_known)
+            if (object_defaults[otmp->otyp].oc_uses_known)
                 otmp->known = 0;
             otmp->dknown = otmp->bknown = 0;
             otmp->rknown = 0;
@@ -180,23 +180,23 @@ boolean restore;
                 otmp->record_achieve_special = NON_PM;
             } else if (otmp->otyp == AMULET_OF_YENDOR) {
                 /* no longer the real Amulet */
-                otmp->otyp = FAKE_AMULET_OF_YENDOR;
+                NH_PILE_WRITE(otmp, (otmp->otyp = FAKE_AMULET_OF_YENDOR));
                 curse(otmp);
             } else if (otmp->otyp == CANDELABRUM_OF_INVOCATION) {
                 if (otmp->lamplit)
                     end_burn(otmp, TRUE);
-                otmp->otyp = WAX_CANDLE;
+                NH_PILE_WRITE(otmp, (otmp->otyp = WAX_CANDLE));
                 otmp->age = 50L; /* assume used */
                 if (otmp->spe > 0)
                     otmp->quan = (long) otmp->spe;
                 otmp->spe = 0;
-                otmp->owt = weight(otmp);
+                nh_set_owt(otmp);
                 curse(otmp);
             } else if (otmp->otyp == BELL_OF_OPENING) {
-                otmp->otyp = BELL;
+                NH_PILE_WRITE(otmp, (otmp->otyp = BELL));
                 curse(otmp);
             } else if (otmp->otyp == SPE_BOOK_OF_THE_DEAD) {
-                otmp->otyp = SPE_BLANK_PAPER;
+                NH_PILE_WRITE(otmp, (otmp->otyp = SPE_BLANK_PAPER));
                 curse(otmp);
             }
         }
@@ -267,7 +267,7 @@ int x, y;
             place_object(otmp, x, y);
     }
     if (cont)
-        cont->owt = weight(cont);
+        nh_set_owt(cont);
 }
 
 /* possibly restore oracle's room and/or put her back inside it; returns
@@ -287,7 +287,7 @@ struct monst *oracle;
         return FALSE;
 
     oracle->mpeaceful = 1;
-    o_ridx = levl[oracle->mx][oracle->my].roomno - ROOMOFFSET;
+    o_ridx = NH_TILE(oracle->mx, oracle->my).roomno - ROOMOFFSET;
     if (o_ridx >= 0 && rooms[o_ridx].rtype == DELPHI)
         return TRUE; /* no fixup needed */
 
@@ -309,7 +309,7 @@ struct monst *oracle;
         cc.y = (rooms[ridx].ly + rooms[ridx].hy) / 2;
         if (enexto(&cc, cc.x, cc.y, oracle->data)) {
             rloc_to(oracle, cc.x, cc.y);
-            o_ridx = levl[oracle->mx][oracle->my].roomno - ROOMOFFSET;
+            o_ridx = NH_TILE(oracle->mx, oracle->my).roomno - ROOMOFFSET;
         }
         /* [if her room is already full, she might end up outside;
            that's ok, next hero just won't get any welcome message,
@@ -490,9 +490,9 @@ struct obj *corpse;
     /* Clear all memory from the level. */
     for (x = 1; x < COLNO; x++)
         for (y = 0; y < ROWNO; y++) {
-            levl[x][y].seenv = 0;
-            levl[x][y].waslit = 0;
-            levl[x][y].glyph = cmap_to_glyph(S_stone);
+            NH_TILE(x, y).seenv = 0;
+            NH_TILE(x, y).waslit = 0;
+            NH_TILE(x, y).glyph = cmap_to_glyph(S_stone);
             lastseentyp[x][y] = 0;
         }
 

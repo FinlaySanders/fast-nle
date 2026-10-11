@@ -722,7 +722,7 @@ boolean break_the_rules; /* True: wizard mode ^T */
            even though casting failure due to these reasons doesn't.
            [Note: this spellev() is different from the one in spell.c
            but they both yield the same result.] */
-#define spellev(spell_otyp) ((int) objects[spell_otyp].oc_level)
+#define spellev(spell_otyp) ((int) object_defaults[spell_otyp].oc_level)
         energy = 5 * spellev(SPE_TELEPORT_AWAY);
         if (break_the_rules) {
             if (!castit)
@@ -1159,10 +1159,10 @@ struct monst *mtmp;
            sent out of his room (caller might resort to goodpos() if
            we report failure here, so this isn't full prevention) */
         if (mtmp->isshk && inhishop(mtmp)) {
-            if (levl[x][y].roomno != ESHK(mtmp)->shoproom)
+            if (NH_TILE(x, y).roomno != ESHK(mtmp)->shoproom)
                 return FALSE;
         } else if (mtmp->ispriest && inhistemple(mtmp)) {
-            if (levl[x][y].roomno != EPRI(mtmp)->shroom)
+            if (NH_TILE(x, y).roomno != EPRI(mtmp)->shroom)
                 return FALSE;
         }
         /* current location is <xx,yy> */

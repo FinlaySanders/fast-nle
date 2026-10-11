@@ -641,7 +641,7 @@ reglyph_darkroom()
 
     for (x = 0; x < COLNO; x++)
         for (y = 0; y < ROWNO; y++) {
-            struct rm *lev = &levl[x][y];
+            struct rm *lev = &NH_TILE(x, y);
 
             if (!flags.dark_room || !iflags.use_color
                 || Is_rogue_level(&u.uz)) {
@@ -5863,7 +5863,7 @@ char *buf;
         Sprintf(buf, "%c",
                 ov_primary_syms[SYM_BOULDER + SYM_OFF_X]
                     ? ov_primary_syms[SYM_BOULDER + SYM_OFF_X]
-                    : showsyms[(int) objects[BOULDER].oc_class + SYM_OFF_O]);
+                    : showsyms[(int) object_defaults[BOULDER].oc_class + SYM_OFF_O]);
 #endif
     else if (!strcmp(optname, "catname"))
         Sprintf(buf, "%s", catname[0] ? catname : none);
@@ -6612,7 +6612,7 @@ struct fruit *replace_fruit;
                    || !strncmp(pl_fruit, "large ", 6)) ? 6
                   : (!strncmp(pl_fruit, "very large ", 11)) ? 11
                     : 0;
-        for (i = bases[FOOD_CLASS]; objects[i].oc_class == FOOD_CLASS; i++) {
+        for (i = bases[FOOD_CLASS]; object_defaults[i].oc_class == FOOD_CLASS; i++) {
             if (!strcmp(OBJ_NAME(objects[i]), pl_fruit)
                 || (globpfx > 0
                     && !strcmp(OBJ_NAME(objects[i]), &pl_fruit[globpfx]))) {

@@ -772,7 +772,7 @@ int x, y;
                    monnm, othnm, x, y, othermon->mstate, mon->mstate, buf);
     }
     mon->mx = x, mon->my = y;
-    level.monsters[x][y] = mon;
+    NH_SET_MON(x, y, mon);
     mon->mstate &= ~(MON_OFFMAP | MON_MIGRATING | MON_LIMBO | MON_BUBBLEMOVE
                      | MON_ENDGAME_FREE | MON_ENDGAME_MIGR);
 }

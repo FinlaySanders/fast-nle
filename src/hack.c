@@ -265,8 +265,8 @@ moverock()
                     deltrap(ttmp);
                     delobj(otmp);
                     bury_objs(rx, ry);
-                    levl[rx][ry].wall_info &= ~W_NONDIGGABLE;
-                    levl[rx][ry].candig = 1;
+                    NH_TILE(rx, ry).wall_info &= ~W_NONDIGGABLE;
+                    NH_TILE(rx, ry).candig = 1;
                     if (cansee(rx, ry))
                         newsym(rx, ry);
                     return sobj_at(BOULDER, sx, sy) ? -1 : 0;
@@ -336,7 +336,7 @@ moverock()
             }
 
             /* Move the boulder *after* the message. */
-            if (glyph_is_invisible(levl[rx][ry].glyph))
+            if (glyph_is_invisible(NH_TILE(rx, ry).glyph))
                 unmap_object(rx, ry);
             movobj(otmp, rx, ry); /* does newsym(rx,ry) */
             if (Blind) {
@@ -412,7 +412,7 @@ STATIC_OVL int
 still_chewing(x, y)
 xchar x, y;
 {
-    struct rm *lev = &levl[x][y];
+    struct rm *lev = &NH_TILE(x, y);
     struct obj *boulder = sobj_at(BOULDER, x, y);
     const char *digtxt = (char *) 0, *dmgtxt = (char *) 0;
 
@@ -663,7 +663,7 @@ boolean
 may_dig(x, y)
 register xchar x, y;
 {
-    struct rm *lev = &levl[x][y];
+    struct rm *lev = &NH_TILE(x, y);
 
     return (boolean) !((IS_STWALL(lev->typ) || IS_TREE(lev->typ))
                        && (lev->wall_info & W_NONDIGGABLE));
@@ -674,7 +674,7 @@ may_passwall(x, y)
 register xchar x, y;
 {
     return (boolean) !(IS_STWALL(TYP_AT(x, y))
-                       && (levl[x][y].wall_info & W_NONPASSWALL));
+                       && (NH_TILE(x, y).wall_info & W_NONPASSWALL));
 }
 
 boolean
@@ -738,7 +738,7 @@ int mode;
 {
     int x = ux + dx;
     int y = uy + dy;
-    register struct rm *tmpr = &levl[x][y];
+    register struct rm *tmpr = &NH_TILE(x, y);
     register struct rm *ust;
 
     context.door_opened = FALSE;
@@ -887,14 +887,14 @@ int mode;
 
         if ((t && t->tseen)
             || (!Levitation && !Flying && !is_clinger(youmonst.data)
-                && is_pool_or_lava(x, y) && levl[x][y].seenv))
+                && is_pool_or_lava(x, y) && NH_TILE(x, y).seenv))
             return (mode == TEST_TRAP);
     }
 
     if (mode == TEST_TRAP)
         return FALSE; /* do not move through traps */
 
-    ust = &levl[ux][uy];
+    ust = &NH_TILE(ux, uy);
 
     /* Now see if other things block our way . . */
     if (dx && dy && !Passes_walls && IS_DOOR(ust->typ)
@@ -1075,7 +1075,7 @@ int mode;
                         }
                     }
                     if (test_move(x, y, nx - x, ny - y, TEST_TRAV)
-                        && (levl[nx][ny].seenv
+                        && (NH_TILE(nx, ny).seenv
                             || (!Blind && couldsee(nx, ny)))) {
                         if (nx == ux && ny == uy) {
                             if (mode == TRAVP_TRAVEL || mode == TRAVP_VALID) {
@@ -1202,7 +1202,7 @@ int x,y;
     if (x == u.ux && y == u.uy)
         return TRUE;
     if (isok(x,y) && glyph_is_cmap(g) && S_stone == glyph_to_cmap(g)
-        && !levl[x][y].seenv)
+        && !NH_TILE(x, y).seenv)
         return FALSE;
     u.tx = x;
     u.ty = y;
@@ -1520,7 +1520,7 @@ domove_core()
         }
         if (((trap = t_at(x, y)) && trap->tseen)
             || (Blind && !Levitation && !Flying && !is_clinger(youmonst.data)
-                && is_pool_or_lava(x, y) && levl[x][y].seenv)) {
+                && is_pool_or_lava(x, y) && NH_TILE(x, y).seenv)) {
             if (context.run >= 2) {
                 if (iflags.mention_walls) {
                     if (trap && trap->tseen) {
@@ -1528,7 +1528,7 @@ domove_core()
 
                         You("stop in front of %s.",
                             an(defsyms[trap_to_defsym(tt)].explanation));
-                    } else if (is_pool_or_lava(x,y) && levl[x][y].seenv) {
+                    } else if (is_pool_or_lava(x,y) && NH_TILE(x, y).seenv) {
                         You("stop at the edge of the %s.",
                             hliquid(is_pool(x,y) ? "water" : "lava"));
                     }
@@ -1606,7 +1606,7 @@ domove_core()
     u.uy0 = u.uy;
     bhitpos.x = x;
     bhitpos.y = y;
-    tmpr = &levl[x][y];
+    tmpr = &NH_TILE(x, y);
 
     /* attack monster */
     if (mtmp) {
@@ -1631,7 +1631,7 @@ domove_core()
          * different message and makes the player remember the monster.
          */
         if (context.nopick && !context.travel
-            && (canspotmon(mtmp) || glyph_is_invisible(levl[x][y].glyph))) {
+            && (canspotmon(mtmp) || glyph_is_invisible(NH_TILE(x, y).glyph))) {
             if (M_AP_TYPE(mtmp) && !Protection_from_shape_changers
                 && !sensemon(mtmp))
                 stumble_onto_mimic(mtmp);
@@ -1669,7 +1669,7 @@ domove_core()
     /* specifying 'F' with no monster wastes a turn */
     if (context.forcefight
         /* remembered an 'I' && didn't use a move command */
-        || (glyph_is_invisible(levl[x][y].glyph) && !context.nopick)) {
+        || (glyph_is_invisible(NH_TILE(x, y).glyph) && !context.nopick)) {
         struct obj *boulder = 0;
         boolean explo = (Upolyd && attacktype(youmonst.data, AT_EXPL)),
                 solid = !accessible(x, y);
@@ -2055,7 +2055,7 @@ invocation_message()
 void
 switch_terrain()
 {
-    struct rm *lev = &levl[u.ux][u.uy];
+    struct rm *lev = &NH_TILE(u.ux, u.uy);
     boolean blocklev = (IS_ROCK(lev->typ) || closed_door(u.ux, u.uy)
                         || (Is_waterlevel(&u.uz) && lev->typ == WATER)),
             was_levitating = !!Levitation, was_flying = !!Flying;
@@ -2353,7 +2353,7 @@ register int typewanted;
      || (typefound = rooms[rno - ROOMOFFSET].rtype) == typewanted  \
      || (typewanted == SHOPBASE && typefound > SHOPBASE))
 
-    switch (rno = levl[x][y].roomno) {
+    switch (rno = NH_TILE(x, y).roomno) {
     case NO_ROOM:
         return ptr;
     case SHARED:
@@ -2384,21 +2384,21 @@ register int typewanted;
         max_y_offset -= step;
 
     for (x = min_x; x <= max_x; x += step) {
-        lev = &levl[x][min_y];
+        lev = &NH_TILE(x, min_y);
         y = 0;
-        if ((rno = lev[y].roomno) >= ROOMOFFSET && !index(ptr, rno)
+        if ((rno = NH_TILE(x, min_y + y).roomno) >= ROOMOFFSET && !index(ptr, rno)
             && goodtype(rno))
             *(--ptr) = rno;
         y += step;
         if (y > max_y_offset)
             continue;
-        if ((rno = lev[y].roomno) >= ROOMOFFSET && !index(ptr, rno)
+        if ((rno = NH_TILE(x, min_y + y).roomno) >= ROOMOFFSET && !index(ptr, rno)
             && goodtype(rno))
             *(--ptr) = rno;
         y += step;
         if (y > max_y_offset)
             continue;
-        if ((rno = lev[y].roomno) >= ROOMOFFSET && !index(ptr, rno)
+        if ((rno = NH_TILE(x, min_y + y).roomno) >= ROOMOFFSET && !index(ptr, rno)
             && goodtype(rno))
             *(--ptr) = rno;
     }
@@ -2647,7 +2647,7 @@ pickup_checks()
         }
     }
     if (!OBJ_AT(u.ux, u.uy)) {
-        register struct rm *lev = &levl[u.ux][u.uy];
+        register struct rm *lev = &NH_TILE(u.ux, u.uy);
 
         if (IS_THRONE(lev->typ))
             pline("It must weigh%s a ton!", lev->looted ? " almost" : "");
@@ -2870,7 +2870,7 @@ STATIC_OVL boolean
 doorless_door(x, y)
 int x, y;
 {
-    struct rm *lev_p = &levl[x][y];
+    struct rm *lev_p = &NH_TILE(x, y);
 
     if (!IS_DOOR(lev_p->typ))
         return FALSE;
@@ -3113,16 +3113,44 @@ weight_cap()
 int
 inv_weight()
 {
-    register struct obj *otmp = invent;
-    register int wt = 0;
+    register struct obj *otmp;
+    register int wt;
 
-    while (otmp) {
-        if (otmp->oclass == COIN_CLASS)
-            wt += (int) (((long) otmp->quan + 50L) / 100L);
-        else if (otmp->otyp != BOULDER || !throws_rocks(youmonst.data))
-            wt += otmp->owt;
-        otmp = otmp->nobj;
+    /* Cached across steps: the walk touches one cold line per item. The cache
+       is invalidated by nh_invwt_dirty() at every top-level inventory change
+       (addinv, extract from invent, replace_object, merged, nh_set_owt). The
+       boulder term depends on the hero's form, so it is kept separate. */
+    if (!nh_invwt_valid) {
+        long nb = 0, b = 0;
+        for (otmp = invent; otmp; otmp = otmp->nobj) {
+            if (otmp->oclass == COIN_CLASS)
+                nb += (long) (((long) otmp->quan + 50L) / 100L);
+            else if (otmp->otyp == BOULDER)
+                b += (long) otmp->owt;
+            else
+                nb += (long) otmp->owt;
+        }
+        nh_invwt_nb = nb;
+        nh_invwt_boulder = b;
+        nh_invwt_valid = 1;
     }
+    wt = (int) (nh_invwt_nb + (throws_rocks(youmonst.data) ? 0L : nh_invwt_boulder));
+#ifdef NLE_INVWT_VERIFY
+    {
+        int ref = 0;
+        for (otmp = invent; otmp; otmp = otmp->nobj) {
+            if (otmp->oclass == COIN_CLASS)
+                ref += (int) (((long) otmp->quan + 50L) / 100L);
+            else if (otmp->otyp != BOULDER || !throws_rocks(youmonst.data))
+                ref += otmp->owt;
+        }
+        if (ref != wt) {
+            fprintf(stderr, "INVWT_MISMATCH turn=%ld cached=%d walked=%d\n", moves, wt, ref);
+            wt = ref;
+            nh_invwt_valid = 0;
+        }
+    }
+#endif
     wc = weight_cap();
     return (wt - wc);
 }

@@ -147,11 +147,11 @@ unsigned mgflags;
             cmap_color(offset);
         }
     } else if ((offset = (glyph - GLYPH_OBJ_OFF)) >= 0) { /* object */
-        idx = objects[offset].oc_class + SYM_OFF_O;
+        idx = object_defaults[offset].oc_class + SYM_OFF_O;
         if (offset == BOULDER)
             idx = SYM_BOULDER + SYM_OFF_X;
         if (has_rogue_color && iflags.use_color) {
-            switch (objects[offset].oc_class) {
+            switch (object_defaults[offset].oc_class) {
             case COIN_CLASS:
                 color = CLR_YELLOW;
                 break;
@@ -177,7 +177,7 @@ unsigned mgflags;
             mon_color(offset);
         special |= MG_RIDDEN;
     } else if ((offset = (glyph - GLYPH_BODY_OFF)) >= 0) { /* a corpse */
-        idx = objects[CORPSE].oc_class + SYM_OFF_O;
+        idx = object_defaults[CORPSE].oc_class + SYM_OFF_O;
         if (has_rogue_color && iflags.use_color)
             color = CLR_RED;
         else

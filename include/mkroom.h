@@ -91,7 +91,7 @@ enum roomtype_types {
 #define SHARED      1 /* indicates normal shared boundary */
 #define SHARED_PLUS 2 /* indicates shared boundary - extra adjacent-square
                        * searching required */
-#define ROOMOFFSET  3 /* (levl[x][y].roomno - ROOMOFFSET) gives rooms[] index,
+#define ROOMOFFSET  3 /* (NH_TILE(x, y).roomno - ROOMOFFSET) gives rooms[] index,
                        * for inside-squares and non-shared boundaries */
 
 #define IS_ROOM_PTR(x)      ((x) >= rooms && (x) < rooms + MAXNROFROOMS)

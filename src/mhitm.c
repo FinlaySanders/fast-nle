@@ -723,7 +723,7 @@ struct monst *magr, *mdef;
     dx = mdef->mx, dy = mdef->my;
     if (mdef == &youmonst)
         dx = u.ux, dy = u.uy;
-    lev = &levl[dx][dy];
+    lev = &NH_TILE(dx, dy);
     if (IS_ROCK(lev->typ) || closed_door(dx, dy) || IS_TREE(lev->typ)
         /* not passes_bars(); engulfer isn't squeezing through */
         || (lev->typ == IRONBARS && !is_whirly(magr->data)))
@@ -1293,8 +1293,9 @@ register struct attack *mattk;
             add_to_minv(magr, gold);
         }
         mdef->mstrategy &= ~STRAT_WAITFORU;
-        if (vis && canseemon(mdef)) {
+        if (vis)
             Strcpy(buf, Monnam(magr));
+        if (vis && canseemon(mdef)) {
             pline("%s steals some gold from %s.", buf, mon_nam(mdef));
         }
         if (!tele_restrict(magr)) {
@@ -1354,8 +1355,9 @@ register struct attack *mattk;
             if (vis)
                 Strcpy(onambuf, doname(otmp));
             (void) add_to_minv(magr, otmp);
-            if (vis && canseemon(mdef)) {
+            if (vis)
                 Strcpy(buf, Monnam(magr));
+            if (vis && canseemon(mdef)) {
                 pline("%s steals %s from %s!", buf, onambuf, mdefnambuf);
             }
             possibly_unwield(mdef, FALSE);

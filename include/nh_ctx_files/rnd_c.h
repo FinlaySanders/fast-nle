@@ -4,7 +4,7 @@
  * Include ONLY from rnd.c, after hack.h. */
 #ifndef NH_CTX_FILE_RND_C_H
 #define NH_CTX_FILE_RND_C_H
+#define rn2disprng_seed (nh_cur->g_rnd_c_rn2disprng_seed)
 #define rng_state (nh_cur->g_rnd_c_rng_state)
 #define rng_init (nh_cur->g_rnd_c_rng_init)
-#define rn2disprng_seed (nh_cur->g_rnd_c_rn2disprng_seed)
 #endif /* NH_CTX_FILE_RND_C_H */

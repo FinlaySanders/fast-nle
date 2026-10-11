@@ -161,8 +161,8 @@ struct obj *obj;
             mtmp->meating = 3 + (mons[obj->corpsenm].cwt >> 6);
             nutrit = mons[obj->corpsenm].cnutrit;
         } else {
-            mtmp->meating = objects[obj->otyp].oc_delay;
-            nutrit = objects[obj->otyp].oc_nutrition;
+            mtmp->meating = object_defaults[obj->otyp].oc_delay;
+            nutrit = object_defaults[obj->otyp].oc_nutrition;
         }
         switch (mtmp->data->msize) {
         case MZ_TINY:
@@ -203,7 +203,7 @@ struct obj *obj;
          * eat.c.  (This also applies to pets eating gold.)
          */
         mtmp->meating = obj->owt / 20 + 1;
-        nutrit = 5 * objects[obj->otyp].oc_nutrition;
+        nutrit = 5 * object_defaults[obj->otyp].oc_nutrition;
     }
     return nutrit;
 }
@@ -548,7 +548,7 @@ int after, udist, whappr;
                     }
                 } else if (gtyp == UNDEF && in_masters_sight
                            && !dog_has_minvent
-                           && (!levl[omx][omy].lit || levl[u.ux][u.uy].lit)
+                           && (!NH_TILE(omx, omy).lit || NH_TILE(u.ux, u.uy).lit)
                            && (otyp == MANFOOD || m_cansee(mtmp, nx, ny))
                            && edog->apport > rn2(8)
                            && can_carry(mtmp, obj) > 0) {
@@ -1225,7 +1225,7 @@ int after; /* this is extra fast monster movement */
                don't use glyph_at() here--it would return the pet but we want
                to know whether an object is remembered at this map location */
             struct obj *o = (!Hallucination && level.lflags.hero_memory
-                             && glyph_is_object(levl[nix][niy].glyph))
+                             && glyph_is_object(NH_TILE(nix, niy).glyph))
                                ? vobj_at(nix, niy) : 0;
             const char *what = o ? distant_name(o, doname) : something;
 
@@ -1335,7 +1335,7 @@ char *seen; /* [COLNO*ROWNO], 1 = already explored from */
                 && (!may_dig(i, j) || !tunnels(mon->data)))
                 continue;
             if (IS_DOOR(TYP_AT(i, j))
-                && (levl[i][j].doormask & (D_CLOSED | D_LOCKED)))
+                && (NH_TILE(i, j).doormask & (D_CLOSED | D_LOCKED)))
                 continue;
             if (!could_reach_item(mon, i, j))
                 continue;

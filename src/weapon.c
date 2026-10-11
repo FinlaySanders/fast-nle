@@ -153,7 +153,7 @@ struct monst *mon;
         tmp += otmp->spe;
 
     /* Put weapon specific "to hit" bonuses in below: */
-    tmp += objects[otmp->otyp].oc_hitbon;
+    tmp += object_defaults[otmp->otyp].oc_hitbon;
 
     /* Put weapon vs. monster type "to hit" bonuses in below: */
 
@@ -223,8 +223,8 @@ struct monst *mon;
         return 0;
 
     if (bigmonst(ptr)) {
-        if (objects[otyp].oc_wldam)
-            tmp = rnd(objects[otyp].oc_wldam);
+        if (object_defaults[otyp].oc_wldam)
+            tmp = rnd(object_defaults[otyp].oc_wldam);
         switch (otyp) {
         case IRON_CHAIN:
         case CROSSBOW_BOLT:
@@ -261,8 +261,8 @@ struct monst *mon;
             break;
         }
     } else {
-        if (objects[otyp].oc_wsdam)
-            tmp = rnd(objects[otyp].oc_wsdam);
+        if (object_defaults[otyp].oc_wsdam)
+            tmp = rnd(object_defaults[otyp].oc_wsdam);
         switch (otyp) {
         case IRON_CHAIN:
         case CROSSBOW_BOLT:
@@ -308,7 +308,7 @@ struct monst *mon;
 
     /* "very heavy iron ball"; weight increase is in increments */
     if (otyp == HEAVY_IRON_BALL && tmp > 0) {
-        int wt = (int) objects[HEAVY_IRON_BALL].oc_weight;
+        int wt = (int) object_defaults[HEAVY_IRON_BALL].oc_weight;
 
         if ((int) otmp->owt > wt) {
             wt = ((int) otmp->owt - wt) / IRON_BALL_W_INCR;
@@ -668,7 +668,7 @@ register struct monst *mtmp;
         if (otmp->oclass == WEAPON_CLASS && otmp->oartifact
             && touch_artifact(otmp, mtmp)
             && ((strong && !wearing_shield)
-                || !objects[otmp->otyp].oc_bimanual))
+                || !object_defaults[otmp->otyp].oc_bimanual))
             return otmp;
     }
 
@@ -1380,7 +1380,7 @@ struct obj *obj;
     if (obj->oclass != WEAPON_CLASS && obj->oclass != TOOL_CLASS
         && obj->oclass != GEM_CLASS)
         return P_NONE; /* Not a weapon, weapon-tool, or ammo */
-    type = objects[obj->otyp].oc_skill;
+    type = object_defaults[obj->otyp].oc_skill;
     return (type < 0) ? -type : type;
 }
 

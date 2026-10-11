@@ -153,7 +153,7 @@ int otyp, oquan;
 
     otmp = mksobj(otyp, TRUE, FALSE);
     otmp->quan = (long) rn1(oquan, 3);
-    otmp->owt = weight(otmp);
+    nh_set_owt(otmp);
     if (otyp == ORCISH_ARROW)
         otmp->opoisoned = TRUE;
     (void) mpickobj(mtmp, otmp);
@@ -712,7 +712,7 @@ register struct monst *mtmp;
                 otmp = mksobj(rnd_class(DILITHIUM_CRYSTAL, LUCKSTONE - 1),
                               FALSE, FALSE);
                 otmp->quan = (long) rn1(2, 3);
-                otmp->owt = weight(otmp);
+                nh_set_owt(otmp);
                 (void) mpickobj(mtmp, otmp);
             }
         }
@@ -761,7 +761,7 @@ register struct monst *mtmp;
                 set_corpsenm(catcorpse, PM_HOUSECAT);
                 (void) stop_timer(ROT_CORPSE, obj_to_any(catcorpse));
                 add_to_container(otmp, catcorpse);
-                otmp->owt = weight(otmp);
+                nh_set_owt(otmp);
             }
             (void) mpickobj(mtmp, otmp);
         }
@@ -783,8 +783,8 @@ register struct monst *mtmp;
         if (!rn2((In_mines(&u.uz) && in_mklev) ? 20 : 60)) {
             otmp = mksobj(rn2(4) ? TALLOW_CANDLE : WAX_CANDLE, TRUE, FALSE);
             otmp->quan = 1;
-            otmp->owt = weight(otmp);
-            if (!mpickobj(mtmp, otmp) && !levl[mtmp->mx][mtmp->my].lit)
+            nh_set_owt(otmp);
+            if (!mpickobj(mtmp, otmp) && !NH_TILE(mtmp->mx, mtmp->my).lit)
                 begin_burn(otmp, FALSE);
         }
         break;
@@ -2171,9 +2171,9 @@ register struct monst *mtmp;
         return;
     mx = mtmp->mx;
     my = mtmp->my;
-    typ = levl[mx][my].typ;
+    typ = NH_TILE(mx, my).typ;
     /* only valid for INSIDE of room */
-    roomno = levl[mx][my].roomno - ROOMOFFSET;
+    roomno = NH_TILE(mx, my).roomno - ROOMOFFSET;
     if (roomno >= 0)
         rt = rooms[roomno].rtype;
 #ifdef SPECIALIZATION
@@ -2195,13 +2195,13 @@ register struct monst *mtmp;
          *  Since rogue has no closed doors, mimic a wall there
          *  (yes, mimics can end up on this level by various means).
          */
-        if (mx != 0 && (levl[mx - 1][my].typ == HWALL
-                        || levl[mx - 1][my].typ == TLCORNER
-                        || levl[mx - 1][my].typ == TRWALL
-                        || levl[mx - 1][my].typ == BLCORNER
-                        || levl[mx - 1][my].typ == TDWALL
-                        || levl[mx - 1][my].typ == CROSSWALL
-                        || levl[mx - 1][my].typ == TUWALL))
+        if (mx != 0 && (NH_TILE(mx - 1, my).typ == HWALL
+                        || NH_TILE(mx - 1, my).typ == TLCORNER
+                        || NH_TILE(mx - 1, my).typ == TRWALL
+                        || NH_TILE(mx - 1, my).typ == BLCORNER
+                        || NH_TILE(mx - 1, my).typ == TDWALL
+                        || NH_TILE(mx - 1, my).typ == CROSSWALL
+                        || NH_TILE(mx - 1, my).typ == TUWALL))
             appear = Is_rogue_level(&u.uz) ? S_hwall : S_hcdoor;
         else
             appear = Is_rogue_level(&u.uz) ? S_vwall : S_vcdoor;
@@ -2297,7 +2297,7 @@ register struct monst *mtmp;
         MCORPSENM(mtmp) = NON_PM;
     }
 
-    if (does_block(mx, my, &levl[mx][my]))
+    if (does_block(mx, my, &NH_TILE(mx, my)))
         block_point(mx, my);
 }
 

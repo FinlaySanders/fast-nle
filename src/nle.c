@@ -724,7 +724,7 @@ nle_weight(nle_ctx_t *nle, int *wt, int *cap)
                 int typ = (otmp->dknown && objects[otmp->otyp].oc_name_known)
                               ? otmp->otyp
                               : glyph_to_obj(nle_shuffled_glyph_c(GLYPH_OBJ_OFF + otmp->otyp));
-                base = objects[typ].oc_weight;
+                base = object_defaults[typ].oc_weight;
             }
             base *= q;
             if (otmp->oeaten) base /= 2;
@@ -861,18 +861,18 @@ nle_inv_probe(nle_ctx_t *nle, unsigned char *slot_class,
 
     nh_cur = (struct nh_ctx *) nle->nh;
     if (uwep && uwep->oclass == WEAPON_CLASS)
-        wsd = (int) objects[uwep->otyp].oc_wsdam;
+        wsd = (int) object_defaults[uwep->otyp].oc_wsdam;
     for (o = invent; o && i < 55; o = o->nobj, i++) {
         int f = 0;
         slot_class[i] = (unsigned char) o->oclass;
         if (is_ammo(o)) f |= 1;
         if (o->oclass == WEAPON_CLASS
-            && objects[o->otyp].oc_skill >= P_BOW
-            && objects[o->otyp].oc_skill <= P_CROSSBOW) f |= 2;
+            && object_defaults[o->otyp].oc_skill >= P_BOW
+            && object_defaults[o->otyp].oc_skill <= P_CROSSBOW) f |= 2;
         if (o->oclass == FOOD_CLASS) { f |= 4; nfood++; }
         if (o->oclass == WEAPON_CLASS) {
             f |= 8; nweap++;
-            if (o != uwep && (int) objects[o->otyp].oc_wsdam > wsd) upg = 1;
+            if (o != uwep && (int) object_defaults[o->otyp].oc_wsdam > wsd) upg = 1;
         }
         if (o == uwep) f |= 16;
         if (o->bknown && o->cursed) { f |= 32; ncursed++; }
@@ -1132,7 +1132,6 @@ nle_step(nle_ctx_t *nle, nle_obs *obs)
     }
     current_nle_ctx = nle;
     nh_cur = (struct nh_ctx *) nle->nh;
-    nh_fobj_invalidate();
     nle->observation = obs;
     /* tty gating tracks the CURRENT step's bindings, not nle_start's:
      * the C API lets each step pass a different obs, so tty_* fields can

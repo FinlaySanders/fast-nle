@@ -137,7 +137,7 @@ struct monst *mon;
         slotmask |= W_SWAPWEP;
     for (; o; o = o->nobj)
         if (((o->owornmask & slotmask) != 0L
-             && objects[o->otyp].oc_oprop == ANTIMAGIC)
+             && object_defaults[o->otyp].oc_oprop == ANTIMAGIC)
             || (o->oartifact && defends_when_carried(AD_MAGM, o)))
             return TRUE;
     return FALSE;
@@ -175,7 +175,7 @@ struct monst *mon;
         slotmask |= W_SWAPWEP;
     for (; o; o = o->nobj)
         if (((o->owornmask & slotmask) != 0L
-             && objects[o->otyp].oc_oprop == BLINDED)
+             && object_defaults[o->otyp].oc_oprop == BLINDED)
             || (o->oartifact && defends_when_carried(AD_BLND, o)))
             return TRUE;
     return FALSE;
@@ -1194,3 +1194,61 @@ struct permonst *mdat;
 }
 
 /*mondata.c*/
+
+unsigned long long nh_spw[NUMMONS];
+static void __attribute__((constructor))
+nh_spw_init(void)
+{
+    int i;
+    for (i = 0; i < NUMMONS; i++) {
+        const struct permonst *p = &mons[i];
+        unsigned long long w = 0;
+        if (tunnels(p)) w |= SPW_TUNNELS;
+        if (needspick(p)) w |= SPW_NEEDSPICK;
+        if (nohands(p)) w |= SPW_NOHANDS;
+        if (verysmall(p)) w |= SPW_VERYSMALL;
+        if (is_giant(p)) w |= SPW_GIANT;
+        if (is_covetous(p)) w |= SPW_COVETOUS;
+        if (is_minion(p)) w |= SPW_MINION;
+        if (is_rider(p)) w |= SPW_RIDER;
+        if (is_unicorn(p)) w |= SPW_UNICORN;
+        if (passes_walls(p)) w |= SPW_PASSWALL;
+        if (passes_bars(p)) w |= SPW_PASSBARS;
+        if (is_human(p)) w |= SPW_HUMAN;
+        if (is_undead(p)) w |= SPW_UNDEAD;
+        if (throws_rocks(p)) w |= SPW_THROWSROCKS;
+        if (hides_under(p)) w |= SPW_HIDESUNDER;
+        if (likes_gold(p)) w |= SPW_LIKEGOLD;
+        if (likes_gems(p)) w |= SPW_LIKEGEMS;
+        if (likes_objs(p)) w |= SPW_LIKEOBJS;
+        if (likes_magic(p)) w |= SPW_LIKEMAGIC;
+        if (mindless(p)) w |= SPW_MINDLESS;
+        if (is_animal(p)) w |= SPW_ANIMAL;
+        if (is_mercenary(p)) w |= SPW_MERC;
+        if (is_flyer(p)) w |= SPW_FLYER;
+        if (is_floater(p)) w |= SPW_FLOATER;
+        if (is_clinger(p)) w |= SPW_CLINGER;
+        if (is_swimmer(p)) w |= SPW_SWIMMER;
+        if (likes_lava(p)) w |= SPW_LIKELAVA;
+        if (nonliving(p)) w |= SPW_NONLIVING;
+        if (breathless(p)) w |= SPW_BREATHLESS;
+        if (amorphous(p)) w |= SPW_AMORPHOUS;
+        if (is_whirly(p)) w |= SPW_WHIRLY;
+        if (unsolid(p)) w |= SPW_UNSOLID;
+        if (webmaker(p)) w |= SPW_WEBMAKER;
+        if (can_teleport(p)) w |= SPW_TPORT;
+        if (is_wanderer(p)) w |= SPW_WANDER;
+        if (perceives(p)) w |= SPW_PERCEIVES;
+        if (infravisible(p)) w |= SPW_INFRAVISIBLE;
+        if (noattacks(p)) w |= SPW_NOATTACKS;
+        if (is_watch(p)) w |= SPW_WATCH;
+        if (is_mind_flayer(p)) w |= SPW_MINDFLAYER;
+        if (is_demon(p)) w |= SPW_DEMON;
+        if (((p->mflags3 & M3_DISPLACES) != 0)) w |= SPW_DISPLACES;
+        if (dmgtype(p, AD_RUST)) w |= SPW_RUSTDMG;
+        if (dmgtype(p, AD_CORR)) w |= SPW_CORRDMG;
+        if (attacktype(p, AT_WEAP)) w |= SPW_WEAPATTK;
+        if (ranged_attk(p)) w |= SPW_RANGED;
+        nh_spw[i] = w;
+    }
+}

@@ -4,7 +4,7 @@
  * Include ONLY from trap.c, after hack.h. */
 #ifndef NH_CTX_FILE_TRAP_C_H
 #define NH_CTX_FILE_TRAP_C_H
-#define tnbuf (nh_cur->g_trap_c_tnbuf)
 #define force_mintrap (nh_cur->g_trap_c_force_mintrap)
 #define recursive_mine (nh_cur->g_trap_c_recursive_mine)
+#define tnbuf (nh_cur->g_trap_c_tnbuf)
 #endif /* NH_CTX_FILE_TRAP_C_H */

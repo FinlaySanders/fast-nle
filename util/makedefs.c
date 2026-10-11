@@ -1175,7 +1175,7 @@ make_version()
     for (i = 1; artifact_names[i]; i++)
         continue;
     version.entity_count = (unsigned long) (i - 1);
-    for (i = 1; objects[i].oc_class != ILLOBJ_CLASS; i++)
+    for (i = 1; object_defaults[i].oc_class != ILLOBJ_CLASS; i++)
         continue;
     version.entity_count = (version.entity_count << 12) | (unsigned long) i;
     for (i = 0; mons[i].mlet; i++)
@@ -1186,9 +1186,9 @@ make_version()
      */
     version.struct_sizes1 =
         (((unsigned long) sizeof(struct context_info) << 24)
-         | ((unsigned long) sizeof(struct obj) << 17)
-         | ((unsigned long) sizeof(struct monst) << 10)
-         | ((unsigned long) sizeof(struct you)));
+         | ((unsigned long) sizeof(struct obj_legacy) << 17)
+         | ((unsigned long) sizeof(struct monst_legacy) << 10)
+         | ((unsigned long) sizeof(struct you_legacy)));
     version.struct_sizes2 = (((unsigned long) sizeof(struct flag) << 10) |
 /* free bits in here */
 #ifdef SYSFLAGS
@@ -2801,7 +2801,7 @@ do_objs()
     Fprintf(ofp, "%s", Dont_Edit_Code);
     Fprintf(ofp, "#ifndef ONAMES_H\n#define ONAMES_H\n\n");
 
-    for (i = 0; !i || objects[i].oc_class != ILLOBJ_CLASS; i++) {
+    for (i = 0; !i || object_defaults[i].oc_class != ILLOBJ_CLASS; i++) {
         SpinCursor(3);
 
         objects[i].oc_name_idx = objects[i].oc_descr_idx = i; /* init */
@@ -2809,13 +2809,13 @@ do_objs()
             continue;
 
         /* make sure probabilities add up to 1000 */
-        if (objects[i].oc_class != class) {
+        if (object_defaults[i].oc_class != class) {
             if (sum && sum != 1000) {
                 Fprintf(stderr, "prob error for class %d (%d%%)", class, sum);
                 (void) fflush(stderr);
                 sumerr = TRUE;
             }
-            class = objects[i].oc_class;
+            class = object_defaults[i].oc_class;
             sum = 0;
         }
 

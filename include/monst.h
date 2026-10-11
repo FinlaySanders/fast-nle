@@ -5,6 +5,7 @@
 
 #ifndef MONST_H
 #define MONST_H
+#include <stdint.h>
 
 #ifndef MEXTRA_H
 #include "mextra.h"
@@ -69,6 +70,75 @@ enum m_ap_types {
 #define M_AP_FLAG(m) ((m)->m_ap_type & ~M_AP_TYPMASK)
 
 struct monst {
+    struct monst *nmon;
+    struct permonst *data;
+    int mhp, mhpmax, mspec_used;
+    uint32_t mstrategy, misc_worn_check;
+    int meating;
+    short movement, cham;
+    unsigned short mextrinsics;
+    xchar mx, my, mux, muy;
+    schar mtame;
+    uchar m_ap_type;
+    Bitfield(female, 1);      /* is female */
+    Bitfield(minvis, 1);      /* currently invisible */
+    Bitfield(invis_blkd, 1);  /* invisibility blocked */
+    Bitfield(perminvis, 1);   /* intrinsic minvis value */
+    Bitfield(mcan, 1);        /* has been cancelled */
+    Bitfield(mburied, 1);     /* has been buried */
+#define mtemplit mburied      /* since buried isn't implemented, use bit for
+                               * monsters shown by transient light source;
+                               * only valid during bhit() execution        */
+    Bitfield(mundetected, 1); /* not seen in present hiding place;
+                               * implies one of M1_CONCEAL or M1_HIDE,
+                               * but not mimic (that is, snake, spider,
+                               * trapper, piercer, eel) */
+    Bitfield(mcansee, 1);   /* cansee 1, temp.blinded 0, blind 0 */
+
+    Bitfield(mspeed, 2);    /* current speed */
+    Bitfield(permspeed, 2); /* intrinsic mspeed value */
+    Bitfield(mrevived, 1);  /* has been revived from the dead */
+    Bitfield(mcloned, 1);   /* has been cloned from another */
+    Bitfield(mavenge, 1);   /* did something to deserve retaliation */
+    Bitfield(mflee, 1);     /* fleeing */
+
+    Bitfield(mfleetim, 7);  /* timeout for mflee */
+    Bitfield(msleeping, 1); /* asleep until woken */
+
+    Bitfield(mblinded, 7);  /* cansee 0, temp.blinded n, blind 0 */
+    Bitfield(mstun, 1);     /* stunned (off balance) */
+
+    Bitfield(mfrozen, 7);
+    Bitfield(mcanmove, 1);  /* paralysis, similar to mblinded */
+
+    Bitfield(mconf, 1);     /* confused */
+    Bitfield(mpeaceful, 1); /* does not attack unprovoked */
+    Bitfield(mtrapped, 1);  /* trapped in a pit, web or bear trap */
+    Bitfield(mleashed, 1);  /* monster is on a leash */
+    Bitfield(isshk, 1);     /* is shopkeeper */
+    Bitfield(isminion, 1);  /* is a minion */
+    Bitfield(isgd, 1);      /* is guard */
+    Bitfield(ispriest, 1);  /* is an aligned priest or high priest */
+
+    Bitfield(iswiz, 1);     /* is the Wizard of Yendor */
+    Bitfield(wormno, 5);    /* at most 31 worms on any level */
+    /* 2 free bits */
+
+#define MAX_NUM_WORMS 32    /* should be 2^(wormno bitfield size) */
+
+
+    uchar m_lev;
+    xchar weapon_check;
+    aligntyp malign;
+    short mnum;
+    struct obj *minvent, *mw;
+    coord mtrack[4];
+    long mlstmv;
+    struct mextra *mextra;
+    unsigned m_id, mappearance;
+    uint32_t mtrapseen, mspare1;
+};
+struct monst_legacy {
     struct monst *nmon;
     struct permonst *data;
     unsigned m_id;
@@ -172,7 +242,7 @@ struct monst {
     struct mextra *mextra; /* point to mextra struct */
 };
 
-#define newmonst() (struct monst *) alloc(sizeof (struct monst))
+#define newmonst() nh_mon_alloc()
 
 /* these are in mspeed */
 #define MSLOW 1 /* slowed monster */

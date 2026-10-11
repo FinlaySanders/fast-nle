@@ -298,7 +298,7 @@ struct you {
     int uhunger;  /* refd only in eat.c and shk.c */
     unsigned uhs; /* hunger state - see eat.c */
 
-    struct prop uprops[LAST_PROP + 1];
+    struct prop uprops[LAST_PROP + 1] __attribute__((aligned(__alignof__(long))));
 
     unsigned umconf;
     Bitfield(usick_type, 2);
@@ -403,5 +403,137 @@ struct you {
 }; /* end of `struct you' */
 
 #define Upolyd (u.umonnum != u.umonster)
+
+struct prop_legacy { long extrinsic, blocked, intrinsic; };
+struct you_legacy {
+    xchar ux, uy;       /* current map coordinates */
+    schar dx, dy, dz;   /* direction of move (or zap or ... ) */
+    schar di;           /* direction of FF */
+    xchar tx, ty;       /* destination of travel */
+    xchar ux0, uy0;     /* initial position FF */
+    d_level uz, uz0;    /* your level on this and the previous turn */
+    d_level utolev;     /* level monster teleported you to, or uz */
+    uchar utotype;      /* bitmask of goto_level() flags for utolev */
+    boolean umoved;     /* changed map location (post-move) */
+    int last_str_turn;  /* 0: none, 1: half turn, 2: full turn
+                           +: turn right, -: turn left */
+    int ulevel;         /* 1 to MAXULEV */
+    int ulevelmax;
+    unsigned utrap;     /* trap timeout */
+    unsigned utraptype; /* defined if utrap nonzero. one of utraptypes */
+    char urooms[5];         /* rooms (roomno + 3) occupied now */
+    char urooms0[5];        /* ditto, for previous position */
+    char uentered[5];       /* rooms (roomno + 3) entered this turn */
+    char ushops[5];         /* shop rooms (roomno + 3) occupied now */
+    char ushops0[5];        /* ditto, for previous position */
+    char ushops_entered[5]; /* ditto, shops entered this turn */
+    char ushops_left[5];    /* ditto, shops exited this turn */
+
+    int uhunger;  /* refd only in eat.c and shk.c */
+    unsigned uhs; /* hunger state - see eat.c */
+
+    struct prop_legacy uprops[LAST_PROP + 1];
+
+    unsigned umconf;
+    Bitfield(usick_type, 2);
+#define SICK_VOMITABLE 0x01
+#define SICK_NONVOMITABLE 0x02
+#define SICK_ALL 0x03
+
+    /* These ranges can never be more than MAX_RANGE (vision.h). */
+    int nv_range;   /* current night vision range */
+    int xray_range; /* current xray vision range */
+
+/*
+ * These variables are valid globally only when punished and blind.
+ */
+#define BC_BALL 0x01  /* bit mask for ball  in 'bc_felt' below */
+#define BC_CHAIN 0x02 /* bit mask for chain in 'bc_felt' below */
+    int bglyph;       /* glyph under the ball */
+    int cglyph;       /* glyph under the chain */
+    int bc_order;     /* ball & chain order [see bc_order() in ball.c] */
+    int bc_felt;      /* mask for ball/chain being felt */
+
+    int umonster;               /* hero's "real" monster num */
+    int umonnum;                /* current monster number */
+
+    int mh, mhmax, mtimedone;   /* for polymorph-self */
+    struct attribs macurr,      /* for monster attribs */
+                   mamax;       /* for monster attribs */
+    int ulycn;                  /* lycanthrope type */
+
+    unsigned ucreamed;
+    unsigned uswldtim;          /* time you have been swallowed */
+
+    Bitfield(uswallow, 1);      /* true if swallowed */
+    Bitfield(uinwater, 1);      /* if you're currently in water (only
+                                   underwater possible currently) */
+    Bitfield(uundetected, 1);   /* if you're a hiding monster/piercer */
+    Bitfield(mfemale, 1);       /* saved human value of flags.female */
+    Bitfield(uinvulnerable, 1); /* you're invulnerable (praying) */
+    Bitfield(uburied, 1);       /* you're buried */
+    Bitfield(uedibility, 1);    /* blessed food detect; sense unsafe food */
+    /* 1 free bit! */
+
+    unsigned udg_cnt;           /* how long you have been demigod */
+    struct u_achieve uachieve;  /* achievements */
+    struct u_event uevent;      /* certain events have happened */
+    struct u_have uhave;        /* you're carrying special objects */
+    struct u_conduct uconduct;  /* KMH, conduct */
+    struct u_roleplay uroleplay;
+    struct attribs acurr,       /* your current attributes (eg. str)*/
+                    aexe,       /* for gain/loss via "exercise" */
+                    abon,       /* your bonus attributes (eg. str) */
+                    amax,       /* your max attributes (eg. str) */
+                   atemp,       /* used for temporary loss/gain */
+                   atime;       /* used for loss/gain countdown */
+    align ualign;               /* character alignment */
+#define CONVERT    2
+#define A_ORIGINAL 1
+#define A_CURRENT  0
+    aligntyp ualignbase[CONVERT]; /* for ualign conversion record */
+    schar uluck, moreluck;        /* luck and luck bonus */
+#define Luck (u.uluck + u.moreluck)
+#define LUCKADD    3  /* value of u.moreluck when carrying luck stone;
+                         + when blessed or uncursed, - when cursed */
+#define LUCKMAX   10  /* maximum value of u.ulUck */
+#define LUCKMIN (-10) /* minimum value of u.uluck */
+    schar uhitinc;
+    schar udaminc;
+    schar uac;
+    uchar uspellprot;        /* protection by SPE_PROTECTION */
+    uchar usptime;           /* #moves until uspellprot-- */
+    uchar uspmtime;          /* #moves between uspellprot-- */
+    int uhp, uhpmax;         /* hit points, aka health */
+    int uen, uenmax;         /* magical energy - M. Stephenson */
+    xchar uhpinc[MAXULEV],   /* increases to uhpmax for each level gain */
+          ueninc[MAXULEV];   /* increases to uenmax for each level gain */
+    int ugangr;              /* if the gods are angry at you */
+    int ugifts;              /* number of artifacts bestowed */
+    int ublessed, ublesscnt; /* blessing/duration from #pray */
+    long umoney0;
+    long uspare1;
+    long uexp, urexp;
+    long ucleansed;          /* to record moves when player was cleansed */
+    long usleep;             /* sleeping; monstermove you last started */
+    int uinvault;
+    struct monst *ustuck;    /* engulfer or grabber, maybe grabbee if Upolyd */
+    struct monst *usteed;    /* mount when riding */
+    long ugallop;            /* turns steed will run after being kicked */
+    int urideturns;          /* time spent riding, for skill advancement */
+    int umortality;          /* how many times you died */
+    int ugrave_arise;    /* you die and become something aside from a ghost */
+    int weapon_slots;        /* unused skill slots */
+    int skills_advanced;     /* # of advances made so far */
+    xchar skill_record[P_SKILL_LIMIT]; /* skill advancements */
+    struct skills weapon_skills[P_NUM_SKILLS];
+    boolean twoweap;         /* KMH -- Using two-weapon combat */
+    /* public-obs export: the engraving the hero last wrote, at (bx,by), has not been read or felt since.
+       While the hero is blind there, the engraving flag reports 1 (present, text unknown), not the RNG truth:
+       sighted, a look reads it at zero cost, so the truth is public; blind, it is not. */
+    xchar nle_engr_blind, nle_engr_bx, nle_engr_by;
+    xchar nle_engr_last, nle_engr_wiped; /* last value read/felt there (0/1/2), and a hero wipe since */
+
+};
 
 #endif /* YOU_H */

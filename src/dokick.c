@@ -262,7 +262,7 @@ xchar x, y;
     if (Fumbling)
         clumsy = TRUE;
 
-    else if (uarm && objects[uarm->otyp].oc_bulky && ACURR(A_DEX) < rnd(25))
+    else if (uarm && object_defaults[uarm->otyp].oc_bulky && ACURR(A_DEX) < rnd(25))
         clumsy = TRUE;
  doit:
     You("kick %s.", mon_nam(mon));
@@ -321,7 +321,7 @@ register struct obj *gold;
             msg_given = TRUE;
         }
     } else {
-        long umoney, value = gold->quan * objects[gold->otyp].oc_cost;
+        long umoney, value = gold->quan * object_defaults[gold->otyp].oc_cost;
 
         mtmp->msleeping = 0;
         finish_meating(mtmp);
@@ -924,7 +924,7 @@ dokick()
         maploc = &nowhere;
         goto ouch;
     }
-    maploc = &levl[x][y];
+    maploc = &NH_TILE(x, y);
 
     /*
      * The next five tests should stay in their present order:
@@ -1136,7 +1136,7 @@ dokick()
                 short frtype = treefruit->otyp;
 
                 treefruit->quan = nfruit;
-                treefruit->owt = weight(treefruit);
+                nh_set_owt(treefruit);
                 if (is_plural(treefruit))
                     pline("Some %s fall from the tree!", xname(treefruit));
                 else
@@ -1253,7 +1253,7 @@ dokick()
                     pline_The("drawbridge is unaffected.");
                     /* update maploc to refer to the drawbridge */
                     (void) find_drawbridge(&x, &y);
-                    maploc = &levl[x][y];
+                    maploc = &NH_TILE(x, y);
                 }
             }
             if (!rn2(3))
@@ -1337,13 +1337,13 @@ dokick()
                     continue;
                 if (is_watch(mtmp->data) && mtmp->mpeaceful
                     && couldsee(mtmp->mx, mtmp->my)) {
-                    if (levl[x][y].looted & D_WARNED) {
+                    if (NH_TILE(x, y).looted & D_WARNED) {
                         mon_yells(mtmp,
                                   "Halt, vandal!  You're under arrest!");
                         (void) angry_guards(FALSE);
                     } else {
                         mon_yells(mtmp, "Hey, stop damaging that door!");
-                        levl[x][y].looted |= D_WARNED;
+                        NH_TILE(x, y).looted |= D_WARNED;
                     }
                     break;
                 }

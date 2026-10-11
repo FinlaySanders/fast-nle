@@ -669,7 +669,7 @@ register char sym;
 {
     register int ct;
     for (ct = 1; ct < NUM_OBJECTS; ct++)
-        if (objects[ct].oc_class == sym && !objects[ct].oc_magic)
+        if (object_defaults[ct].oc_class == sym && !object_defaults[ct].oc_magic)
             knows_object(ct);
 }
 
@@ -1128,7 +1128,7 @@ register struct trobj *trop;
                       low level players or unbalancing; also
                       spells in restricted skill categories */
                    || (obj->oclass == SPBOOK_CLASS
-                       && (objects[otyp].oc_level > 3
+                       && (object_defaults[otyp].oc_level > 3
                            || restricted_spell_discipline(otyp)))) {
                 dealloc_obj(obj);
                 obj = mkobj(trop->trclass, FALSE);
@@ -1136,7 +1136,7 @@ register struct trobj *trop;
             }
 
             /* Don't start with +0 or negative rings */
-            if (objects[otyp].oc_charged && obj->spe <= 0)
+            if (object_defaults[otyp].oc_charged && obj->spe <= 0)
                 obj->spe = rne(3);
 
             /* Heavily relies on the fact that 1) we create wands
@@ -1173,7 +1173,7 @@ register struct trobj *trop;
                                 OBJ_NAME(objects[inv_subs[i].subs_otyp]),
                                 (trop->trotyp == UNDEF_TYP) ? "random " : "",
                                 OBJ_NAME(objects[otyp]));
-                    otyp = obj->otyp = inv_subs[i].subs_otyp;
+                    otyp = NH_PILE_WRITE(obj, (obj->otyp = inv_subs[i].subs_otyp));
                     break;
                 }
         }
@@ -1189,7 +1189,7 @@ register struct trobj *trop;
             /* no "blessed" or "identified" money */
             obj->quan = u.umoney0;
         } else {
-            if (objects[otyp].oc_uses_known)
+            if (object_defaults[otyp].oc_uses_known)
                 obj->known = 1;
             obj->dknown = obj->bknown = obj->rknown = 1;
             if (Is_container(obj) || obj->otyp == STATUE) {
@@ -1212,7 +1212,7 @@ register struct trobj *trop;
                 obj->blessed = trop->trbless;
         }
         /* defined after setting otyp+quan + blessedness */
-        obj->owt = weight(obj);
+        nh_set_owt(obj);
         obj = addinv(obj);
 
         /* Make the type known if necessary */

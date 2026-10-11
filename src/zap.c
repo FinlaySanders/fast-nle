@@ -1047,7 +1047,7 @@ register struct obj *obj;
         break;
         /* case RIN_PROTECTION:  not needed */
     }
-    if (objects[otyp].oc_magic
+    if (object_defaults[otyp].oc_magic
         || (obj->spe && (obj->oclass == ARMOR_CLASS
                          || obj->oclass == WEAPON_CLASS || is_weptool(obj)))
         || otyp == POT_ACID
@@ -1063,14 +1063,14 @@ register struct obj *obj;
         switch (obj->oclass) {
         case SCROLL_CLASS:
             costly_alteration(obj, COST_CANCEL);
-            obj->otyp = SCR_BLANK_PAPER;
+            NH_PILE_WRITE(obj, (obj->otyp = SCR_BLANK_PAPER));
             obj->spe = 0;
             break;
         case SPBOOK_CLASS:
             if (otyp != SPE_CANCELLATION && otyp != SPE_NOVEL
                 && otyp != SPE_BOOK_OF_THE_DEAD) {
                 costly_alteration(obj, COST_CANCEL);
-                obj->otyp = SPE_BLANK_PAPER;
+                NH_PILE_WRITE(obj, (obj->otyp = SPE_BLANK_PAPER));
             }
             break;
         case POTION_CLASS:
@@ -1083,9 +1083,9 @@ register struct obj *obj;
                    cancel it and it just becomes fruit juice...
                    whereas see invisible tastes like "enchanted" fruit
                    juice, it similarly cancels */
-                obj->otyp = POT_FRUIT_JUICE;
+                NH_PILE_WRITE(obj, (obj->otyp = POT_FRUIT_JUICE));
             } else {
-                obj->otyp = POT_WATER;
+                NH_PILE_WRITE(obj, (obj->otyp = POT_WATER));
                 obj->odiluted = 0; /* same as any other water */
             }
             break;
@@ -1108,7 +1108,7 @@ boolean by_you;
 
     /* Is this a charged/enchanted object? */
     if (!obj
-        || (!objects[obj->otyp].oc_charged && obj->oclass != WEAPON_CLASS
+        || (!object_defaults[obj->otyp].oc_charged && obj->oclass != WEAPON_CLASS
             && obj->oclass != ARMOR_CLASS && !is_weptool(obj))
         || obj->spe <= 0)
         return FALSE;
@@ -1433,7 +1433,7 @@ int id;
         sokoban_guilt();
     if (id == STRANGE_OBJECT) { /* preserve symbol */
         int try_limit = 3;
-        unsigned magic_obj = objects[obj->otyp].oc_magic;
+        unsigned magic_obj = object_defaults[obj->otyp].oc_magic;
 
         if (obj->otyp == UNICORN_HORN && obj->degraded_horn)
             magic_obj = 0;
@@ -1445,7 +1445,7 @@ int id;
                 delobj(otmp);
             otmp = mkobj(obj->oclass, FALSE);
         } while (--try_limit > 0
-                 && objects[otmp->otyp].oc_magic != magic_obj);
+                 && object_defaults[otmp->otyp].oc_magic != magic_obj);
     } else {
         /* literally replace obj with this new thing */
         otmp = mksobj(id, FALSE, FALSE);
@@ -1483,8 +1483,8 @@ int id;
         if (otmp->otyp == EGG)
             kill_egg(otmp);
         else {
-            otmp->otyp = EGG;
-            otmp->owt = weight(otmp);
+            NH_PILE_WRITE(otmp, (otmp->otyp = EGG));
+            nh_set_owt(otmp);
         }
         otmp->corpsenm = NON_PM;
         otmp->spe = 0;
@@ -1527,7 +1527,7 @@ int id;
     if (id == STRANGE_OBJECT && obj->otyp == CORPSE) {
         /* turn crocodile corpses into shoes */
         if (obj->corpsenm == PM_CROCODILE) {
-            otmp->otyp = LOW_BOOTS;
+            NH_PILE_WRITE(otmp, (otmp->otyp = LOW_BOOTS));
             otmp->oclass = ARMOR_CLASS;
             otmp->spe = 0;
             otmp->oeroded = 0;
@@ -1542,14 +1542,14 @@ int id;
         delete_contents(otmp);
 
     /* 'n' merged objects may be fused into 1 object */
-    if (otmp->quan > 1L && (!objects[otmp->otyp].oc_merge
+    if (otmp->quan > 1L && (!object_defaults[otmp->otyp].oc_merge
                             || (can_merge && otmp->quan > (long) rn2(1000))))
         otmp->quan = 1L;
 
     switch (otmp->oclass) {
     case TOOL_CLASS:
         if (otmp->otyp == MAGIC_LAMP) {
-            otmp->otyp = OIL_LAMP;
+            NH_PILE_WRITE(otmp, (otmp->otyp = OIL_LAMP));
             otmp->age = 1500L; /* "best" oil lamp possible */
         } else if (otmp->otyp == MAGIC_MARKER) {
             otmp->recharged = 1; /* degraded quality */
@@ -1559,7 +1559,7 @@ int id;
 
     case WAND_CLASS:
         while (otmp->otyp == WAN_WISHING || otmp->otyp == WAN_POLYMORPH)
-            otmp->otyp = rnd_class(WAN_LIGHT, WAN_LIGHTNING);
+            NH_PILE_WRITE(otmp, (otmp->otyp = rnd_class(WAN_LIGHT, WAN_LIGHTNING)));
         /* altering the object tends to degrade its quality
            (analogous to spellbook `read count' handling) */
         if ((int) otmp->recharged < rn2(7)) /* recharge_limit */
@@ -1568,17 +1568,17 @@ int id;
 
     case POTION_CLASS:
         while (otmp->otyp == POT_POLYMORPH)
-            otmp->otyp = rnd_class(POT_GAIN_ABILITY, POT_WATER);
+            NH_PILE_WRITE(otmp, (otmp->otyp = rnd_class(POT_GAIN_ABILITY, POT_WATER)));
         break;
 
     case SPBOOK_CLASS:
         while (otmp->otyp == SPE_POLYMORPH)
-            otmp->otyp = rnd_class(SPE_DIG, SPE_BLANK_PAPER);
+            NH_PILE_WRITE(otmp, (otmp->otyp = rnd_class(SPE_DIG, SPE_BLANK_PAPER)));
         /* reduce spellbook abuse; non-blank books degrade */
         if (otmp->otyp != SPE_BLANK_PAPER) {
             otmp->spestudied = obj->spestudied + 1;
             if (otmp->spestudied > MAX_SPELL_STUDY) {
-                otmp->otyp = SPE_BLANK_PAPER;
+                NH_PILE_WRITE(otmp, (otmp->otyp = SPE_BLANK_PAPER));
                 /* writing a new book over it will yield an unstudied
                    one; re-polymorphing this one as-is may or may not
                    get something non-blank */
@@ -1591,14 +1591,14 @@ int id;
         if (otmp->quan > (long) rnd(4)
             && objects[obj->otyp].oc_material == MINERAL
             && objects[otmp->otyp].oc_material != MINERAL) {
-            otmp->otyp = ROCK; /* transmutation backfired */
+            NH_PILE_WRITE(otmp, (otmp->otyp = ROCK)); /* transmutation backfired */
             otmp->quan /= 2L;  /* some material has been lost */
         }
         break;
     }
 
     /* update the weight */
-    otmp->owt = weight(otmp);
+    nh_set_owt(otmp);
 
     /*
      * ** we are now done adjusting the object (except possibly wearing it) **
@@ -1655,7 +1655,7 @@ int id;
         } /* old_wornmask */
     } else if (obj_location == OBJ_FLOOR) {
         if (obj->otyp == BOULDER && otmp->otyp != BOULDER
-            && !does_block(ox, oy, &levl[ox][oy]))
+            && !does_block(ox, oy, &NH_TILE(ox, oy)))
             unblock_point(ox, oy);
         else if (obj->otyp != BOULDER && otmp->otyp == BOULDER)
             /* (checking does_block() here would be redundant) */
@@ -1709,7 +1709,7 @@ struct obj *obj;
 
     (void) get_obj_location(obj, &oox, &ooy, 0);
     /* add more if stone objects are added.. */
-    switch (objects[obj->otyp].oc_class) {
+    switch (object_defaults[obj->otyp].oc_class) {
     case ROCK_CLASS: /* boulders and statues */
     case TOOL_CLASS: /* figurines */
         if (obj->otyp == BOULDER) {
@@ -2901,14 +2901,14 @@ struct obj *obj; /* wand or spell */
                     pline("The trapdoor beneath you shatters.");
                     disclose = TRUE;
                 }
-                ttmp->ttyp = HOLE;
+                NH_TRAP_WRITE(ttmp, (ttmp->ttyp = HOLE));
                 ttmp->tseen = 1;
                 newsym(x, y);
                 /* might fall down hole */
                 dotrap(ttmp, 0);
             } else if (!striking && ttmp->ttyp == HOLE) {
                 /* locking transforms hole into trapdoor */
-                ttmp->ttyp = TRAPDOOR;
+                NH_TRAP_WRITE(ttmp, (ttmp->ttyp = TRAPDOOR));
                 if (Blind || !ttmp->tseen) {
                     pline("Some %s swirls beneath you.",
                           is_ice(x, y) ? "frost" : "dust");
@@ -3408,7 +3408,7 @@ struct obj **pobj; /* object tossed/used, set to NULL
             }
         } else {
             if (weapon == ZAPPED_WAND && obj->otyp == WAN_PROBING
-                && glyph_is_invisible(levl[bhitpos.x][bhitpos.y].glyph)) {
+                && glyph_is_invisible(NH_TILE(bhitpos.x, bhitpos.y).glyph)) {
                 unmap_object(bhitpos.x, bhitpos.y);
                 newsym(x, y);
             }
@@ -3438,7 +3438,7 @@ struct obj **pobj; /* object tossed/used, set to NULL
                     if (cansee(bhitpos.x, bhitpos.y)
                         || (obj->otyp == WAN_STRIKING && !Deaf))
                         learnwand(obj);
-                    if (levl[bhitpos.x][bhitpos.y].doormask == D_BROKEN
+                    if (NH_TILE(bhitpos.x, bhitpos.y).doormask == D_BROKEN
                         && *in_rooms(bhitpos.x, bhitpos.y, SHOPBASE)) {
                         shopdoor = TRUE;
                         add_damage(bhitpos.x, bhitpos.y, SHOP_DOOR_COST);
@@ -3455,7 +3455,7 @@ struct obj **pobj; /* object tossed/used, set to NULL
         if (weapon != ZAPPED_WAND && weapon != INVIS_BEAM) {
             /* 'I' present but no monster: erase */
             /* do this before the tmp_at() */
-            if (glyph_is_invisible(levl[bhitpos.x][bhitpos.y].glyph)
+            if (glyph_is_invisible(NH_TILE(bhitpos.x, bhitpos.y).glyph)
                 && cansee(x, y)) {
                 unmap_object(bhitpos.x, bhitpos.y);
                 newsym(x, y);
@@ -4002,7 +4002,7 @@ const char *fltxt;
 
 /* note: worn amulet of life saving must be preserved in order to operate */
 #define oresist_disintegration(obj)                                       \
-    (objects[obj->otyp].oc_oprop == DISINT_RES || obj_resists(obj, 5, 50) \
+    (object_defaults[obj->otyp].oc_oprop == DISINT_RES || obj_resists(obj, 5, 50) \
      || is_quest_artifact(obj) || obj == m_amulet)
 
     for (otmp = mon->minvent; otmp; otmp = otmp2) {
@@ -4324,7 +4324,7 @@ melt_ice(x, y, msg)
 xchar x, y;
 const char *msg;
 {
-    struct rm *lev = &levl[x][y];
+    struct rm *lev = &NH_TILE(x, y);
     struct obj *otmp;
     struct monst *mtmp;
 
@@ -4438,7 +4438,7 @@ short exploding_wand_typ;
     const char *zapverb;
     struct monst *mon;
     struct trap *t;
-    struct rm *lev = &levl[x][y];
+    struct rm *lev = &NH_TILE(x, y);
     boolean see_it = cansee(x, y), yourzap;
     int rangemod = 0, abstype = abs(type) % 10;
 
@@ -4616,7 +4616,7 @@ short exploding_wand_typ;
 
     /* secret door gets revealed, converted into regular door */
     if (TYP_AT(x, y) == SDOOR) {
-        cvt_sdoor_to_door(&levl[x][y]); /* .typ = DOOR */
+        cvt_sdoor_to_door(&NH_TILE(x, y)); /* .typ = DOOR */
         /* target spot will now pass closed_door() test below
            (except on rogue level) */
         newsym(x, y);
@@ -4745,18 +4745,18 @@ register struct obj *obj; /* no texts here! */
     if (by_you && obj->otyp == BOULDER)
         sokoban_guilt();
 
-    obj->otyp = ROCK;
+    NH_PILE_WRITE(obj, (obj->otyp = ROCK));
     obj->oclass = GEM_CLASS;
     obj->quan = (long) rn1(60, 7);
-    obj->owt = weight(obj);
+    nh_set_owt(obj);
     obj->dknown = obj->bknown = obj->rknown = 0;
-    obj->known = objects[obj->otyp].oc_uses_known ? 0 : 1;
+    obj->known = object_defaults[obj->otyp].oc_uses_known ? 0 : 1;
     dealloc_oextra(obj);
 
     if (obj->where == OBJ_FLOOR) {
         obj_extract_self(obj); /* move rocks back on top */
         place_object(obj, obj->ox, obj->oy);
-        if (!does_block(obj->ox, obj->oy, &levl[obj->ox][obj->oy]))
+        if (!does_block(obj->ox, obj->oy, &NH_TILE(obj->ox, obj->oy)))
             unblock_point(obj->ox, obj->oy);
         if (cansee(obj->ox, obj->oy))
             newsym(obj->ox, obj->oy);
@@ -5018,8 +5018,8 @@ int osym, dmgtyp;
            the rest as already processed once control returns here */
         if (deferral_indx < SIZE(deferrals)
             && ((obj->owornmask != 0L
-                 && (objects[obj->otyp].oc_oprop == LEVITATION
-                     || objects[obj->otyp].oc_oprop == FLYING))
+                 && (object_defaults[obj->otyp].oc_oprop == LEVITATION
+                     || object_defaults[obj->otyp].oc_oprop == FLYING))
                 /* destroyed wands and potions of polymorph don't trigger
                    polymorph so don't need to be deferred */
                 || (obj->otyp == POT_WATER && u.ulycn >= LOW_PM

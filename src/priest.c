@@ -102,7 +102,7 @@ pick_move:
     for (i = 0; i < cnt; i++) {
         nx = poss[i].x;
         ny = poss[i].y;
-        if (IS_ROOM(levl[nx][ny].typ)
+        if (IS_ROOM(NH_TILE(nx, ny).typ)
             || (mtmp->isshk && (!in_his_shop || ESHK(mtmp)->following))) {
             if (avoid && (info[i] & NOTONL))
                 continue;
@@ -244,7 +244,7 @@ boolean sanctum; /* is it the seat of the high priest? */
                      sx + 1, sy, MM_EPRI);
     if (priest) {
         EPRI(priest)->shroom = (schar) ((sroom - rooms) + ROOMOFFSET);
-        EPRI(priest)->shralign = Amask2align(levl[sx][sy].altarmask);
+        EPRI(priest)->shralign = Amask2align(NH_TILE(sx, sy).altarmask);
         EPRI(priest)->shrpos.x = sx;
         EPRI(priest)->shrpos.y = sy;
         assign_level(&(EPRI(priest)->shrlevel), lvl);
@@ -365,7 +365,7 @@ struct monst *pri;
     if (!pri || !pri->ispriest)
         return FALSE;
     epri_p = EPRI(pri);
-    lev = &levl[epri_p->shrpos.x][epri_p->shrpos.y];
+    lev = &NH_TILE(epri_p->shrpos.x, epri_p->shrpos.y);
     if (!IS_ALTAR(lev->typ) || !(lev->altarmask & AM_SHRINE))
         return FALSE;
     return (boolean) (epri_p->shralign
@@ -738,7 +738,7 @@ struct monst *priest;
     troom = &rooms[roomno - ROOMOFFSET];
 
     if ((u.ux == x && u.uy == y) || !linedup(u.ux, u.uy, x, y, 1)) {
-        if (IS_DOOR(levl[u.ux][u.uy].typ)) {
+        if (IS_DOOR(NH_TILE(u.ux, u.uy).typ)) {
             if (u.ux == troom->lx - 1) {
                 x = troom->hx;
                 y = u.uy;
@@ -814,7 +814,7 @@ angry_priest()
          * a fresh corpse nearby, the priest ought to have an
          * opportunity to try converting it back; maybe someday...)
          */
-        lev = &levl[eprip->shrpos.x][eprip->shrpos.y];
+        lev = &NH_TILE(eprip->shrpos.x, eprip->shrpos.y);
         if (!IS_ALTAR(lev->typ)
             || ((aligntyp) Amask2align(lev->altarmask & AM_MASK)
                 != eprip->shralign)) {

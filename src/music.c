@@ -276,7 +276,7 @@ int force;
                 }
             }
             if (!rn2(14 - force))
-                switch (levl[x][y].typ) {
+                switch (NH_TILE(x, y).typ) {
                 case FOUNTAIN: /* Make the fountain disappear */
                     if (cansee(x, y))
                         pline_The("fountain falls into a chasm.");
@@ -313,7 +313,7 @@ int force;
                      * reduce indentation and the consequent line-wraps.
                      */
 
-                    levl[x][y].doormask = 0;
+                    NH_TILE(x, y).doormask = 0;
                     /*
                      * Let liquid flow into the newly created chasm.
                      * Adjust corresponding code in apply.c for
@@ -426,13 +426,13 @@ int force;
                         newsym(x, y);
                     break;
                 case DOOR: /* Make the door collapse */
-                    if (levl[x][y].doormask == D_NODOOR)
+                    if (NH_TILE(x, y).doormask == D_NODOOR)
                         goto do_pit;
                     if (cansee(x, y))
                         pline_The("door collapses.");
                     if (*in_rooms(x, y, SHOPBASE))
                         add_damage(x, y, 0L);
-                    levl[x][y].doormask = D_NODOOR;
+                    NH_TILE(x, y).doormask = D_NODOOR;
                     unblock_point(x, y);
                     newsym(x, y);
                     break;
@@ -480,7 +480,7 @@ struct obj *instr;
 
     /* if won't yield special effect, make sound of mundane counterpart */
     if (!do_spec || instr->spe <= 0)
-        while (objects[itmp.otyp].oc_magic) {
+        while (object_defaults[itmp.otyp].oc_magic) {
             itmp.otyp -= 1;
             mundane = TRUE;
         }
@@ -775,7 +775,7 @@ struct obj *instr;
                             if (find_drawbridge(&x, &y)) {
                                 /* tune now fully known */
                                 u.uevent.uheard_tune = 2;
-                                if (levl[x][y].typ == DRAWBRIDGE_DOWN)
+                                if (NH_TILE(x, y).typ == DRAWBRIDGE_DOWN)
                                     close_drawbridge(x, y);
                                 else
                                     open_drawbridge(x, y);
@@ -791,7 +791,7 @@ struct obj *instr;
                 for (y = u.uy - 1; y <= u.uy + 1 && !ok; y++)
                     for (x = u.ux - 1; x <= u.ux + 1 && !ok; x++)
                         if (isok(x, y))
-                            if (IS_DRAWBRIDGE(levl[x][y].typ)
+                            if (IS_DRAWBRIDGE(NH_TILE(x, y).typ)
                                 || is_drawbridge_wall(x, y) >= 0)
                                 ok = TRUE;
                 if (ok) { /* There is a drawbridge near */

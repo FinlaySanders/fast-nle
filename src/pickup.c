@@ -943,7 +943,7 @@ boolean FDECL((*allow), (OBJ_P)); /* allow function */
                 add_menu(win, obj_to_glyph(curr, rn2_on_display_rng), &any,
                          (qflags & USE_INVLET) ? curr->invlet
                            : (first && curr->oclass == COIN_CLASS) ? '$' : 0,
-                         def_oc_syms[(int) objects[curr->otyp].oc_class].sym,
+                         def_oc_syms[(int) object_defaults[curr->otyp].oc_class].sym,
                          ATR_NONE, doname_with_price(curr), MENU_UNSELECTED);
                 first = FALSE;
             }
@@ -1132,7 +1132,7 @@ int how;               /* type of query */
                     any.a_int = curr->oclass;
                     add_menu(
                         win, NO_GLYPH, &any, invlet++,
-                        def_oc_syms[(int) objects[curr->otyp].oc_class].sym,
+                        def_oc_syms[(int) object_defaults[curr->otyp].oc_class].sym,
                         ATR_NONE, let_to_name(*pack, FALSE,
                                               (how != PICK_NONE)
                                                   && iflags.menu_head_objsym),
@@ -1898,7 +1898,7 @@ doloot()
             if (anyfound)
                 c = 'y';
         }
-    } else if (IS_GRAVE(levl[cc.x][cc.y].typ)) {
+    } else if (IS_GRAVE(NH_TILE(cc.x, cc.y).typ)) {
         You("need to dig up the grave to effectively loot it...");
     }
 
@@ -1988,7 +1988,7 @@ reverse_loot()
     if (!goldob)
         return FALSE;
 
-    if (!IS_THRONE(levl[x][y].typ)) {
+    if (!IS_THRONE(NH_TILE(x, y).typ)) {
         dropx(goldob);
         /* the dropped gold might have fallen to lower level */
         if (g_at(x, y))
@@ -2012,19 +2012,19 @@ reverse_loot()
             verbalize("Thank you for your contribution to reduce the debt.");
             freeinv(goldob);
             (void) add_to_container(coffers, goldob);
-            coffers->owt = weight(coffers);
+            nh_set_owt(coffers);
             coffers->cknown = 0;
             if (!coffers->olocked) {
                 boxdummy = zeroobj, boxdummy.otyp = SPE_WIZARD_LOCK;
                 (void) boxlock(coffers, &boxdummy);
             }
-        } else if (levl[x][y].looted != T_LOOTED
+        } else if (NH_TILE(x, y).looted != T_LOOTED
                    && (mon = makemon(courtmon(), x, y, NO_MM_FLAGS)) != 0) {
             freeinv(goldob);
             add_to_minv(mon, goldob);
             pline("The exchequer accepts your contribution.");
             if (!rn2(10))
-                levl[x][y].looted = T_LOOTED;
+                NH_TILE(x, y).looted = T_LOOTED;
         } else {
             You("drop %s.", doname(goldob));
             dropx(goldob);
@@ -2289,7 +2289,7 @@ register struct obj *obj;
         if (floor_container && obj->oclass == COIN_CLASS)
             sellobj(obj, current_container->ox, current_container->oy);
         (void) add_to_container(current_container, obj);
-        current_container->owt = weight(current_container);
+        nh_set_owt(current_container);
     }
     /* gold needs this, and freeinv() many lines above may cause
      * the encumbrance to disappear from the status, so just always
@@ -2325,7 +2325,7 @@ register struct obj *obj;
         impossible("<out> no current_container?");
         return -1;
     } else if (is_gold) {
-        obj->owt = weight(obj);
+        nh_set_owt(obj);
     }
 
     if (obj->oartifact && !touch_artifact(obj, &youmonst))
@@ -2343,7 +2343,7 @@ register struct obj *obj;
 
     /* Remove the object from the list. */
     obj_extract_self(obj);
-    current_container->owt = weight(current_container);
+    nh_set_owt(current_container);
 
     if (Icebox)
         removed_from_icebox(obj);
@@ -2448,7 +2448,7 @@ boolean makecat, givemsg;
                 obj_extract_self(deadcat);
                 obfree(deadcat, (struct obj *) 0), deadcat = 0;
             }
-            box->owt = weight(box);
+            nh_set_owt(box);
             box->spe = 0;
         }
     } else {
@@ -2591,7 +2591,7 @@ boolean more_containers; /* True iff #loot multiple and this isn't last one */
         && (loss = boh_loss(current_container, held)) != 0) {
         used = 1;
         You("owe %ld %s for lost merchandise.", loss, currency(loss));
-        current_container->owt = weight(current_container);
+        nh_set_owt(current_container);
     }
     inokay = (invent != 0
               && !(invent == current_container && !current_container->nobj));
@@ -3225,7 +3225,7 @@ struct obj *box; /* or bag */
     if (empty_it) {
         struct obj *otmp, *nobj;
         boolean terse, highdrop = !can_reach_floor(TRUE),
-                altarizing = IS_ALTAR(levl[ox][oy].typ),
+                altarizing = IS_ALTAR(NH_TILE(ox, oy).typ),
                 cursed_mbag = (Is_mbag(box) && box->cursed);
         int held = carried(box);
         long loss = 0L;
@@ -3283,7 +3283,7 @@ struct obj *box; /* or bag */
         }
         if (loss) /* magic bag lost some shop goods */
             You("owe %ld %s for lost merchandise.", loss, currency(loss));
-        box->owt = weight(box); /* mbag_item_gone() doesn't update this */
+        nh_set_owt(box); /* mbag_item_gone() doesn't update this */
         if (held)
             (void) encumber_msg();
     }

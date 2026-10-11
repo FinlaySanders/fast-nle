@@ -42,7 +42,7 @@ boolean
 picking_at(x, y)
 int x, y;
 {
-    return (boolean) (occupation == picklock && xlock.door == &levl[x][y]);
+    return (boolean) (occupation == picklock && xlock.door == &NH_TILE(x, y));
 }
 
 /* produce an occupation string appropriate for the current activity */
@@ -85,7 +85,7 @@ picklock(VOID_ARGS)
             return ((xlock.usedtime = 0)); /* you or it moved */
         }
     } else { /* door */
-        if (xlock.door != &(levl[u.ux + u.dx][u.uy + u.dy])) {
+        if (xlock.door != &(NH_TILE(u.ux + u.dx, u.uy + u.dy))) {
             return ((xlock.usedtime = 0)); /* you moved */
         }
         switch (xlock.door->doormask) {
@@ -453,7 +453,7 @@ struct obj *pick;
             return PICKLOCK_LEARNED_SOMETHING;
         }
 
-        door = &levl[cc.x][cc.y];
+        door = &NH_TILE(cc.x, cc.y);
         mtmp = m_at(cc.x, cc.y);
         if (mtmp && canseemon(mtmp) && M_AP_TYPE(mtmp) != M_AP_FURNITURE
             && M_AP_TYPE(mtmp) != M_AP_OBJECT) {
@@ -542,9 +542,9 @@ doforce()
     }
     if (!uwep /* proper type test */
         || ((uwep->oclass == WEAPON_CLASS || is_weptool(uwep))
-               ? (objects[uwep->otyp].oc_skill < P_DAGGER
-                  || objects[uwep->otyp].oc_skill == P_FLAIL
-                  || objects[uwep->otyp].oc_skill > P_LANCE)
+               ? (object_defaults[uwep->otyp].oc_skill < P_DAGGER
+                  || object_defaults[uwep->otyp].oc_skill == P_FLAIL
+                  || object_defaults[uwep->otyp].oc_skill > P_LANCE)
                : uwep->oclass != ROCK_CLASS)) {
         You_cant("force anything %s weapon.",
                  !uwep ? "when not wielding a"
@@ -595,7 +595,7 @@ doforce()
             else
                 You("start bashing it with %s.", yname(uwep));
             xlock.box = otmp;
-            xlock.chance = objects[uwep->otyp].oc_wldam * 2;
+            xlock.chance = object_defaults[uwep->otyp].oc_wldam * 2;
             xlock.picktyp = picktyp;
             xlock.magic_key = FALSE;
             xlock.usedtime = 0;
@@ -668,7 +668,7 @@ int x, y;
     if (Confusion || Stunned)
         res = 1;
 
-    door = &levl[cc.x][cc.y];
+    door = &NH_TILE(cc.x, cc.y);
     portcullis = (is_drawbridge_wall(cc.x, cc.y) >= 0);
     if (Blind) {
         int oldglyph = door->glyph;
@@ -814,7 +814,7 @@ doclose()
     if (Confusion || Stunned)
         res = 1;
 
-    door = &levl[x][y];
+    door = &NH_TILE(x, y);
     portcullis = (is_drawbridge_wall(x, y) >= 0);
     if (Blind) {
         int oldglyph = door->glyph;
@@ -924,7 +924,7 @@ doorlock(otmp, x, y)
 struct obj *otmp;
 int x, y;
 {
-    register struct rm *door = &levl[x][y];
+    register struct rm *door = &NH_TILE(x, y);
     boolean res = TRUE;
     int loudness = 0;
     const char *msg = (const char *) 0;

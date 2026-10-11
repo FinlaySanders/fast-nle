@@ -754,7 +754,7 @@ domonability(VOID_ARGS)
     else if (is_mind_flayer(youmonst.data))
         return domindblast();
     else if (u.umonnum == PM_GREMLIN) {
-        if (IS_FOUNTAIN(levl[u.ux][u.uy].typ)) {
+        if (IS_FOUNTAIN(NH_TILE(u.ux, u.uy).typ)) {
             if (split_mon(&youmonst, (struct monst *) 0))
                 dryup(u.ux, u.uy, TRUE);
         } else
@@ -1089,7 +1089,7 @@ wiz_show_seenv(VOID_ARGS)
             if (x == u.ux && y == u.uy) {
                 row[curx] = row[curx + 1] = '@';
             } else {
-                v = levl[x][y].seenv & 0xff;
+                v = NH_TILE(x, y).seenv & 0xff;
                 if (v == 0)
                     row[curx] = row[curx + 1] = ' ';
                 else
@@ -1162,7 +1162,7 @@ wiz_show_wmodes(VOID_ARGS)
         putstr(win, 0, ""); /* tty only: blank top line */
     for (y = 0; y < ROWNO; y++) {
         for (x = 0; x < COLNO; x++) {
-            lev = &levl[x][y];
+            lev = &NH_TILE(x, y);
             if (x == u.ux && y == u.uy)
                 row[x] = '@';
             else if (IS_WALL(lev->typ) || lev->typ == SDOOR)
@@ -1175,7 +1175,7 @@ wiz_show_wmodes(VOID_ARGS)
                 row[x] = 'x';
         }
         row[COLNO] = '\0';
-        /* map column 0, levl[0][], is off the left edge of the screen */
+        /* map column 0, NH_TILE(0, ), is off the left edge of the screen */
         putstr(win, 0, &row[1]);
     }
     display_nhwindow(win, TRUE);
@@ -1183,7 +1183,7 @@ wiz_show_wmodes(VOID_ARGS)
     return 0;
 }
 
-/* wizard mode variant of #terrain; internal levl[][].typ values in base-36 */
+/* wizard mode variant of #terrain; internal NH_TILE(, ).typ values in base-36 */
 STATIC_OVL void
 wiz_map_levltyp(VOID_ARGS)
 {
@@ -1193,14 +1193,14 @@ wiz_map_levltyp(VOID_ARGS)
     boolean istty = !strcmp(windowprocs.name, "tty");
 
     win = create_nhwindow(NHW_TEXT);
-    /* map row 0, levl[][0], is drawn on the second line of tty screen */
+    /* map row 0, NH_TILE(, 0), is drawn on the second line of tty screen */
     if (istty)
         putstr(win, 0, ""); /* tty only: blank top line */
     for (y = 0; y < ROWNO; y++) {
-        /* map column 0, levl[0][], is off the left edge of the screen;
+        /* map column 0, NH_TILE(0, ), is off the left edge of the screen;
            it should always have terrain type "undiggable stone" */
         for (x = 1; x < COLNO; x++) {
-            terrain = levl[x][y].typ;
+            terrain = NH_TILE(x, y).typ;
             /* assumes there aren't more than 10+26+26 terrain types */
             row[x - 1] = (char) ((terrain == STONE && !may_dig(x, y))
                                     ? '*'
@@ -1211,7 +1211,7 @@ wiz_map_levltyp(VOID_ARGS)
                                           : 'A' + terrain - 36);
         }
         x--;
-        if (levl[0][y].typ != STONE || may_dig(0, y))
+        if (NH_TILE(0, y).typ != STONE || may_dig(0, y))
             row[x++] = '!';
         row[x] = '\0';
         putstr(win, 0, row);
@@ -1585,8 +1585,8 @@ doterrain(VOID_ARGS)
      *  known map without mons (to see objects under monsters);
      * explore mode: normal choices plus full map (w/o mons, objs, traps);
      * wizard mode: normal and explore choices plus
-     *  a dump of the internal levl[][].typ codes w/ level flags, or
-     *  a legend for the levl[][].typ codes dump
+     *  a dump of the internal NH_TILE(, ).typ codes w/ level flags, or
+     *  a legend for the NH_TILE(, ).typ codes dump
      */
     men = create_nhwindow(NHW_MENU);
     start_menu(men);
@@ -1611,11 +1611,11 @@ doterrain(VOID_ARGS)
         if (wizard) {
             any.a_int = 5;
             add_menu(men, NO_GLYPH, &any, 0, 0, ATR_NONE,
-                     "internal levl[][].typ codes in base-36",
+                     "internal NH_TILE(, ).typ codes in base-36",
                      MENU_UNSELECTED);
             any.a_int = 6;
             add_menu(men, NO_GLYPH, &any, 0, 0, ATR_NONE,
-                     "legend of base-36 levl[][].typ codes",
+                     "legend of base-36 NH_TILE(, ).typ codes",
                      MENU_UNSELECTED);
         }
     }
@@ -1797,7 +1797,7 @@ int propindx; /* index of a property which can be conveyed by worn item */
     for (o = invent; o; o = o->nobj) {
         if (!(o->owornmask & mask))
             continue;
-        if ((int) objects[o->otyp].oc_oprop == propindx
+        if ((int) object_defaults[o->otyp].oc_oprop == propindx
             && objects[o->otyp].oc_name_known && o->dknown)
             return TRUE;
     }
@@ -5433,7 +5433,7 @@ int x, y;
     winid win;
     char ch;
     char buf[BUFSZ];
-    schar typ = levl[x][y].typ;
+    schar typ = NH_TILE(x, y).typ;
     int npick, K = 0;
     menu_item *picks = (menu_item *) 0;
     struct trap *ttmp;
@@ -5444,7 +5444,7 @@ int x, y;
 
     if (IS_DOOR(typ)) {
         boolean key_or_pick, card;
-        int dm = levl[x][y].doormask;
+        int dm = NH_TILE(x, y).doormask;
 
         if ((dm & (D_CLOSED | D_LOCKED))) {
             add_herecmd_menuitem(win, doopen, "Open the door"), ++K;
@@ -5535,7 +5535,7 @@ boolean doit;
     winid win;
     char ch;
     char buf[BUFSZ];
-    schar typ = levl[u.ux][u.uy].typ;
+    schar typ = NH_TILE(u.ux, u.uy).typ;
     int npick;
     menu_item *picks = (menu_item *) 0;
 
@@ -5668,11 +5668,11 @@ int x, y, mod;
             }
 
             /* here */
-            if (IS_FOUNTAIN(levl[u.ux][u.uy].typ)
-                || IS_SINK(levl[u.ux][u.uy].typ)) {
+            if (IS_FOUNTAIN(NH_TILE(u.ux, u.uy).typ)
+                || IS_SINK(NH_TILE(u.ux, u.uy).typ)) {
                 click_cmd[0] = cmd_from_func(mod == CLICK_1 ? dodrink : dodip);
                 return click_cmd;
-            } else if (IS_THRONE(levl[u.ux][u.uy].typ)) {
+            } else if (IS_THRONE(NH_TILE(u.ux, u.uy).typ)) {
                 click_cmd[0] = cmd_from_func(dosit);
                 return click_cmd;
             } else if ((u.ux == xupstair && u.uy == yupstair)
@@ -5712,19 +5712,19 @@ int x, y, mod;
                 return click_cmd;
             }
 
-            if (IS_DOOR(levl[u.ux + x][u.uy + y].typ)) {
+            if (IS_DOOR(NH_TILE(u.ux + x, u.uy + y).typ)) {
                 /* slight assistance to the player: choose kick/open for them
                  */
-                if (levl[u.ux + x][u.uy + y].doormask & D_LOCKED) {
+                if (NH_TILE(u.ux + x, u.uy + y).doormask & D_LOCKED) {
                     click_cmd[0] = cmd_from_func(dokick);
                     return click_cmd;
                 }
-                if (levl[u.ux + x][u.uy + y].doormask & D_CLOSED) {
+                if (NH_TILE(u.ux + x, u.uy + y).doormask & D_CLOSED) {
                     click_cmd[0] = cmd_from_func(doopen);
                     return click_cmd;
                 }
             }
-            if (levl[u.ux + x][u.uy + y].typ <= SCORR) {
+            if (NH_TILE(u.ux + x, u.uy + y).typ <= SCORR) {
                 click_cmd[0] = cmd_from_func(dosearch);
                 click_cmd[1] = 0;
                 return click_cmd;

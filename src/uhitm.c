@@ -135,7 +135,7 @@ struct obj *wep; /* uwep for attack(), null for kick_monster() */
          * not stay there, so the player will have suddenly forgotten
          * the square's contents for no apparent reason.
         if (!canspotmon(mtmp)
-            && !glyph_is_invisible(levl[bhitpos.x][bhitpos.y].glyph))
+            && !glyph_is_invisible(NH_TILE(bhitpos.x, bhitpos.y).glyph))
             map_invisible(bhitpos.x, bhitpos.y);
          */
         return FALSE;
@@ -380,7 +380,7 @@ register struct monst *mtmp;
                         break;
                     }
             }
-            if (inshop || foo || (IS_ROCK(levl[u.ux][u.uy].typ)
+            if (inshop || foo || (IS_ROCK(NH_TILE(u.ux, u.uy).typ)
                                   && !passes_walls(mtmp->data))) {
                 char buf[BUFSZ];
 
@@ -467,7 +467,7 @@ register struct monst *mtmp;
      * evade.
      */
     if (context.forcefight && !DEADMONSTER(mtmp) && !canspotmon(mtmp)
-        && !glyph_is_invisible(levl[u.ux + u.dx][u.uy + u.dy].glyph)
+        && !glyph_is_invisible(NH_TILE(u.ux + u.dx, u.uy + u.dy).glyph)
         && !(u.uswallow && mtmp == u.ustuck))
         map_invisible(u.ux + u.dx, u.uy + u.dy);
 
@@ -586,7 +586,7 @@ struct attack *uattk; /* ... but we don't enforce that here; Null works ok */
             continue;
         mtmp = m_at(tx, ty);
         if (!mtmp) {
-            if (glyph_is_invisible(levl[tx][ty].glyph))
+            if (glyph_is_invisible(NH_TILE(tx, ty).glyph))
                 (void) unmap_invisible(tx, ty);
             continue;
         }
@@ -989,12 +989,12 @@ int dieroll;
                                       (cnt == 1L) ? "isn't" : "aren't");
                             if (obj->timed)
                                 obj_stop_timers(obj);
-                            obj->otyp = ROCK;
+                            NH_PILE_WRITE(obj, (obj->otyp = ROCK));
                             obj->oclass = GEM_CLASS;
                             obj->oartifact = 0;
                             obj->spe = 0;
                             obj->known = obj->dknown = obj->bknown = 0;
-                            obj->owt = weight(obj);
+                            nh_set_owt(obj);
                             if (thrown)
                                 place_object(obj, mon->mx, mon->my);
                         } else {
@@ -1080,7 +1080,7 @@ int dieroll;
                     tmp = obj->owt / 100;
                     if (is_wet_towel(obj)) {
                         /* wielded wet towel should probably use whip skill
-                           (but not by setting objects[TOWEL].oc_skill==P_WHIP
+                           (but not by setting object_defaults[TOWEL].oc_skill==P_WHIP
                            because that would turn towel into a weptool) */
                         tmp += obj->spe;
                         if (rn2(obj->spe + 1)) /* usually lose some wetness */
@@ -3076,7 +3076,7 @@ struct monst *mtmp;
         else if (M_AP_TYPE(mtmp) == M_AP_MONSTER)
             what = a_monnam(mtmp); /* differs from what was sensed */
     } else {
-        int glyph = levl[u.ux + u.dx][u.uy + u.dy].glyph;
+        int glyph = NH_TILE(u.ux + u.dx, u.uy + u.dy).glyph;
 
         if (glyph_is_cmap(glyph) && (glyph_to_cmap(glyph) == S_hcdoor
                                      || glyph_to_cmap(glyph) == S_vcdoor))
@@ -3098,7 +3098,7 @@ struct monst *mtmp;
     /* if hero is blind, wakeup() won't display the monster even though
        it's no longer concealed */
     if (!canspotmon(mtmp)
-        && !glyph_is_invisible(levl[mtmp->mx][mtmp->my].glyph))
+        && !glyph_is_invisible(NH_TILE(mtmp->mx, mtmp->my).glyph))
         map_invisible(mtmp->mx, mtmp->my);
 }
 

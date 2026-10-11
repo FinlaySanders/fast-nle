@@ -97,7 +97,7 @@ register struct obj *obj;
 {
     /* protect invocation tools but not Rider corpses (handled elsewhere)*/
     /* if (obj->oclass != FOOD_CLASS && obj_resists(obj, 0, 0)) */
-    if (objects[obj->otyp].oc_unique)
+    if (object_defaults[obj->otyp].oc_unique)
         return FALSE;
     /* above also prevents the Amulet from being eaten, so we must never
        allow fake amulets to be eaten either [which is already the case] */
@@ -306,7 +306,7 @@ recalc_wt()
     debugpline1("Old weight = %d", piece->owt);
     debugpline2("Used time = %d, Req'd time = %d", context.victual.usedtime,
                 context.victual.reqtime);
-    piece->owt = weight(piece);
+    nh_set_owt(piece);
     debugpline1("New weight = %d", piece->owt);
 }
 
@@ -331,7 +331,7 @@ struct obj *otmp;
 {
     unsigned nut = (otmp->otyp == CORPSE) ? mons[otmp->corpsenm].cnutrit
                       : otmp->globby ? otmp->owt
-                         : (unsigned) objects[otmp->otyp].oc_nutrition;
+                         : (unsigned) object_defaults[otmp->otyp].oc_nutrition;
 
     if (otmp->otyp == LEMBAS_WAFER) {
         if (maybe_polyd(is_elf(youmonst.data), Race_if(PM_ELF)))
@@ -341,7 +341,7 @@ struct obj *otmp;
         /* prevent polymorph making a partly eaten wafer
            become more nutritious than an untouched one */
         if (otmp->oeaten >= nut)
-            otmp->oeaten = (otmp->oeaten < objects[LEMBAS_WAFER].oc_nutrition)
+            otmp->oeaten = (otmp->oeaten < object_defaults[LEMBAS_WAFER].oc_nutrition)
                               ? (nut - 1) : nut;
     } else if (otmp->otyp == CRAM_RATION) {
         if (maybe_polyd(is_dwarf(youmonst.data), Race_if(PM_DWARF)))
@@ -1751,7 +1751,7 @@ boolean already_partly_eaten;
                 fmt_ptr((genericptr_t) otmp),
                 fmt_ptr((genericptr_t) context.victual.piece));
     debugpline1("reqtime = %d", context.victual.reqtime);
-    debugpline1("(original reqtime = %d)", objects[otmp->otyp].oc_delay);
+    debugpline1("(original reqtime = %d)", object_defaults[otmp->otyp].oc_delay);
     debugpline1("nmod = %d", context.victual.nmod);
     debugpline1("oeaten = %d", otmp->oeaten);
     context.victual.fullwarn = context.victual.doreset = FALSE;
@@ -1966,7 +1966,7 @@ struct obj *otmp;
 
     /* Note: rings are not so common that this is unbalancing. */
     /* (How often do you even _find_ 3 rings of polymorph in a game?) */
-    oldprop = u.uprops[objects[typ].oc_oprop].intrinsic;
+    oldprop = u.uprops[object_defaults[typ].oc_oprop].intrinsic;
     if (otmp == uleft || otmp == uright) {
         Ring_gone(otmp);
         if (u.uhp <= 0)
@@ -1976,13 +1976,13 @@ struct obj *otmp;
     if (!rn2(otmp->oclass == RING_CLASS ? 3 : 5)) {
         switch (otmp->otyp) {
         default:
-            if (!objects[typ].oc_oprop)
+            if (!object_defaults[typ].oc_oprop)
                 break; /* should never happen */
 
-            if (!(u.uprops[objects[typ].oc_oprop].intrinsic & FROMOUTSIDE))
+            if (!(u.uprops[object_defaults[typ].oc_oprop].intrinsic & FROMOUTSIDE))
                 accessory_has_effect(otmp);
 
-            u.uprops[objects[typ].oc_oprop].intrinsic |= FROMOUTSIDE;
+            u.uprops[object_defaults[typ].oc_oprop].intrinsic |= FROMOUTSIDE;
 
             switch (typ) {
             case RIN_SEE_INVISIBLE:
@@ -2568,7 +2568,7 @@ doeat()
             basenutrit = weight(otmp);
         /* oc_nutrition is usually weight anyway */
         else
-            basenutrit = objects[otmp->otyp].oc_nutrition;
+            basenutrit = object_defaults[otmp->otyp].oc_nutrition;
 #ifdef MAIL
         if (otmp->otyp == SCR_MAIL) {
             basenutrit = 0;
@@ -2687,7 +2687,7 @@ doeat()
             break;
         }
 
-        context.victual.reqtime = objects[otmp->otyp].oc_delay;
+        context.victual.reqtime = object_defaults[otmp->otyp].oc_delay;
         if (otmp->otyp != FORTUNE_COOKIE
             && (otmp->cursed || (!nonrotting_food(otmp->otyp)
                                  && (monstermoves - otmp->age)
@@ -2839,7 +2839,7 @@ gethungry()
            Slow digestion cancels move hunger but still causes ring hunger. */
         switch ((int) (moves % 20)) { /* note: use even cases only */
         case 4:
-            if (uleft && (uleft->spe || !objects[uleft->otyp].oc_charged))
+            if (uleft && (uleft->spe || !object_defaults[uleft->otyp].oc_charged))
                 u.uhunger--;
             break;
         case 8:
@@ -2847,7 +2847,7 @@ gethungry()
                 u.uhunger--;
             break;
         case 12:
-            if (uright && (uright->spe || !objects[uright->otyp].oc_charged))
+            if (uright && (uright->spe || !object_defaults[uright->otyp].oc_charged))
                 u.uhunger--;
             break;
         case 16:

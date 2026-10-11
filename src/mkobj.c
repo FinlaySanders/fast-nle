@@ -5,6 +5,79 @@
 
 #include "hack.h"
 
+/* contents of a container the hero carries count toward hidden gold */
+static void
+nh_cont_dirty(struct obj *c)
+{
+    while (c && c->where == OBJ_CONTAINED)
+        c = c->ocontainer;
+    if (c && c->where == OBJ_INVENT)
+        nh_invgen++;
+}
+
+/* Object addresses stay stable; storage belongs to the game, not its worker. */
+#define NH_OBJ_BLOCK_SIZE 128
+struct nh_obj_block {
+    struct nh_obj_block *next;
+    struct obj slots[NH_OBJ_BLOCK_SIZE];
+};
+struct nh_obj_pool {
+    struct nh_obj_block *blocks;
+    struct obj *available;
+};
+
+struct obj *
+nh_obj_alloc(void)
+{
+    struct nh_obj_pool *pool = nh_cur->g_mkobj_c_obj_pool;
+    struct obj *obj;
+    if (!pool) {
+        pool = (struct nh_obj_pool *) alloc(sizeof *pool);
+        pool->blocks = (struct nh_obj_block *) 0;
+        pool->available = (struct obj *) 0;
+        nh_cur->g_mkobj_c_obj_pool = pool;
+    }
+    if (!pool->available) {
+        int i;
+        struct nh_obj_block *block =
+            (struct nh_obj_block *) alloc(sizeof *block);
+        block->next = pool->blocks;
+        pool->blocks = block;
+        for (i = NH_OBJ_BLOCK_SIZE - 1; i >= 0; --i) {
+            block->slots[i].nobj = pool->available;
+            pool->available = &block->slots[i];
+        }
+    }
+    obj = pool->available;
+    pool->available = obj->nobj;
+    return obj;
+}
+
+void
+nh_obj_free(struct obj *obj)
+{
+    struct nh_obj_pool *pool = nh_cur->g_mkobj_c_obj_pool;
+    obj->nobj = pool->available;
+    pool->available = obj;
+}
+
+void
+nh_obj_pool_release(genericptr_t storage)
+{
+    struct nh_obj_pool *pool = (struct nh_obj_pool *) storage;
+    if (pool) {
+        struct nh_obj_block *block = pool->blocks;
+        while (block) {
+            struct nh_obj_block *next = block->next;
+            free((genericptr_t) block);
+            block = next;
+        }
+        free((genericptr_t) pool);
+    }
+}
+
+
+
 /* Per-env return buffer for where_name() */
 #define unknown (nh_cur->g_mkobj_c_unknown)
 
@@ -132,7 +205,7 @@ struct obj *otmp;
         if (m) {
             if (m->mextra)
                 dealloc_mextra(m);
-            free((genericptr_t) m);
+            nh_mon_free(m);
             OMONST(otmp) = (struct monst *) 0;
         }
     }
@@ -268,7 +341,7 @@ boolean artif;
     while ((prob -= objects[i].oc_prob) > 0)
         i++;
 
-    if (objects[i].oc_class != oclass || !OBJ_NAME(objects[i]))
+    if (object_defaults[i].oc_class != oclass || !OBJ_NAME(objects[i]))
         panic("probtype error, oclass=%d i=%d", (int) oclass, i);
 
     return mksobj(i, TRUE, artif);
@@ -333,22 +406,22 @@ struct obj *box;
             if (otmp->oclass == COIN_CLASS) {
                 /* 2.5 x level's usual amount; weight adjusted below */
                 otmp->quan = (long) (rnd(level_difficulty() + 2) * rnd(75));
-                otmp->owt = weight(otmp);
+                nh_set_owt(otmp);
             } else
                 while (otmp->otyp == ROCK) {
-                    otmp->otyp = rnd_class(DILITHIUM_CRYSTAL, LOADSTONE);
+                    NH_PILE_WRITE(otmp, (otmp->otyp = rnd_class(DILITHIUM_CRYSTAL, LOADSTONE)));
                     if (otmp->quan > 2L)
                         otmp->quan = 1L;
-                    otmp->owt = weight(otmp);
+                    nh_set_owt(otmp);
                 }
             if (box->otyp == BAG_OF_HOLDING) {
                 if (Is_mbag(otmp)) {
-                    otmp->otyp = SACK;
+                    NH_PILE_WRITE(otmp, (otmp->otyp = SACK));
                     otmp->spe = 0;
-                    otmp->owt = weight(otmp);
+                    nh_set_owt(otmp);
                 } else
                     while (otmp->otyp == WAN_CANCELLATION)
-                        otmp->otyp = rnd_class(WAN_LIGHT, WAN_LIGHTNING);
+                        NH_PILE_WRITE(otmp, (otmp->otyp = rnd_class(WAN_LIGHT, WAN_LIGHTNING)));
             }
         }
         (void) add_to_container(box, otmp);
@@ -444,9 +517,9 @@ long num;
     otmp->lamplit = 0;                /* ditto */
     otmp->owornmask = 0L;             /* new object isn't worn */
     obj->quan -= num;
-    obj->owt = weight(obj);
+    nh_set_owt(obj);
     otmp->quan = num;
-    otmp->owt = weight(otmp); /* -= obj->owt ? */
+    nh_set_owt(otmp); /* -= obj->owt ? */
 
     context.objsplit.parent_oid = obj->o_id;
     context.objsplit.child_oid = otmp->o_id;
@@ -588,7 +661,8 @@ struct obj *otmp;
         /* do nothing */
         break;
     case OBJ_INVENT:
-        nh_no_hero_gold = 0;
+        nh_invwt_dirty();
+        nh_no_hero_gold = 0; nh_invgen++;
         otmp->nobj = obj->nobj;
         obj->nobj = otmp;
         extract_nobj(obj, &invent);
@@ -597,6 +671,7 @@ struct obj *otmp;
         otmp->nobj = obj->nobj;
         otmp->ocontainer = obj->ocontainer;
         obj->nobj = otmp;
+        nh_cont_dirty(obj->ocontainer);
         extract_nobj(obj, &obj->ocontainer->cobj);
         break;
     case OBJ_MINVENT:
@@ -615,6 +690,7 @@ struct obj *otmp;
         nh_fobj_invalidate();
         extract_nobj(obj, &fobj);
         extract_nexthere(obj, &level.objs[obj->ox][obj->oy]);
+            nh_pile_update(obj->ox, obj->oy);
         break;
     default:
         panic("replace_object: obj position");
@@ -782,7 +858,7 @@ boolean artif;
 {
     int mndx, tryct;
     struct obj *otmp;
-    char let = objects[otyp].oc_class;
+    char let = object_defaults[otyp].oc_class;
 
     otmp = newobj();
     *otmp = zeroobj;
@@ -792,14 +868,14 @@ boolean artif;
         otmp->o_id = context.ident++; /* ident overflowed */
     otmp->quan = 1L;
     otmp->oclass = let;
-    otmp->otyp = otyp;
+    NH_PILE_WRITE(otmp, (otmp->otyp = otyp));
     otmp->where = OBJ_FREE;
     otmp->dknown = index(dknowns, let) ? 0 : 1;
     if ((otmp->otyp >= ELVEN_SHIELD && otmp->otyp <= ORCISH_SHIELD)
         || otmp->otyp == SHIELD_OF_REFLECTION
-        || objects[otmp->otyp].oc_merge)
+        || object_defaults[otmp->otyp].oc_merge)
         otmp->dknown = 0;
-    if (!objects[otmp->otyp].oc_uses_known)
+    if (!object_defaults[otmp->otyp].oc_uses_known)
         otmp->known = 1;
     otmp->lknown = 0;
     otmp->cknown = 0;
@@ -907,7 +983,7 @@ boolean artif;
             case WAX_CANDLE:
                 otmp->spe = 1;
                 otmp->age = 20L * /* 400 or 200 */
-                            (long) objects[otmp->otyp].oc_cost;
+                            (long) object_defaults[otmp->otyp].oc_cost;
                 otmp->lamplit = 0;
                 otmp->quan = 1L + (long) (rn2(2) ? rn2(7) : 0);
                 blessorcurse(otmp, 5);
@@ -1033,7 +1109,7 @@ boolean artif;
             otmp->recharged = 0; /* used to control recharging */
             break;
         case RING_CLASS:
-            if (objects[otmp->otyp].oc_charged) {
+            if (object_defaults[otmp->otyp].oc_charged) {
                 blessorcurse(otmp, 3);
                 if (rn2(10)) {
                     if (rn2(10) && bcsign(otmp))
@@ -1071,7 +1147,7 @@ boolean artif;
                but most callers aren't prepared to deal with Null result
                and cluttering them up to do so is pointless */
             panic("mksobj tried to make type %d, class %d.",
-                  (int) otmp->otyp, (int) objects[otmp->otyp].oc_class);
+                  (int) otmp->otyp, (int) object_defaults[otmp->otyp].oc_class);
             /*NOTREACHED*/
         }
     }
@@ -1112,9 +1188,9 @@ boolean artif;
     }
 
     /* unique objects may have an associated artifact entry */
-    if (objects[otyp].oc_unique && !otmp->oartifact)
+    if (object_defaults[otyp].oc_unique && !otmp->oartifact)
         otmp = mk_artifact(otmp, (aligntyp) A_NONE);
-    otmp->owt = weight(otmp);
+    nh_set_owt(otmp);
     return otmp;
 }
 
@@ -1157,20 +1233,20 @@ int id;
     switch (obj->otyp) {
     case CORPSE:
         start_corpse_timeout(obj);
-        obj->owt = weight(obj);
+        nh_set_owt(obj);
         break;
     case FIGURINE:
         if (obj->corpsenm != NON_PM && !dead_species(obj->corpsenm, TRUE)
             && (carried(obj) || mcarried(obj)))
             attach_fig_transform_timeout(obj);
-        obj->owt = weight(obj);
+        nh_set_owt(obj);
         break;
     case EGG:
         if (obj->corpsenm != NON_PM && !dead_species(obj->corpsenm, TRUE))
             attach_egg_hatch_timeout(obj, when);
         break;
     default: /* tin, etc. */
-        obj->owt = weight(obj);
+        nh_set_owt(obj);
         break;
     }
 }
@@ -1288,7 +1364,7 @@ register struct obj *otmp;
     if (carried(otmp) && confers_luck(otmp))
         set_moreluck();
     else if (otmp->otyp == BAG_OF_HOLDING)
-        otmp->owt = weight(otmp);
+        nh_set_owt(otmp);
     else if (otmp->otyp == FIGURINE && otmp->timed)
         (void) stop_timer(FIG_TRANSFORM, obj_to_any(otmp));
     if (otmp->lamplit)
@@ -1308,7 +1384,7 @@ register struct obj *otmp;
     if (carried(otmp) && confers_luck(otmp))
         set_moreluck();
     else if (otmp->otyp == BAG_OF_HOLDING)
-        otmp->owt = weight(otmp);
+        nh_set_owt(otmp);
     if (otmp->lamplit)
         maybe_adjust_light(otmp, old_light);
 }
@@ -1338,7 +1414,7 @@ register struct obj *otmp;
     if (carried(otmp) && confers_luck(otmp)) {
         set_moreluck();
     } else if (otmp->otyp == BAG_OF_HOLDING) {
-        otmp->owt = weight(otmp);
+        nh_set_owt(otmp);
     } else if (otmp->otyp == FIGURINE) {
         if (otmp->corpsenm != NON_PM && !dead_species(otmp->corpsenm, TRUE)
             && (carried(otmp) || mcarried(otmp)))
@@ -1365,7 +1441,7 @@ register struct obj *otmp;
     if (carried(otmp) && confers_luck(otmp))
         set_moreluck();
     else if (otmp->otyp == BAG_OF_HOLDING)
-        otmp->owt = weight(otmp);
+        nh_set_owt(otmp);
     else if (otmp->otyp == FIGURINE && otmp->timed)
         (void) stop_timer(FIG_TRANSFORM, obj_to_any(otmp));
     if (otmp->lamplit)
@@ -1423,7 +1499,7 @@ int
 weight(obj)
 register struct obj *obj;
 {
-    int wt = (int) objects[obj->otyp].oc_weight;
+    int wt = (int) object_defaults[obj->otyp].oc_weight;
 
     /* glob absorpsion means that merging globs accumulates weight while
        quantity stays 1, so update 'wt' to reflect that, unless owt is 0,
@@ -1473,7 +1549,7 @@ register struct obj *obj;
     } else if (obj->otyp == HEAVY_IRON_BALL && obj->owt != 0) {
         return (int) obj->owt; /* kludge for "very" heavy iron ball */
     } else if (obj->otyp == CANDELABRUM_OF_INVOCATION && obj->spe) {
-        return wt + obj->spe * (int) objects[TALLOW_CANDLE].oc_weight;
+        return wt + obj->spe * (int) object_defaults[TALLOW_CANDLE].oc_weight;
     }
     return (wt ? wt * (int) obj->quan : ((int) obj->quan + 1) >> 1);
 }
@@ -1507,7 +1583,7 @@ int x, y;
         gold = mksobj_at(GOLD_PIECE, x, y, TRUE, FALSE);
         gold->quan = amount;
     }
-    gold->owt = weight(gold);
+    nh_set_owt(gold);
     return gold;
 }
 
@@ -1563,7 +1639,7 @@ unsigned corpstatflags;
         int old_corpsenm = otmp->corpsenm;
 
         otmp->corpsenm = monsndx(ptr);
-        otmp->owt = weight(otmp);
+        nh_set_owt(otmp);
         if (otmp->otyp == CORPSE && (special_corpse(old_corpsenm)
                                      || special_corpse(otmp->corpsenm))) {
             obj_stop_timers(otmp);
@@ -1722,7 +1798,7 @@ register struct obj *otmp;
     if (Is_candle(otmp))
         return FALSE;
 
-    if (objects[otyp].oc_oprop == FIRE_RES || otyp == WAN_FIRE)
+    if (object_defaults[otyp].oc_oprop == FIRE_RES || otyp == WAN_FIRE)
         return FALSE;
 
     return (boolean) ((omat <= WOOD && omat != LIQUID) || omat == PLASTIC);
@@ -1795,7 +1871,8 @@ int x, y;
     /* add to floor chain */
     otmp->nobj = fobj;
     fobj = otmp;
-    nh_fobj_invalidate();
+    nh_fobj_placed(otmp);
+    nh_pile_update(x, y);
     if (otmp->timed)
         obj_timer_checks(otmp, x, y, 0);
 }
@@ -1929,7 +2006,8 @@ register struct obj *otmp;
     if (otmp->where != OBJ_FLOOR)
         panic("remove_object: obj not on floor");
     extract_nexthere(otmp, &level.objs[x][y]);
-    nh_fobj_invalidate();
+    nh_pile_update(x, y);
+    nh_fobj_removed(otmp);
     extract_nobj(otmp, &fobj);
     /* update vision iff this was the only boulder at its spot */
     if (otmp->otyp == BOULDER && !sobj_at(BOULDER, x, y))
@@ -1988,6 +2066,7 @@ struct obj *obj;
         remove_object(obj);
         break;
     case OBJ_CONTAINED:
+        nh_cont_dirty(obj->ocontainer);
         extract_nobj(obj, &obj->ocontainer->cobj);
         container_weight(obj->ocontainer);
         obj->ocontainer = (struct obj *) 0; /* clear stale back-link */
@@ -2020,6 +2099,11 @@ extract_nobj(obj, head_ptr)
 struct obj *obj, **head_ptr;
 {
     struct obj *curr, *prev;
+
+    if (head_ptr == &invent) {
+        nh_invwt_dirty();
+        nh_invgen++;
+    }
 
     curr = *head_ptr;
     for (prev = (struct obj *) 0; curr; prev = curr, curr = curr->nobj) {
@@ -2115,6 +2199,7 @@ struct obj *container, *obj;
     obj->ocontainer = container;
     obj->nobj = container->cobj;
     container->cobj = obj;
+    nh_cont_dirty(container);
     return obj;
 }
 
@@ -2151,7 +2236,7 @@ STATIC_OVL void
 container_weight(container)
 struct obj *container;
 {
-    container->owt = weight(container);
+    nh_set_owt(container);
     if (container->where == OBJ_CONTAINED)
         container_weight(container->ocontainer);
     /*
@@ -2197,7 +2282,7 @@ struct obj *obj;
 
     if (obj->oextra)
         dealloc_oextra(obj);
-    free((genericptr_t) obj);
+    nh_obj_free(obj);
 }
 
 /* create an object from a horn of plenty; mirrors bagotricks(makemon.c) */
@@ -2219,22 +2304,22 @@ boolean tipping; /* caller emptying entire contents; affects shop handling */
         consume_obj_charge(horn, !tipping);
         if (!rn2(13)) {
             obj = mkobj(POTION_CLASS, FALSE);
-            if (objects[obj->otyp].oc_magic)
+            if (object_defaults[obj->otyp].oc_magic)
                 do {
-                    obj->otyp = rnd_class(POT_BOOZE, POT_WATER);
+                    NH_PILE_WRITE(obj, (obj->otyp = rnd_class(POT_BOOZE, POT_WATER)));
                 } while (obj->otyp == POT_SICKNESS);
             what = (obj->quan > 1L) ? "Some potions" : "A potion";
         } else {
             obj = mkobj(FOOD_CLASS, FALSE);
             if (obj->otyp == FOOD_RATION && !rn2(7))
-                obj->otyp = LUMP_OF_ROYAL_JELLY;
+                NH_PILE_WRITE(obj, (obj->otyp = LUMP_OF_ROYAL_JELLY));
             what = "Some food";
         }
         ++objcount;
         pline("%s %s out.", what, vtense(what, "spill"));
         obj->blessed = horn->blessed;
         obj->cursed = horn->cursed;
-        obj->owt = weight(obj);
+        nh_set_owt(obj);
         /* using a shop's horn of plenty entails a usage fee and also
            confers ownership of the created item to the shopkeeper */
         if (horn->unpaid)
@@ -2248,8 +2333,8 @@ boolean tipping; /* caller emptying entire contents; affects shop handling */
                                         ? "Oops!  %s out of your reach!"
                                         : (Is_airlevel(&u.uz)
                                            || Is_waterlevel(&u.uz)
-                                           || levl[u.ux][u.uy].typ < IRONBARS
-                                           || levl[u.ux][u.uy].typ >= ICE)
+                                           || NH_TILE(u.ux, u.uy).typ < IRONBARS
+                                           || NH_TILE(u.ux, u.uy).typ >= ICE)
                                           ? "Oops!  %s away from you!"
                                           : "Oops!  %s to the floor!",
                                       The(aobjnam(obj, "slip")), (char *) 0);
@@ -2259,7 +2344,7 @@ boolean tipping; /* caller emptying entire contents; affects shop handling */
             if (!can_reach_floor(TRUE)) {
                 hitfloor(obj, TRUE); /* does altar check, message, drop */
             } else {
-                if (IS_ALTAR(levl[u.ux][u.uy].typ))
+                if (IS_ALTAR(NH_TILE(u.ux, u.uy).typ))
                     doaltarobj(obj); /* does its own drop message */
                 else
                     pline("%s %s to the %s.", Doname2(obj),
@@ -2387,7 +2472,7 @@ const char *mesg;
                 if ((obj != uchain && obj != uball) || !bc_ok) {
                     /* discovered an object not in inventory which
                        erroneously has worn mask set */
-                    Sprintf(maskbuf, "worn mask 0x%08lx", obj->owornmask);
+                    Sprintf(maskbuf, "worn mask 0x%08lx", (unsigned long) obj->owornmask);
                     insane_object(obj, ofmt0, maskbuf, (struct monst *) 0);
                 }
                 break;
@@ -2492,14 +2577,14 @@ long oquan;
 {
      if (obj) {
          *obj = zeroobj;
-         obj->otyp = otyp;
-         obj->oclass = objects[otyp].oc_class;
+         NH_PILE_WRITE(obj, (obj->otyp = otyp));
+         obj->oclass = object_defaults[otyp].oc_class;
          /* obj->dknown = 0; */
          /* suppress known except for amulets (needed for fakes & real AoY) */
          obj->known = (obj->oclass == AMULET_CLASS)
                        ? obj->known
                          /* default is "on" for types which don't use it */
-                         : !objects[otyp].oc_uses_known;
+                         : !object_defaults[otyp].oc_uses_known;
          obj->quan = oquan ? oquan : 1L;
          obj->corpsenm = NON_PM; /* suppress statue and figurine details */
          /* but suppressing fruit details leads to "bad fruit #0" */
@@ -2569,7 +2654,7 @@ const char *mesg;
         || obj->otyp < LOWEST_GLOB || obj->otyp > HIGHEST_GLOB
         /* a partially eaten glob could have any non-zero weight but an
            intact one should weigh an exact multiple of base weight (20) */
-        || ((obj->owt % objects[obj->otyp].oc_weight) != 0 && !obj->oeaten)) {
+        || ((obj->owt % object_defaults[obj->otyp].oc_weight) != 0 && !obj->oeaten)) {
         char mesgbuf[BUFSZ], globbuf[QBUFSZ];
 
         Sprintf(globbuf, " glob %d,quan=%ld,owt=%u ",
@@ -2628,13 +2713,13 @@ struct obj *obj;
     }
     if (n > 1) {
         /* multiple bits set */
-        Sprintf(maskbuf, "worn mask (multiple) 0x%08lx", obj->owornmask);
+        Sprintf(maskbuf, "worn mask (multiple) 0x%08lx", (unsigned long) obj->owornmask);
         insane_object(obj, ofmt0, maskbuf, (struct monst *) 0);
     }
     if ((owornmask & ~allmask) != 0L
         || (carried(obj) && (owornmask & W_SADDLE) != 0L)) {
         /* non-wearable bit(s) set */
-        Sprintf(maskbuf, "worn mask (bogus)) 0x%08lx", obj->owornmask);
+        Sprintf(maskbuf, "worn mask (bogus)) 0x%08lx", (unsigned long) obj->owornmask);
         insane_object(obj, ofmt0, maskbuf, (struct monst *) 0);
     }
     if (n == 1 && (carried(obj) || (owornmask & (W_BALL | W_CHAIN)) != 0L)) {
@@ -2711,7 +2796,7 @@ struct obj *obj;
             break;
         }
         if (what) {
-            Sprintf(maskbuf, "worn mask 0x%08lx != %s", obj->owornmask, what);
+            Sprintf(maskbuf, "worn mask 0x%08lx != %s", (unsigned long) obj->owornmask, what);
             insane_object(obj, ofmt0, maskbuf, (struct monst *) 0);
         }
     }

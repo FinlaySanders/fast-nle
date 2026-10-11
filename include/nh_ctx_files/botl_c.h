@@ -4,11 +4,11 @@
  * Include ONLY from botl.c, after hack.h. */
 #ifndef NH_CTX_FILE_BOTL_C_H
 #define NH_CTX_FILE_BOTL_C_H
-#define strength_buf (nh_cur->g_botl_c_strength_buf)
-#define blinit (nh_cur->g_botl_c_blinit)
-#define update_all (nh_cur->g_botl_c_update_all)
 #define valset (nh_cur->g_botl_c_valset)
+#define update_all (nh_cur->g_botl_c_update_all)
+#define blinit (nh_cur->g_botl_c_blinit)
 #define bl_hilite_moves (nh_cur->g_botl_c_bl_hilite_moves)
+#define strength_buf (nh_cur->g_botl_c_strength_buf)
 #define cond_hilites (nh_cur->g_botl_c_cond_hilites)
 #define now_or_before_idx (nh_cur->g_botl_c_now_or_before_idx)
 #define status_hilite_str_id (nh_cur->g_botl_c_status_hilite_str_id)

@@ -248,7 +248,7 @@ boolean foundyou;
         && !is_undirected_spell(mattk->adtyp, spellnum)) {
         pline("%s casts a spell at %s!",
               canseemon(mtmp) ? Monnam(mtmp) : "Something",
-              levl[mtmp->mux][mtmp->muy].typ == WATER ? "empty water"
+              NH_TILE(mtmp->mux, mtmp->muy).typ == WATER ? "empty water"
                                                       : "thin air");
         return (0);
     }

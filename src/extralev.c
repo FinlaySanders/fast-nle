@@ -79,10 +79,10 @@ int x, y, dir;
             fromy = r[x][y].rly + r[x][y].dy;
             fromx += 1 + 26 * x;
             fromy += 7 * y;
-            if (!IS_WALL(levl[fromx][fromy].typ))
+            if (!IS_WALL(NH_TILE(fromx, fromy).typ))
                 impossible("down: no wall at %d,%d?", fromx, fromy);
             dodoor(fromx, fromy, &rooms[r[x][y].nle_room_idx]);
-            levl[fromx][fromy].doormask = D_NODOOR;
+            NH_TILE(fromx, fromy).doormask = D_NODOOR;
             fromy++;
         }
         if (y >= 2) {
@@ -101,10 +101,10 @@ int x, y, dir;
             toy = r[x][y].rly - 1;
             tox += 1 + 26 * x;
             toy += 7 * y;
-            if (!IS_WALL(levl[tox][toy].typ))
+            if (!IS_WALL(NH_TILE(tox, toy).typ))
                 impossible("up: no wall at %d,%d?", tox, toy);
             dodoor(tox, toy, &rooms[r[x][y].nle_room_idx]);
-            levl[tox][toy].doormask = D_NODOOR;
+            NH_TILE(tox, toy).doormask = D_NODOOR;
             toy--;
         }
         roguejoin(fromx, fromy, tox, toy, FALSE);
@@ -121,10 +121,10 @@ int x, y, dir;
             fromy = r[x][y].rly + rn2(r[x][y].dy);
             fromx += 1 + 26 * x;
             fromy += 7 * y;
-            if (!IS_WALL(levl[fromx][fromy].typ))
+            if (!IS_WALL(NH_TILE(fromx, fromy).typ))
                 impossible("down: no wall at %d,%d?", fromx, fromy);
             dodoor(fromx, fromy, &rooms[r[x][y].nle_room_idx]);
-            levl[fromx][fromy].doormask = D_NODOOR;
+            NH_TILE(fromx, fromy).doormask = D_NODOOR;
             fromx++;
         }
         if (x >= 2) {
@@ -143,10 +143,10 @@ int x, y, dir;
             toy = r[x][y].rly + rn2(r[x][y].dy);
             tox += 1 + 26 * x;
             toy += 7 * y;
-            if (!IS_WALL(levl[tox][toy].typ))
+            if (!IS_WALL(NH_TILE(tox, toy).typ))
                 impossible("left: no wall at %d,%d?", tox, toy);
             dodoor(tox, toy, &rooms[r[x][y].nle_room_idx]);
-            levl[tox][toy].doormask = D_NODOOR;
+            NH_TILE(tox, toy).doormask = D_NODOOR;
             tox--;
         }
         roguejoin(fromx, fromy, tox, toy, TRUE);
@@ -332,7 +332,7 @@ makerogueghost()
     if (rn2(4)) {
         ghostobj = mksobj_at(FOOD_RATION, x, y, FALSE, FALSE);
         ghostobj->quan = (long) rnd(7);
-        ghostobj->owt = weight(ghostobj);
+        nh_set_owt(ghostobj);
     }
     if (rn2(2)) {
         ghostobj = mksobj_at(MACE, x, y, FALSE, FALSE);
@@ -353,7 +353,7 @@ makerogueghost()
     ghostobj = mksobj_at(ARROW, x, y, FALSE, FALSE);
     ghostobj->spe = 0;
     ghostobj->quan = (long) rn1(10, 25);
-    ghostobj->owt = weight(ghostobj);
+    nh_set_owt(ghostobj);
     if (rn2(4))
         curse(ghostobj);
 

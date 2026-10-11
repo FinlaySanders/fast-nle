@@ -434,8 +434,8 @@ register xchar x, y;
 {
     register char rno;
 
-    rno = levl[x][y].roomno;
-    if ((rno < ROOMOFFSET) || levl[x][y].edge || !IS_SHOP(rno - ROOMOFFSET))
+    rno = NH_TILE(x, y).roomno;
+    if ((rno < ROOMOFFSET) || NH_TILE(x, y).edge || !IS_SHOP(rno - ROOMOFFSET))
         rno = NO_ROOM;
     return rno;
 }
@@ -455,7 +455,7 @@ boolean newlev;
      *   (he wasn't strictly-inside last turn anyway)))
      * THEN (there's nothing to do, so just return)
      */
-    if (!*leavestring && (!levl[u.ux][u.uy].edge || levl[u.ux0][u.uy0].edge))
+    if (!*leavestring && (!NH_TILE(u.ux, u.uy).edge || NH_TILE(u.ux0, u.uy0).edge))
         return;
 
     shkp = shop_keeper(*u.ushops0);
@@ -484,7 +484,7 @@ boolean newlev;
     }
 
     if (rob_shop(shkp)) {
-        call_kops(shkp, (!newlev && levl[u.ux0][u.uy0].edge));
+        call_kops(shkp, (!newlev && NH_TILE(u.ux0, u.uy0).edge));
     }
 }
 
@@ -1024,7 +1024,7 @@ register struct obj *obj, *merge;
     }
     if (obj->owornmask) {
         impossible("obfree: deleting worn obj (%d: %ld)", obj->otyp,
-                   obj->owornmask);
+                   (long) obj->owornmask);
         /* unfortunately at this point we don't know whether worn mask
            applied to hero or a monster or perhaps something bogus, so
            can't call remove_worn_item() to get <X>_off() side-effects */
@@ -1938,7 +1938,7 @@ struct monst *shkp;
 
     /* if you're not in this shk's shop room, or if you're in its doorway
         or entry spot, then your gear gets dumped all the way inside */
-    if (*u.ushops != eshkp->shoproom || IS_DOOR(levl[u.ux][u.uy].typ)
+    if (*u.ushops != eshkp->shoproom || IS_DOOR(NH_TILE(u.ux, u.uy).typ)
         || (u.ux == eshkp->shk.x && u.uy == eshkp->shk.y)) {
         /* shk.x,shk.y is the position immediately in
          * front of the door -- move in one more space
@@ -2079,7 +2079,7 @@ struct obj *obj;
 
     if (obj->globby) {
         /* globs must be sold by weight not by volume */
-        long unit_weight = (long) objects[obj->otyp].oc_weight,
+        long unit_weight = (long) object_defaults[obj->otyp].oc_weight,
              wt = (obj->owt > 0) ? (long) obj->owt : (long) weight(obj);
 
         if (unit_weight)
@@ -2162,7 +2162,7 @@ register struct monst *shkp; /* if angry, impose a surcharge */
                 i = STRANGE_OBJECT;
                 break;
             }
-            tmp = (long) objects[i].oc_cost;
+            tmp = (long) object_defaults[i].oc_cost;
         } else if (oid_price_adjustment(obj, obj->o_id) > 0) {
             /* unid'd, arbitrarily impose surcharge: tmp *= 4/3 */
             multiplier *= 4L;
@@ -2248,7 +2248,7 @@ boolean unpaid_only;
                 && otmp->oclass != BALL_CLASS
                 && !(otmp->oclass == FOOD_CLASS && otmp->oeaten)
                 && !(Is_candle(otmp)
-                     && otmp->age < 20L * (long) objects[otmp->otyp].oc_cost))
+                     && otmp->age < 20L * (long) object_defaults[otmp->otyp].oc_cost))
                 price += set_cost(otmp, shkp);
         } else {
             /* no_charge is only set for floor items (including
@@ -2612,7 +2612,7 @@ const char *arg;
      * scrolls/books (that is, blank and mail), but only if the
      * object is within the shk's area of interest/expertise.
      */
-    if (!objects[obj->otyp].oc_magic && saleable(shkp, obj)
+    if (!object_defaults[obj->otyp].oc_magic && saleable(shkp, obj)
         && (obj->oclass == WEAPON_CLASS || obj->oclass == ARMOR_CLASS
             || obj->oclass == SCROLL_CLASS || obj->oclass == SPBOOK_CLASS
             || obj->otyp == MIRROR)) {
@@ -3200,7 +3200,7 @@ xchar x, y;
         || obj->oclass == BALL_CLASS || obj->oclass == CHAIN_CLASS
         || offer == 0L || (obj->oclass == FOOD_CLASS && obj->oeaten)
         || (Is_candle(obj)
-            && obj->age < 20L * (long) objects[obj->otyp].oc_cost)) {
+            && obj->age < 20L * (long) object_defaults[obj->otyp].oc_cost)) {
         pline("%s seems uninterested%s.", Shknam(shkp),
               cgold ? " in the rest" : "");
         if (container)
@@ -3439,7 +3439,7 @@ getprice(obj, shk_buying)
 register struct obj *obj;
 boolean shk_buying;
 {
-    register long tmp = (long) objects[obj->otyp].oc_cost;
+    register long tmp = (long) object_defaults[obj->otyp].oc_cost;
 
     if (obj->oartifact) {
         tmp = arti_cost(obj);
@@ -3469,7 +3469,7 @@ boolean shk_buying;
         break;
     case TOOL_CLASS:
         if (Is_candle(obj)
-            && obj->age < 20L * (long) objects[obj->otyp].oc_cost)
+            && obj->age < 20L * (long) object_defaults[obj->otyp].oc_cost)
             tmp /= 2L;
         break;
     }
@@ -3518,7 +3518,7 @@ long cost;
     struct damage *tmp_dam;
     char *shops;
 
-    if (IS_DOOR(levl[x][y].typ)) {
+    if (IS_DOOR(NH_TILE(x, y).typ)) {
         struct monst *mtmp;
 
         /* Don't schedule for repair unless it's a real shop entrance */
@@ -3541,12 +3541,12 @@ long cost;
     tmp_dam->place.x = x;
     tmp_dam->place.y = y;
     tmp_dam->cost = cost;
-    SET_TYP_P(tmp_dam, levl[x][y].typ);
+    SET_TYP_P(tmp_dam, NH_TILE(x, y).typ);
     tmp_dam->next = level.damagelist;
     level.damagelist = tmp_dam;
     /* If player saw damage, display as a wall forever */
     if (cansee(x, y))
-        levl[x][y].seenv = SVALL;
+        NH_TILE(x, y).seenv = SVALL;
 }
 
 /*
@@ -3582,8 +3582,8 @@ boolean croaked;
         disposition = 0;
         Strcpy(shops, in_rooms(x, y, SHOPBASE));
         if (index(shops, ESHK(shkp)->shoproom)) {
-            if (IS_DOOR(levl[x][y].typ))
-                old_doormask = levl[x][y].doormask;
+            if (IS_DOOR(NH_TILE(x, y).typ))
+                old_doormask = NH_TILE(x, y).doormask;
 
             if (croaked) {
                 disposition = (shops[1]) ? 0 : 1;
@@ -3608,15 +3608,15 @@ boolean croaked;
         if (disposition > 1) {
             did_repair = TRUE;
             if (cansee(x, y)) {
-                if (IS_WALL(levl[x][y].typ)) {
+                if (IS_WALL(NH_TILE(x, y).typ)) {
                     saw_walls++;
-                } else if (IS_DOOR(levl[x][y].typ)
+                } else if (IS_DOOR(NH_TILE(x, y).typ)
                            /* an existing door here implies trap removal */
                            && !(old_doormask & (D_ISOPEN | D_CLOSED))) {
                     saw_door = TRUE;
                 } else if (disposition == 3) { /* untrapped */
                     saw_untrap++;
-                    if (IS_DOOR(levl[x][y].typ))
+                    if (IS_DOOR(NH_TILE(x, y).typ))
                         doorway_trap = TRUE;
                 } else {
                     saw_floor = TRUE;
@@ -3747,7 +3747,7 @@ boolean catchup; /* restoring a level */
             otmp = mksobj((ttmp->ttyp == LANDMINE) ? LAND_MINE : BEARTRAP,
                           TRUE, FALSE);
             otmp->quan = 1L;
-            otmp->owt = weight(otmp);
+            nh_set_owt(otmp);
             (void) mpickobj(shkp, otmp);
         }
         deltrap(ttmp);
@@ -3757,8 +3757,8 @@ boolean catchup; /* restoring a level */
             disposition = 3;
     }
     if (IS_ROOM(tmp_dam->typ)
-        || (tmp_dam->typ == levl[x][y].typ
-            && (!IS_DOOR(tmp_dam->typ) || levl[x][y].doormask > D_BROKEN)))
+        || (tmp_dam->typ == NH_TILE(x, y).typ
+            && (!IS_DOOR(tmp_dam->typ) || NH_TILE(x, y).doormask > D_BROKEN)))
         /* no terrain fix necessary (trap removal or manually repaired) */
         return disposition;
 
@@ -3766,7 +3766,7 @@ boolean catchup; /* restoring a level */
        restore original terrain type and move any items away */
     SET_TYP_XY(x, y, tmp_dam->typ);
     if (IS_DOOR(tmp_dam->typ))
-        levl[x][y].doormask = D_CLOSED; /* arbitrary */
+        NH_TILE(x, y).doormask = D_CLOSED; /* arbitrary */
 
     (void) memset((genericptr_t) litter, 0, sizeof litter);
 #define NEED_UPDATE 1
@@ -3775,11 +3775,11 @@ boolean catchup; /* restoring a level */
 #define horiz(i) ((i % 3) - 1)
 #define vert(i) ((i / 3) - 1)
     k = 0; /* number of adjacent shop spots */
-    if (level.objs[x][y] && !IS_ROOM(levl[x][y].typ)) {
+    if (level.objs[x][y] && !IS_ROOM(NH_TILE(x, y).typ)) {
         for (i = 0; i < 9; i++) {
             ix = x + horiz(i);
             iy = y + vert(i);
-            if (i == 4 || !isok(ix, iy) || !ZAP_POS(levl[ix][iy].typ))
+            if (i == 4 || !isok(ix, iy) || !ZAP_POS(NH_TILE(ix, iy).typ))
                 continue;
             litter[i] = OPEN;
             if (inside_shop(ix, iy) == ESHK(shkp)->shoproom) {
@@ -3845,7 +3845,7 @@ boolean catchup; /* restoring a level */
     if (cansee(x, y)) {
         if (IS_WALL(tmp_dam->typ))
             /* player sees actual repair process, so KNOWS it's a wall */
-            levl[x][y].seenv = SVALL;
+            NH_TILE(x, y).seenv = SVALL;
         newsym(x, y);
     }
     for (i = 0; i < 9; i++)
@@ -4418,7 +4418,7 @@ long cost;
             if (o == FOOD_CLASS)
                 return ", gourmets' delight!";
             if (objects[itm->otyp].oc_name_known
-                    ? objects[itm->otyp].oc_magic
+                    ? object_defaults[itm->otyp].oc_magic
                     : (o == AMULET_CLASS || o == RING_CLASS || o == WAND_CLASS
                        || o == POTION_CLASS || o == SCROLL_CLASS
                        || o == SPBOOK_CLASS))
@@ -4570,7 +4570,7 @@ boolean altusage; /* some items have an "alternate" use with different cost */
            what is charged for an ordinary lamp (don't bother with
            angry shk surcharge) */
         if (!altusage)
-            tmp = (long) objects[OIL_LAMP].oc_cost;
+            tmp = (long) object_defaults[OIL_LAMP].oc_cost;
         else
             tmp += tmp / 3L;                 /* djinni is being released */
     } else if (otmp->otyp == MAGIC_MARKER) { /* 70 - 100 */
@@ -4618,7 +4618,7 @@ boolean altusage;
     long tmp;
 
     if (!otmp->unpaid || !*u.ushops
-        || (otmp->spe <= 0 && objects[otmp->otyp].oc_charged))
+        || (otmp->spe <= 0 && object_defaults[otmp->otyp].oc_charged))
         return;
     if (!(shkp = shop_keeper(*u.ushops)) || !inhishop(shkp))
         return;
@@ -4709,7 +4709,7 @@ register xchar x, y;
 
     if (roomno < 0 || !IS_SHOP(roomno))
         return FALSE;
-    if (!IS_DOOR(levl[x][y].typ))
+    if (!IS_DOOR(NH_TILE(x, y).typ))
         return FALSE;
     if (roomno != *u.ushops)
         return FALSE;
@@ -4743,8 +4743,8 @@ register xchar x, y;
     register int roomno;
     register struct monst *shkp;
 
-    if (!(IS_DOOR(levl[u.ux][u.uy].typ)
-          && levl[u.ux][u.uy].doormask == D_BROKEN))
+    if (!(IS_DOOR(NH_TILE(u.ux, u.uy).typ)
+          && NH_TILE(u.ux, u.uy).doormask == D_BROKEN))
         return FALSE;
 
     roomno = *in_rooms(x, y, SHOPBASE);

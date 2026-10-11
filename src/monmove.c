@@ -14,11 +14,28 @@
 STATIC_DCL void FDECL(watch_on_duty, (struct monst *));
 STATIC_DCL int FDECL(disturb, (struct monst *));
 STATIC_DCL void FDECL(release_hero, (struct monst *));
-STATIC_DCL void FDECL(distfleeck, (struct monst *, int *, int *, int *));
+STATIC_DCL void FDECL(distfleeck, (struct monst *, int *, int *, int *)) __attribute__((always_inline));
+/* per-move helpers: inline into the monster-turn pass (their out-of-line copies stay for other callers) */
+extern void FDECL(set_apparxy, (struct monst *)) __attribute__((always_inline));
+extern boolean FDECL(should_displace, (struct monst *, coord *, long *, int, XCHAR_P, XCHAR_P)) __attribute__((always_inline));
+extern boolean FDECL(m_digweapon_check, (struct monst *, XCHAR_P, XCHAR_P)) __attribute__((always_inline));
+extern boolean FDECL(monhaskey, (struct monst *, BOOLEAN_P)) __attribute__((always_inline));
+extern int FDECL(dochugw, (struct monst *)) __attribute__((always_inline));
 STATIC_DCL int FDECL(m_arrival, (struct monst *));
 STATIC_DCL boolean FDECL(stuff_prevents_passage, (struct monst *));
 STATIC_DCL int FDECL(vamp_shift, (struct monst *, struct permonst *,
                                   BOOLEAN_P));
+
+static inline boolean
+nh_move_obj_at(int x, int y)
+{
+    boolean present = NH_SUMMARY(x, y).move_obj_present;
+#ifdef NH_MOVEMENT_MASK_VERIFY
+    if (present != OBJ_AT(x, y))
+        panic("object presence mismatch after movement %d,%d", x, y);
+#endif
+    return present;
+}
 
 /* True if mtmp died */
 boolean
@@ -89,14 +106,14 @@ register struct monst *mtmp;
     if (mtmp->mpeaceful && in_town(u.ux + u.dx, u.uy + u.dy)
         && mtmp->mcansee && m_canseeu(mtmp) && !rn2(3)) {
         if (picking_lock(&x, &y) && IS_DOOR(TYP_AT(x, y))
-            && (levl[x][y].doormask & D_LOCKED)) {
+            && (NH_TILE(x, y).doormask & D_LOCKED)) {
             if (couldsee(mtmp->mx, mtmp->my)) {
-                if (levl[x][y].looted & D_WARNED) {
+                if (NH_TILE(x, y).looted & D_WARNED) {
                     mon_yells(mtmp, "Halt, thief!  You're under arrest!");
                     (void) angry_guards(!!Deaf);
                 } else {
                     mon_yells(mtmp, "Hey, stop picking that lock!");
-                    levl[x][y].looted |= D_WARNED;
+                    NH_TILE(x, y).looted |= D_WARNED;
                 }
                 stop_occupation();
             }
@@ -337,7 +354,7 @@ int *inrange, *nearby, *scared;
      * running into you by accident but possibly attacking the spot
      * where it guesses you are.
      */
-    if (!mtmp->mcansee || (Invis && !perceives(mtmp->data))) {
+    if (!mtmp->mcansee || (Invis && !SPWQ(mtmp->data, SPW_PERCEIVES, perceives(mtmp->data)))) {
         seescaryx = mtmp->mux;
         seescaryy = mtmp->muy;
     } else {
@@ -428,7 +445,7 @@ register struct monst *mtmp;
         mtmp->mstun = 0;
 
     /* some monsters teleport */
-    if (mtmp->mflee && !rn2(40) && can_teleport(mdat) && !mtmp->iswiz
+    if (mtmp->mflee && !rn2(40) && SPWQ(mdat, SPW_TPORT, can_teleport(mdat)) && !mtmp->iswiz
         && !level.lflags.noteleport) {
         (void) rloc(mtmp, TRUE);
         return 0;
@@ -459,7 +476,7 @@ register struct monst *mtmp;
 
     /* Monsters that want to acquire things */
     /* may teleport, so do it before inrange is set */
-    if (is_covetous(mdat))
+    if (SPWQ(mdat, SPW_COVETOUS, is_covetous(mdat)))
         (void) tactics(mtmp);
 
     /* check distance and scariness of attacks */
@@ -497,10 +514,10 @@ register struct monst *mtmp;
     }
 
     /* the watch will look around and see if you are up to no good :-) */
-    if (is_watch(mdat)) {
+    if (SPWQ(mdat, SPW_WATCH, is_watch(mdat))) {
         watch_on_duty(mtmp);
 
-    } else if (is_mind_flayer(mdat) && !rn2(20)) {
+    } else if (SPWQ(mdat, SPW_MINDFLAYER, is_mind_flayer(mdat)) && !rn2(20)) {
         struct monst *m2, *nmon = (struct monst *) 0;
 
         if (canseemon(mtmp))
@@ -533,7 +550,7 @@ register struct monst *mtmp;
                 continue;
             if (m2->mpeaceful == mtmp->mpeaceful)
                 continue;
-            if (mindless(m2->data))
+            if (SPWQ(m2->data, SPW_MINDLESS, mindless(m2->data)))
                 continue;
             if (m2 == mtmp)
                 continue;
@@ -556,7 +573,7 @@ register struct monst *mtmp;
      */
     if ((!mtmp->mpeaceful || Conflict) && inrange
         && dist2(mtmp->mx, mtmp->my, mtmp->mux, mtmp->muy) <= 8
-        && attacktype(mdat, AT_WEAP)) {
+        && SPWQ(mdat, SPW_WEAPATTK, attacktype(mdat, AT_WEAP))) {
         struct obj *mw_tmp;
 
         /* The scared check is necessary.  Otherwise a monster that is
@@ -583,7 +600,7 @@ register struct monst *mtmp;
         || (mtmp->minvis && !rn2(3))
         || (mdat->mlet == S_LEPRECHAUN && !findgold(invent)
             && (findgold(mtmp->minvent) || rn2(2)))
-        || (is_wanderer(mdat) && !rn2(4)) || (Conflict && !mtmp->iswiz)
+        || (SPWQ(mdat, SPW_WANDER, is_wanderer(mdat)) && !rn2(4)) || (Conflict && !mtmp->iswiz)
         || (!mtmp->mcansee && !rn2(4)) || mtmp->mpeaceful) {
         /* Possibly cast an undirected spell if not attacking you */
         /* note that most of the time castmu() will pick a directed
@@ -628,7 +645,7 @@ register struct monst *mtmp;
                 return 0;
             /* Monsters can move and then shoot on same turn;
                our hero can't.  Is that fair? */
-            if (!nearby && (ranged_attk(mdat) || find_offensive(mtmp)))
+            if (!nearby && (SPWQ(mdat, SPW_RANGED, ranged_attk(mdat)) || find_offensive(mtmp)))
                 break;
             /* engulfer/grabber checks */
             if (mtmp == u.ustuck) {
@@ -651,7 +668,7 @@ register struct monst *mtmp;
      */
 
     if (!mtmp->mpeaceful || (Conflict && !resist(mtmp, RING_CLASS, 0, 0))) {
-        if (inrange && !noattacks(mdat)
+        if (inrange && !SPWQ(mdat, SPW_NOATTACKS, noattacks(mdat))
             && (Upolyd ? u.mh : u.uhp) > 0 && !scared && tmp != 3)
             if (mattacku(mtmp))
                 return 1; /* monster died (e.g. exploded) */
@@ -715,7 +732,7 @@ xchar gx, gy;
         nx = poss[i].x;
         ny = poss[i].y;
         ndist = dist2(nx, ny, gx, gy);
-        if (MON_AT(nx, ny) && (info[i] & ALLOW_MDISP) && !(info[i] & ALLOW_M)
+        if ((info[i] & ALLOW_MDISP) && !(info[i] & ALLOW_M) /* ALLOW_MDISP is only set with a monster there */
             && !undesirable_disp(mtmp, nx, ny)) {
             if (shortest_with_displacing == -1
                 || (ndist < shortest_with_displacing))
@@ -782,6 +799,9 @@ nh_fobj_invalidate(void)
     nh_fobj_generation++;
 }
 
+/* The index lives in the window [nh_fobj_lo, nh_fobj_lo + nh_fobj_count) parked
+ * at the top of the arrays, so place_object (a chain prepend) is one store and
+ * remove_object shifts only the newer prefix. Other chain edits still invalidate. */
 static void
 nh_fobj_build(void)
 {
@@ -793,7 +813,40 @@ nh_fobj_build(void)
         nh_fobj_x[n] = o->ox; nh_fobj_y[n] = o->oy;
         n++;
     }
-    nh_fobj_count = n; nh_fobj_valid = 1;
+    if (n && n < 2048) {
+        memmove(nh_fobj_ptr + 2048 - n, nh_fobj_ptr, n * sizeof nh_fobj_ptr[0]);
+        memmove(nh_fobj_x + 2048 - n, nh_fobj_x, n * sizeof nh_fobj_x[0]);
+        memmove(nh_fobj_y + 2048 - n, nh_fobj_y, n * sizeof nh_fobj_y[0]);
+    }
+    nh_fobj_lo = 2048 - n; nh_fobj_count = n; nh_fobj_valid = 1;
+}
+
+void
+nh_fobj_placed(struct obj *o)
+{
+    nh_fobj_generation++;
+    if (!nh_fobj_valid || nh_fobj_count < 0) return;
+    if (nh_fobj_lo == 0) { nh_fobj_valid = 0; return; }
+    nh_fobj_lo--;
+    nh_fobj_ptr[nh_fobj_lo] = o;
+    nh_fobj_x[nh_fobj_lo] = o->ox; nh_fobj_y[nh_fobj_lo] = o->oy;
+    nh_fobj_count++;
+}
+
+void
+nh_fobj_removed(struct obj *o)
+{
+    int i, lo = nh_fobj_lo, hi;
+    nh_fobj_generation++;
+    if (!nh_fobj_valid || nh_fobj_count < 0) return;
+    hi = lo + nh_fobj_count;
+    for (i = lo; i < hi; i++)
+        if (nh_fobj_ptr[i] == o) break;
+    if (i == hi) { nh_fobj_valid = 0; return; }
+    memmove(nh_fobj_ptr + lo + 1, nh_fobj_ptr + lo, (i - lo) * sizeof nh_fobj_ptr[0]);
+    memmove(nh_fobj_x + lo + 1, nh_fobj_x + lo, (i - lo) * sizeof nh_fobj_x[0]);
+    memmove(nh_fobj_y + lo + 1, nh_fobj_y + lo, (i - lo) * sizeof nh_fobj_y[0]);
+    nh_fobj_lo++; nh_fobj_count--;
 }
 
 struct obj *
@@ -804,7 +857,7 @@ nh_fobj_next(struct nh_fobj_cursor *cursor, struct obj *prev,
     if (!prev) {
         if (!nh_fobj_valid) nh_fobj_build();
         cursor->generation = nh_fobj_generation;
-        cursor->index = 0;
+        cursor->index = nh_fobj_lo;
         cursor->mask = 0;
         cursor->fallback = nh_fobj_count < 0;
     } else if (cursor->generation != nh_fobj_generation) {
@@ -817,54 +870,59 @@ nh_fobj_next(struct nh_fobj_cursor *cursor, struct obj *prev,
         return (struct obj *) 0;
     }
 #ifdef NLE_FOBJ_VERIFY
-    {
-        int n = 0;
+    if (!prev && nh_fobj_count >= 0) {
+        int n = 0, bad = 0;
         for (o = fobj; o; o = o->nobj, n++)
-            if (n >= nh_fobj_count || nh_fobj_ptr[n] != o
-                || nh_fobj_x[n] != o->ox || nh_fobj_y[n] != o->oy)
-                panic("floor index mismatch at %d", n);
-        if (n != nh_fobj_count) panic("floor index count mismatch");
+            if (n >= nh_fobj_count || nh_fobj_ptr[nh_fobj_lo + n] != o
+                || nh_fobj_x[nh_fobj_lo + n] != o->ox || nh_fobj_y[nh_fobj_lo + n] != o->oy) { bad = 1; break; }
+        if (bad || n != nh_fobj_count) {
+            fprintf(stderr, "FOBJ_MISMATCH turn=%ld n=%d count=%d lo=%d\n", moves, n, nh_fobj_count, nh_fobj_lo);
+            nh_fobj_build();
+            cursor->generation = nh_fobj_generation;
+            cursor->index = nh_fobj_lo;
+            cursor->fallback = nh_fobj_count < 0;
+        }
     }
 #endif
 #ifdef __SSE2__
-    /* Reject eight coordinates at once; the first matching entry still wins. */
-    if (lx >= -32768 && hx <= 32767 && ly >= -32768 && hy <= 32767
+    /* Reject sixteen byte coordinates at once; the first matching entry still wins. */
+    if (lx >= -128 && hx <= 127 && ly >= -128 && hy <= 127
         && lx <= hx && ly <= hy) {
         if (cursor->mask && cursor->lx == lx && cursor->hx == hx
             && cursor->ly == ly && cursor->hy == hy) {
             int bit = __builtin_ctz(cursor->mask);
-            int i = cursor->base + bit / 2;
-            cursor->mask &= ~(3U << bit);
+            int i = cursor->base + bit;
+            cursor->mask &= ~(1U << bit);
             cursor->index = i + 1;
             return nh_fobj_ptr[i];
         }
         cursor->mask = 0;
-        __m128i xl = _mm_set1_epi16((short) lx), xh = _mm_set1_epi16((short) hx);
-        __m128i yl = _mm_set1_epi16((short) ly), yh = _mm_set1_epi16((short) hy);
-        while (cursor->index + 8 <= nh_fobj_count) {
+        __m128i xl = _mm_set1_epi8((char) lx), xh = _mm_set1_epi8((char) hx);
+        __m128i yl = _mm_set1_epi8((char) ly), yh = _mm_set1_epi8((char) hy);
+        while (cursor->index + 16 <= nh_fobj_lo + nh_fobj_count) {
             int i = cursor->index;
             __m128i x = _mm_loadu_si128((const __m128i *) (nh_fobj_x + i));
             __m128i y = _mm_loadu_si128((const __m128i *) (nh_fobj_y + i));
             __m128i reject = _mm_or_si128(
-                _mm_or_si128(_mm_cmpgt_epi16(xl, x), _mm_cmpgt_epi16(x, xh)),
-                _mm_or_si128(_mm_cmpgt_epi16(yl, y), _mm_cmpgt_epi16(y, yh)));
+                _mm_or_si128(_mm_cmpgt_epi8(xl, x), _mm_cmpgt_epi8(x, xh)),
+                _mm_or_si128(_mm_cmpgt_epi8(yl, y), _mm_cmpgt_epi8(y, yh)));
             unsigned int mask = (~(unsigned int) _mm_movemask_epi8(reject)) & 65535U;
             if (mask) {
                 int bit = __builtin_ctz(mask);
                 cursor->base = i;
-                cursor->mask = mask & ~(3U << bit);
+                cursor->mask = mask & ~(1U << bit);
                 cursor->lx = lx; cursor->hx = hx;
                 cursor->ly = ly; cursor->hy = hy;
-                i += bit / 2;
+                i += bit;
                 cursor->index = i + 1;
                 return nh_fobj_ptr[i];
             }
-            cursor->index += 8;
+            cursor->index += 16;
         }
     }
 #endif
     cursor->mask = 0;
-    while (cursor->index < nh_fobj_count) {
+    while (cursor->index < nh_fobj_lo + nh_fobj_count) {
         int i = cursor->index++;
         if (nh_fobj_x[i] >= lx && nh_fobj_x[i] <= hx
             && nh_fobj_y[i] >= ly && nh_fobj_y[i] <= hy)
@@ -888,7 +946,7 @@ register int after;
     boolean uses_items = 0, setlikes = 0;
     boolean avoid = FALSE;
     boolean better_with_displacing = FALSE;
-    boolean sawmon = canspotmon(mtmp); /* before it moved */
+    boolean sawmon = is_vampshifter(mtmp) ? canspotmon(mtmp) : FALSE; /* before it moved; only the fog-cloud shift reads it */
     struct permonst *ptr;
     struct monst *mtoo;
     schar mmoved = 0; /* not strictly nec.: chi >= 0 will do */
@@ -914,7 +972,7 @@ register int after;
             finish_meating(mtmp);
         return 3; /* still eating */
     }
-    if (hides_under(ptr) && OBJ_AT(mtmp->mx, mtmp->my) && rn2(10))
+    if (SPWQ(ptr, SPW_HIDESUNDER, hides_under(ptr)) && OBJ_AT(mtmp->mx, mtmp->my) && rn2(10))
         return 0; /* do not leave hiding place */
 
     set_apparxy(mtmp);
@@ -923,11 +981,11 @@ register int after;
      * other calls of m_move (ex. leprechauns dodging)
      */
     if (!Is_rogue_level(&u.uz))
-        can_tunnel = tunnels(ptr);
-    can_open = !(nohands(ptr) || verysmall(ptr));
+        can_tunnel = SPWQ(ptr, SPW_TUNNELS, tunnels(ptr));
+    can_open = !(SPWQ(ptr, SPW_NOHANDS, nohands(ptr)) || SPWQ(ptr, SPW_VERYSMALL, verysmall(ptr)));
     can_unlock =
-        ((can_open && monhaskey(mtmp, TRUE)) || mtmp->iswiz || is_rider(ptr));
-    doorbuster = is_giant(ptr);
+        ((can_open && monhaskey(mtmp, TRUE)) || mtmp->iswiz || SPWQ(ptr, SPW_RIDER, is_rider(ptr)));
+    doorbuster = SPWQ(ptr, SPW_GIANT, is_giant(ptr));
     if (mtmp->wormno)
         goto not_special;
     /* my dog gets special treatment */
@@ -957,7 +1015,7 @@ register int after;
     }
 
     /* and the acquisitive monsters get special treatment */
-    if (is_covetous(ptr)) {
+    if (SPWQ(ptr, SPW_COVETOUS, is_covetous(ptr))) {
         xchar tx = STRAT_GOALX(mtmp->mstrategy),
               ty = STRAT_GOALY(mtmp->mstrategy);
         struct monst *intruder = m_at(tx, ty);
@@ -1018,13 +1076,13 @@ register int after;
     } else {
         struct obj *lepgold, *ygold;
         boolean should_see = (couldsee(omx, omy)
-                              && (levl[gx][gy].lit || !levl[omx][omy].lit)
+                              && (NH_TILE(gx, gy).lit || !NH_TILE(omx, omy).lit)
                               && (dist2(omx, omy, gx, gy) <= 36));
 
         if (!mtmp->mcansee
-            || (should_see && Invis && !perceives(ptr) && rn2(11))
+            || (should_see && Invis && !SPWQ(ptr, SPW_PERCEIVES, perceives(ptr)) && rn2(11))
             || is_obj_mappear(&youmonst,STRANGE_OBJECT) || u.uundetected
-            || (is_obj_mappear(&youmonst,GOLD_PIECE) && !likes_gold(ptr))
+            || (is_obj_mappear(&youmonst,GOLD_PIECE) && !SPWQ(ptr, SPW_LIKEGOLD, likes_gold(ptr)))
             || (mtmp->mpeaceful && !mtmp->isshk) /* allow shks to follow */
             || ((monsndx(ptr) == PM_STALKER || ptr->mlet == S_BAT
                  || ptr->mlet == S_LIGHT) && !rn2(3)))
@@ -1061,13 +1119,13 @@ register int after;
                 (curr_mon_load(mtmp) * 100) / max_mon_load(mtmp);
 
             /* look for gold or jewels nearby */
-            likegold = (likes_gold(ptr) && pctload < 95);
-            likegems = (likes_gems(ptr) && pctload < 85);
-            uses_items = (!mindless(ptr) && !is_animal(ptr) && pctload < 75);
-            likeobjs = (likes_objs(ptr) && pctload < 75);
-            likemagic = (likes_magic(ptr) && pctload < 85);
-            likerock = (throws_rocks(ptr) && pctload < 50 && !Sokoban);
-            conceals = hides_under(ptr);
+            likegold = (SPWQ(ptr, SPW_LIKEGOLD, likes_gold(ptr)) && pctload < 95);
+            likegems = (SPWQ(ptr, SPW_LIKEGEMS, likes_gems(ptr)) && pctload < 85);
+            uses_items = (!SPWQ(ptr, SPW_MINDLESS, mindless(ptr)) && !SPWQ(ptr, SPW_ANIMAL, is_animal(ptr)) && pctload < 75);
+            likeobjs = (SPWQ(ptr, SPW_LIKEOBJS, likes_objs(ptr)) && pctload < 75);
+            likemagic = (SPWQ(ptr, SPW_LIKEMAGIC, likes_magic(ptr)) && pctload < 85);
+            likerock = (SPWQ(ptr, SPW_THROWSROCKS, throws_rocks(ptr)) && pctload < 50 && !Sokoban);
+            conceals = SPWQ(ptr, SPW_HIDESUNDER, hides_under(ptr));
             setlikes = TRUE;
         }
     }
@@ -1086,7 +1144,7 @@ register int after;
             && !mtmp->mpeaceful)
             minr--;
         /* guards shouldn't get too distracted */
-        if (!mtmp->mpeaceful && is_mercenary(ptr))
+        if (!mtmp->mpeaceful && SPWQ(ptr, SPW_MERC, is_mercenary(ptr)))
             minr = 1;
 
         if ((likegold || likegems || likeobjs || likemagic || likerock
@@ -1125,8 +1183,8 @@ register int after;
                        water location accepts flyers, but they can't reach
                        underwater objects, so being able to move to a spot
                        is insufficient for deciding whether to do so */
-                    if ((is_pool(xx, yy) && !is_swimmer(ptr))
-                        || (is_lava(xx, yy) && !likes_lava(ptr)))
+                    if ((is_pool(xx, yy) && !SPWQ(ptr, SPW_SWIMMER, is_swimmer(ptr)))
+                        || (is_lava(xx, yy) && !SPWQ(ptr, SPW_LIKELAVA, likes_lava(ptr))))
                         continue;
 
                     if (((likegold && otmp->oclass == COIN_CLASS)
@@ -1146,8 +1204,8 @@ register int after;
                                   && touch_petrifies(&mons[otmp->corpsenm]))))
                         && touch_artifact(otmp, mtmp)) {
                         if (can_carry(mtmp, otmp) > 0
-                            && (throws_rocks(ptr) || !sobj_at(BOULDER, xx, yy))
-                            && (!is_unicorn(ptr)
+                            && (SPWQ(ptr, SPW_THROWSROCKS, throws_rocks(ptr)) || !sobj_at(BOULDER, xx, yy))
+                            && (!SPWQ(ptr, SPW_UNICORN, is_unicorn(ptr))
                                 || objects[otmp->otyp].oc_material == GEMSTONE)
                             /* Don't get stuck circling an Elbereth */
                             && !onscary(xx, yy, mtmp)) {
@@ -1183,7 +1241,7 @@ register int after;
     }
 
     /* don't tunnel if hostile and close enough to prefer a weapon */
-    if (can_tunnel && needspick(ptr)
+    if (can_tunnel && SPWQ(ptr, SPW_NEEDSPICK, needspick(ptr))
         && ((!mtmp->mpeaceful || Conflict)
             && dist2(mtmp->mx, mtmp->my, mtmp->mux, mtmp->muy) <= 8))
         can_tunnel = FALSE;
@@ -1195,22 +1253,22 @@ register int after;
         flag |= (ALLOW_SANCT | ALLOW_SSM);
     else
         flag |= ALLOW_U;
-    if (is_minion(ptr) || is_rider(ptr))
+    if (SPWQ(ptr, SPW_MINION, is_minion(ptr)) || SPWQ(ptr, SPW_RIDER, is_rider(ptr)))
         flag |= ALLOW_SANCT;
     /* unicorn may not be able to avoid hero on a noteleport level */
-    if (is_unicorn(ptr) && !level.lflags.noteleport)
+    if (SPWQ(ptr, SPW_UNICORN, is_unicorn(ptr)) && !level.lflags.noteleport)
         flag |= NOTONL;
-    if (passes_walls(ptr))
+    if (SPWQ(ptr, SPW_PASSWALL, passes_walls(ptr)))
         flag |= (ALLOW_WALL | ALLOW_ROCK);
-    if (passes_bars(ptr))
+    if (SPWQ(ptr, SPW_PASSBARS, passes_bars(ptr)))
         flag |= ALLOW_BARS;
     if (can_tunnel)
         flag |= ALLOW_DIG;
-    if (is_human(ptr) || ptr == &mons[PM_MINOTAUR])
+    if (SPWQ(ptr, SPW_HUMAN, is_human(ptr)) || ptr == &mons[PM_MINOTAUR])
         flag |= ALLOW_SSM;
-    if ((is_undead(ptr) && ptr->mlet != S_GHOST) || is_vampshifter(mtmp))
+    if ((SPWQ(ptr, SPW_UNDEAD, is_undead(ptr)) && ptr->mlet != S_GHOST) || is_vampshifter(mtmp))
         flag |= NOGARLIC;
-    if (throws_rocks(ptr))
+    if (SPWQ(ptr, SPW_THROWSROCKS, throws_rocks(ptr)))
         flag |= ALLOW_ROCK;
     if (can_open)
         flag |= OPENDOOR;
@@ -1220,6 +1278,7 @@ register int after;
         flag |= BUSTDOOR;
     {
         register int i, j, nx, ny, nearer;
+        unsigned int trackmask;
         int jcnt, cnt;
         int ndist, nidist;
         register coord *mtrk;
@@ -1228,13 +1287,16 @@ register int after;
         cnt = mfndpos(mtmp, poss, info, flag);
         chcnt = 0;
         jcnt = min(MTSZ, cnt - 1);
+        trackmask = 0; /* neighbourhood bits of the recent track: the avoidance loop (and its RNG draw) only runs on a hit */
+        for (j = 0; j < jcnt; j++)
+            trackmask |= nh_move_position_bit(omx, omy, mtmp->mtrack[j].x, mtmp->mtrack[j].y);
         chi = -1;
         nidist = dist2(nix, niy, gx, gy);
         /* allow monsters be shortsighted on some levels for balance */
         if (!mtmp->mpeaceful && level.lflags.shortsighted
             && nidist > (couldsee(nix, niy) ? 144 : 36) && appr == 1)
             appr = 0;
-        if (is_unicorn(ptr) && level.lflags.noteleport) {
+        if (SPWQ(ptr, SPW_UNICORN, is_unicorn(ptr)) && level.lflags.noteleport) {
             /* on noteleport levels, perhaps we cannot avoid hero */
             for (i = 0; i < cnt; i++)
                 if (!(info[i] & NOTONL))
@@ -1248,10 +1310,10 @@ register int after;
             nx = poss[i].x;
             ny = poss[i].y;
 
-            if (MON_AT(nx, ny) && (info[i] & ALLOW_MDISP)
+            if ((info[i] & ALLOW_MDISP)
                 && !(info[i] & ALLOW_M) && !better_with_displacing)
                 continue;
-            if (appr != 0) {
+            if (appr != 0 && (trackmask & nh_move_position_bit(omx, omy, nx, ny))) {
                 mtrk = &mtmp->mtrack[0];
                 for (j = 0; j < jcnt; mtrk++, j++)
                     if (nx == mtrk->x && ny == mtrk->y)
@@ -1360,7 +1422,7 @@ register int after;
         if (mtmp->wormno)
             worm_move(mtmp);
     } else {
-        if (is_unicorn(ptr) && rn2(2) && !tele_restrict(mtmp)) {
+        if (SPWQ(ptr, SPW_UNICORN, is_unicorn(ptr)) && rn2(2) && !tele_restrict(mtmp)) {
             (void) rloc(mtmp, TRUE);
             return 1;
         }
@@ -1386,9 +1448,9 @@ register int after;
                message happen at right time, then back to the door again
                [if we did the shift above, before moving the monster,
                we would need to duplicate it in dog_move()...] */
-            if (is_vampshifter(mtmp) && !amorphous(mtmp->data)
+            if (is_vampshifter(mtmp) && !SPWQ(mtmp->data, SPW_AMORPHOUS, amorphous(mtmp->data))
                 && IS_DOOR(TYP_AT(nix, niy))
-                && ((levl[nix][niy].doormask & (D_LOCKED | D_CLOSED)) != 0)
+                && ((NH_TILE(nix, niy).doormask & (D_LOCKED | D_CLOSED)) != 0)
                 && can_fog(mtmp)) {
                 if (sawmon) {
                     remove_monster(nix, niy);
@@ -1415,9 +1477,9 @@ register int after;
 
             /* open a door, or crash through it, if 'mtmp' can */
             if (IS_DOOR(TYP_AT(mtmp->mx, mtmp->my))
-                && !passes_walls(ptr) /* doesn't need to open doors */
+                && !SPWQ(ptr, SPW_PASSWALL, passes_walls(ptr)) /* doesn't need to open doors */
                 && !can_tunnel) {     /* taken care of below */
-                struct rm *here = &levl[mtmp->mx][mtmp->my];
+                struct rm *here = &NH_TILE(mtmp->mx, mtmp->my);
                 boolean btrapped = (here->doormask & D_TRAPPED) != 0,
                         observeit = canseeit && canspotmon(mtmp);
 
@@ -1432,7 +1494,7 @@ register int after;
                     btrapped = FALSE;
                 }
                 if ((here->doormask & (D_LOCKED | D_CLOSED)) != 0
-                    && amorphous(ptr)) {
+                    && SPWQ(ptr, SPW_AMORPHOUS, amorphous(ptr))) {
                     if (flags.verbose && canseemon(mtmp))
                         pline("%s %s under the door.", Monnam(mtmp),
                               (ptr == &mons[PM_FOG_CLOUD]
@@ -1509,7 +1571,7 @@ register int after;
                 }
             } else if (TYP_AT(mtmp->mx, mtmp->my) == IRONBARS) {
                 /* As of 3.6.2: was using may_dig() but it doesn't handle bars */
-                if (!(levl[mtmp->mx][mtmp->my].wall_info & W_NONDIGGABLE)
+                if (!(NH_TILE(mtmp->mx, mtmp->my).wall_info & W_NONDIGGABLE)
                     && (dmgtype(ptr, AD_RUST) || dmgtype(ptr, AD_CORR))) {
                     if (canseemon(mtmp))
                         pline("%s eats through the iron bars.", Monnam(mtmp));
@@ -1519,7 +1581,7 @@ register int after;
                     Norep("%s %s %s the iron bars.", Monnam(mtmp),
                           /* pluralization fakes verb conjugation */
                           makeplural(locomotion(ptr, "pass")),
-                          passes_walls(ptr) ? "through" : "between");
+                          SPWQ(ptr, SPW_PASSWALL, passes_walls(ptr)) ? "through" : "between");
             }
 
             /* possibly dig */
@@ -1538,21 +1600,21 @@ register int after;
             } else
                 newsym(mtmp->mx, mtmp->my);
         }
-        if (OBJ_AT(mtmp->mx, mtmp->my) && mtmp->mcanmove) {
+        if (nh_move_obj_at(mtmp->mx, mtmp->my) && mtmp->mcanmove) {
             /* recompute the likes tests, in case we polymorphed
              * or if the "likegold" case got taken above */
             if (setlikes) {
                 int pctload = (curr_mon_load(mtmp) * 100) / max_mon_load(mtmp);
 
                 /* look for gold or jewels nearby */
-                likegold = (likes_gold(ptr) && pctload < 95);
-                likegems = (likes_gems(ptr) && pctload < 85);
+                likegold = (SPWQ(ptr, SPW_LIKEGOLD, likes_gold(ptr)) && pctload < 95);
+                likegems = (SPWQ(ptr, SPW_LIKEGEMS, likes_gems(ptr)) && pctload < 85);
                 uses_items =
-                    (!mindless(ptr) && !is_animal(ptr) && pctload < 75);
-                likeobjs = (likes_objs(ptr) && pctload < 75);
-                likemagic = (likes_magic(ptr) && pctload < 85);
-                likerock = (throws_rocks(ptr) && pctload < 50 && !Sokoban);
-                conceals = hides_under(ptr);
+                    (!SPWQ(ptr, SPW_MINDLESS, mindless(ptr)) && !SPWQ(ptr, SPW_ANIMAL, is_animal(ptr)) && pctload < 75);
+                likeobjs = (SPWQ(ptr, SPW_LIKEOBJS, likes_objs(ptr)) && pctload < 75);
+                likemagic = (SPWQ(ptr, SPW_LIKEMAGIC, likes_magic(ptr)) && pctload < 85);
+                likerock = (SPWQ(ptr, SPW_THROWSROCKS, throws_rocks(ptr)) && pctload < 50 && !Sokoban);
+                conceals = SPWQ(ptr, SPW_HIDESUNDER, hides_under(ptr));
             }
 
             /* Maybe a rock mole just ate some metal object */
@@ -1594,7 +1656,7 @@ register int after;
             }
         }
 
-        if (hides_under(ptr) || ptr->mlet == S_EEL) {
+        if (SPWQ(ptr, SPW_HIDESUNDER, hides_under(ptr)) || ptr->mlet == S_EEL) {
             /* Always set--or reset--mundetected if it's already hidden
                (just in case the object it was hiding under went away);
                usually set mundetected unless monster can't move.  */
@@ -1615,7 +1677,7 @@ dissolve_bars(x, y)
 register int x, y;
 {
     SET_TYP_XY(x, y, (Is_special(&u.uz) || *in_rooms(x, y, 0)) ? ROOM : CORR);
-    levl[x][y].rmflags = 0;
+    NH_TILE(x, y).rmflags = 0;
     newsym(x, y);
 }
 
@@ -1624,7 +1686,7 @@ closed_door(x, y)
 register int x, y;
 {
     return (boolean) (IS_DOOR(TYP_AT(x, y))
-                      && (levl[x][y].doormask & (D_LOCKED | D_CLOSED)));
+                      && (NH_TILE(x, y).doormask & (D_LOCKED | D_CLOSED)));
 }
 
 boolean
@@ -1635,7 +1697,7 @@ register int x, y;
 
     /* use underlying terrain in front of closed drawbridge */
     if (levtyp == DRAWBRIDGE_UP)
-        levtyp = db_under_typ(levl[x][y].drawbridgemask);
+        levtyp = db_under_typ(NH_TILE(x, y).drawbridgemask);
 
     return (boolean) (ACCESSIBLE(levtyp) && !closed_door(x, y));
 }
@@ -1661,7 +1723,7 @@ register struct monst *mtmp;
     if (mx == u.ux && my == u.uy)
         goto found_you;
 
-    notseen = (!mtmp->mcansee || (Invis && !perceives(mtmp->data)));
+    notseen = (!mtmp->mcansee || (Invis && !SPWQ(mtmp->data, SPW_PERCEIVES, perceives(mtmp->data))));
     /* add cases as required.  eg. Displacement ... */
     if (notseen || Underwater) {
         /* Xorns can smell quantities of valuable metal
@@ -1691,7 +1753,7 @@ register struct monst *mtmp;
             my = u.uy - disp + rn2(2 * disp + 1);
         } while (!isok(mx, my)
                  || (disp != 2 && mx == mtmp->mx && my == mtmp->my)
-                 || ((mx != u.ux || my != u.uy) && !passes_walls(mtmp->data)
+                 || ((mx != u.ux || my != u.uy) && !SPWQ(mtmp->data, SPW_PASSWALL, passes_walls(mtmp->data))
                      && !(accessible(mx, my)
                           || (closed_door(mx, my)
                               && (can_ooze(mtmp) || can_fog(mtmp)))))

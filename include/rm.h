@@ -365,12 +365,12 @@ extern struct symsetentry symset[NUM_GRAPHICS]; /* from drawing.c */
  */
 #define F_LOOTED 1
 #define F_WARNED 2
-#define FOUNTAIN_IS_WARNED(x, y) (levl[x][y].looted & F_WARNED)
-#define FOUNTAIN_IS_LOOTED(x, y) (levl[x][y].looted & F_LOOTED)
-#define SET_FOUNTAIN_WARNED(x, y) levl[x][y].looted |= F_WARNED;
-#define SET_FOUNTAIN_LOOTED(x, y) levl[x][y].looted |= F_LOOTED;
-#define CLEAR_FOUNTAIN_WARNED(x, y) levl[x][y].looted &= ~F_WARNED;
-#define CLEAR_FOUNTAIN_LOOTED(x, y) levl[x][y].looted &= ~F_LOOTED;
+#define FOUNTAIN_IS_WARNED(x, y) (NH_TILE(x, y).looted & F_WARNED)
+#define FOUNTAIN_IS_LOOTED(x, y) (NH_TILE(x, y).looted & F_LOOTED)
+#define SET_FOUNTAIN_WARNED(x, y) NH_TILE(x, y).looted |= F_WARNED;
+#define SET_FOUNTAIN_LOOTED(x, y) NH_TILE(x, y).looted |= F_LOOTED;
+#define CLEAR_FOUNTAIN_WARNED(x, y) NH_TILE(x, y).looted &= ~F_WARNED;
+#define CLEAR_FOUNTAIN_LOOTED(x, y) NH_TILE(x, y).looted &= ~F_LOOTED;
 
 /*
  * Doors are even worse :-) The special warning has a side effect
@@ -431,7 +431,37 @@ extern struct symsetentry symset[NUM_GRAPHICS]; /* from drawing.c */
  * Also remember that the run-length encoding for some ports in save.c
  * must be updated to consider the field.
  */
+/* Primary tile state. The two terrain types retain their original update points. */
 struct rm {
+    short glyph;               /* what the hero thinks is there */
+    schar typ;               /* what is really there */
+    uchar seenv;             /* seen vector */
+    unsigned char rmflags : 5;      /* extra information for typ */
+    unsigned char horizontal : 1; /* wall/door/etc is horiz. (more typ info) */
+    unsigned char lit : 1;        /* speed hack for lit rooms */
+    unsigned char waslit : 1;     /* remember if a location was lit */
+
+    unsigned char roomno : 6; /* room # for special rooms */
+    unsigned char edge : 1;   /* marks boundaries for special rooms*/
+    unsigned char candig : 1; /* Exception to Can_dig_down; was a trapdoor */
+};
+struct nh_tile_summary {
+    unsigned short move_pile : 3;
+    unsigned short move_trap : 5;
+    unsigned short move_trap_present : 1;
+    unsigned short move_gas : 1;
+    unsigned short move_obj_present : 1;
+};
+
+static inline void
+nh_copy_terrain(struct rm *dst, const struct rm *src)
+{
+    dst->glyph = src->glyph; dst->typ = src->typ; dst->seenv = src->seenv;
+    dst->rmflags = src->rmflags; dst->horizontal = src->horizontal;
+    dst->lit = src->lit; dst->waslit = src->waslit; dst->roomno = src->roomno;
+    dst->edge = src->edge; dst->candig = src->candig;
+}
+struct rm_legacy {
     int glyph;               /* what the hero thinks is there */
     schar typ;               /* what is really there */
     uchar seenv;             /* seen vector */
@@ -449,14 +479,14 @@ struct rm {
     {                                                             \
         if ((x) >= 0 && (y) >= 0 && (x) < COLNO && (y) < ROWNO) { \
             if ((ttyp) < MAX_TYPE)                                \
-                levl[(x)][(y)].typ = (ttyp);                      \
+                NH_TILE((x), (y)).typ = (ttyp);                      \
             if ((ttyp) == LAVAPOOL)                               \
-                levl[(x)][(y)].lit = 1;                           \
+                NH_TILE((x), (y)).lit = 1;                           \
             else if ((schar)(llit) != -2) {                       \
                 if ((schar)(llit) == -1)                          \
-                    levl[(x)][(y)].lit = rn2(2);                  \
+                    NH_TILE((x), (y)).lit = rn2(2);                  \
                 else                                              \
-                    levl[(x)][(y)].lit = (llit);                  \
+                    NH_TILE((x), (y)).lit = (llit);                  \
             }                                                     \
         }                                                         \
     }
@@ -605,6 +635,8 @@ struct levelflags {
                                   rather than ROOM */
 };
 
+#include "movement_masks.h"
+
 typedef struct {
     struct rm locations[COLNO][ROWNO];
 #ifndef MICROPORT_BUG
@@ -622,6 +654,7 @@ typedef struct {
     struct damage *damagelist;
     struct cemetery *bonesinfo;
     struct levelflags lflags;
+    struct nh_move_column move_columns[COLNO + 2];
 } dlevel_t;
 
 extern schar lastseentyp[COLNO][ROWNO]; /* last seen/touched dungeon typ */
@@ -631,7 +664,12 @@ extern dlevel_t level; /* structure describing the current level */
 /*
  * Macros for compatibility with old code. Someday these will go away.
  */
-#define levl level.locations
+static inline struct rm *
+nh_tile_at(dlevel_t *lev, unsigned int x, unsigned int y)
+{
+    return &lev->locations[x][y];
+}
+#define NH_TILE(x, y) (*nh_tile_at(&level, (x), (y)))
 #define fobj level.objlist
 #define fmon level.monlist
 
@@ -657,22 +695,29 @@ extern dlevel_t level; /* structure describing the current level */
 #else   /* without 'mburied' */
 #define MON_AT(x, y) (level.monsters[x][y] != (struct monst *) 0)
 #endif
+#define NH_SET_MON(x, y, m) \
+    do { \
+        int nhmx_ = (x), nhmy_ = (y); \
+        struct monst *nhmm_ = (m); \
+        level.monsters[nhmx_][nhmy_] = nhmm_; \
+        nh_move_set_occupied(level.move_columns, nhmx_, nhmy_, nhmm_ != 0); \
+    } while (0)
 #ifdef EXTRA_SANITY_CHECKS
 #define place_worm_seg(m, x, y) \
     do {                                                        \
         if (level.monsters[x][y] && level.monsters[x][y] != m)  \
             impossible("place_worm_seg over mon");              \
-        level.monsters[x][y] = m;                               \
+        NH_SET_MON(x, y, m);                               \
     } while(0)
 #define remove_monster(x, y) \
     do {                                                \
         if (!level.monsters[x][y])                      \
             impossible("no monster to remove");         \
-        level.monsters[x][y] = (struct monst *) 0;      \
+        NH_SET_MON(x, y, (struct monst *) 0);      \
     } while(0)
 #else
-#define place_worm_seg(m, x, y) level.monsters[x][y] = m
-#define remove_monster(x, y) level.monsters[x][y] = (struct monst *) 0
+#define place_worm_seg(m, x, y) NH_SET_MON(x, y, m)
+#define remove_monster(x, y) NH_SET_MON(x, y, (struct monst *) 0)
 #endif
 #define m_at(x, y) (MON_AT(x, y) ? level.monsters[x][y] : (struct monst *) 0)
 #define m_buried_at(x, y) \

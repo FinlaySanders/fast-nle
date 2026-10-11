@@ -84,7 +84,7 @@ int x, y;
 
     if (!isok(x, y))
         return 0;
-    type = levl[x][y].typ;
+    type = NH_TILE(x, y).typ;
     return (IS_WALL(type) || IS_DOOR(type)
             || type == SDOOR || type == IRONBARS);
 }
@@ -97,7 +97,7 @@ int x, y;
     if (!isok(x, y))
         return 1;
 
-    return (levl[x][y].typ == STONE || iswall(x, y));
+    return (NH_TILE(x, y).typ == STONE || iswall(x, y));
 }
 
 /* return TRUE if out of bounds, wall or rock */
@@ -105,7 +105,7 @@ STATIC_OVL boolean
 is_solid(x, y)
 int x, y;
 {
-    return (boolean) (!isok(x, y) || IS_STWALL(levl[x][y].typ));
+    return (boolean) (!isok(x, y) || IS_STWALL(NH_TILE(x, y).typ));
 }
 
 /*
@@ -179,7 +179,7 @@ int x1, y1, x2, y2;
                                     bughack.inarea.x1, bughack.inarea.y1,
                                     bughack.inarea.x2, bughack.inarea.y2))
                 continue;
-            lev = &levl[x][y];
+            lev = &NH_TILE(x, y);
             type = lev->typ;
             if (IS_WALL(type) && type != DBWALL) {
                 if (is_solid(x - 1, y - 1) && is_solid(x - 1, y)
@@ -220,7 +220,7 @@ int x1, y1, x2, y2;
     /* set the correct wall type. */
     for (x = x1; x <= x2; x++)
         for (y = y1; y <= y2; y++) {
-            lev = &levl[x][y];
+            lev = &NH_TILE(x, y);
             type = lev->typ;
             if (!(IS_WALL(type) && type != DBWALL))
                 continue;
@@ -270,7 +270,7 @@ int dir;
     mz_move(x, y, dir);
     mz_move(x, y, dir);
     if (x < 3 || y < 3 || x > x_maze_max || y > y_maze_max
-        || levl[x][y].typ != STONE)
+        || NH_TILE(x, y).typ != STONE)
         return FALSE;
     return TRUE;
 }
@@ -298,9 +298,9 @@ xchar lx, ly, hx, hy;
 {
     return (boolean) (occupied(x, y)
                       || within_bounded_area(x, y, lx, ly, hx, hy)
-                      || !((levl[x][y].typ == CORR && level.lflags.is_maze_lev)
-                           || levl[x][y].typ == ROOM
-                           || levl[x][y].typ == AIR));
+                      || !((NH_TILE(x, y).typ == CORR && level.lflags.is_maze_lev)
+                           || NH_TILE(x, y).typ == ROOM
+                           || NH_TILE(x, y).typ == AIR));
 }
 
 /* pick a location in area (lx, ly, hx, hy) but not in (nlx, nly, nhx, nhy)
@@ -429,7 +429,7 @@ baalz_fixup()
     /* find low and high x for to-be-wallified portion of level */
     y = ROWNO / 2;
     for (lastx = x = 0; x < COLNO; ++x)
-        if ((levl[x][y].wall_info & W_NONDIGGABLE) != 0) {
+        if ((NH_TILE(x, y).wall_info & W_NONDIGGABLE) != 0) {
             if (!lastx)
                 bughack.inarea.x1 = x + 1;
             lastx = x;
@@ -438,7 +438,7 @@ baalz_fixup()
     /* find low and high y for to-be-wallified portion of level */
     x = bughack.inarea.x1;
     for (lasty = y = 0; y < ROWNO; ++y)
-        if ((levl[x][y].wall_info & W_NONDIGGABLE) != 0) {
+        if ((NH_TILE(x, y).wall_info & W_NONDIGGABLE) != 0) {
             if (!lasty)
                 bughack.inarea.y1 = y + 1;
             lasty = y;
@@ -447,17 +447,17 @@ baalz_fixup()
     /* two pools mark where special post-wallify fix-ups are needed */
     for (x = bughack.inarea.x1; x <= bughack.inarea.x2; ++x)
         for (y = bughack.inarea.y1; y <= bughack.inarea.y2; ++y)
-            if (levl[x][y].typ == POOL) {
+            if (NH_TILE(x, y).typ == POOL) {
                 SET_TYP_XY(x, y, HWALL);
                 if (bughack.delarea.x1 == COLNO)
                     bughack.delarea.x1 = x, bughack.delarea.y1 = y;
                 else
                     bughack.delarea.x2 = x, bughack.delarea.y2 = y;
-            } else if (levl[x][y].typ == IRONBARS) {
+            } else if (NH_TILE(x, y).typ == IRONBARS) {
                 /* novelty effect; allowing digging in front of 'eyes' */
-                levl[x - 1][y].wall_info &= ~W_NONDIGGABLE;
+                NH_TILE(x - 1, y).wall_info &= ~W_NONDIGGABLE;
                 if (isok(x - 2, y))
-                    levl[x - 2][y].wall_info &= ~W_NONDIGGABLE;
+                    NH_TILE(x - 2, y).wall_info &= ~W_NONDIGGABLE;
             }
 
     wallification(max(bughack.inarea.x1 - 2, 1),
@@ -469,16 +469,16 @@ baalz_fixup()
        both top and bottom gets a bogus extra connection to room area,
        producing unwanted rectangles; change back to separated legs */
     x = bughack.delarea.x1, y = bughack.delarea.y1;
-    if (isok(x, y) && levl[x][y].typ == TLWALL
-        && isok(x, y + 1) && levl[x][y + 1].typ == TUWALL) {
+    if (isok(x, y) && NH_TILE(x, y).typ == TLWALL
+        && isok(x, y + 1) && NH_TILE(x, y + 1).typ == TUWALL) {
         SET_TYP_XY(x, y, BRCORNER);
         SET_TYP_XY(x, y + 1, HWALL);
         if ((mtmp = m_at(x, y)) != 0) /* something at temporary pool... */
             (void) rloc(mtmp, FALSE);
     }
     x = bughack.delarea.x2, y = bughack.delarea.y2;
-    if (isok(x, y) && levl[x][y].typ == TLWALL
-        && isok(x, y - 1) && levl[x][y - 1].typ == TDWALL) {
+    if (isok(x, y) && NH_TILE(x, y).typ == TLWALL
+        && isok(x, y - 1) && NH_TILE(x, y - 1).typ == TDWALL) {
         SET_TYP_XY(x, y, TRCORNER);
         SET_TYP_XY(x, y - 1, HWALL);
         if ((mtmp = m_at(x, y)) != 0) /* something at temporary pool... */
@@ -719,7 +719,7 @@ struct monst *mtmp;
     if (rn2(1000) < goldprob) {
         if ((otmp = mksobj(GOLD_PIECE, TRUE, FALSE)) != 0) {
             otmp->quan = 1L + rnd(goldprob);
-            otmp->owt = weight(otmp);
+            nh_set_owt(otmp);
             add_to_minv(mtmp, otmp);
         }
     }
@@ -753,7 +753,7 @@ const char *gang;
                 otmp->spe = fruitadd((char *) orcfruit[rn2(SIZE(orcfruit))],
                                      (struct fruit *) 0);
             otmp->quan += (long) rn2(3);
-            otmp->owt = weight(otmp);
+            nh_set_owt(otmp);
         }
     }
 }
@@ -866,7 +866,7 @@ xchar typ;
     dirok[0] = 0; /* lint suppression */
     for (x = 2; x < x_maze_max; x++)
         for (y = 2; y < y_maze_max; y++)
-            if (ACCESSIBLE(levl[x][y].typ) && (x % 2) && (y % 2)) {
+            if (ACCESSIBLE(NH_TILE(x, y).typ) && (x % 2) && (y % 2)) {
                 idx = idx2 = 0;
                 for (dir = 0; dir < 4; dir++) {
                     /* note: mz_move() is a macro which modifies
@@ -884,8 +884,8 @@ xchar typ;
                         idx2++;
                         continue;
                     }
-                    if (!ACCESSIBLE(levl[dx][dy].typ)
-                        && ACCESSIBLE(levl[dx2][dy2].typ)) {
+                    if (!ACCESSIBLE(NH_TILE(dx, dy).typ)
+                        && ACCESSIBLE(NH_TILE(dx2, dy2).typ)) {
                         dirok[idx++] = dir;
                         idx2++;
                     }
@@ -962,7 +962,7 @@ int wallthick;
         /* back up the existing smaller maze */
         for (x = 1; x < x_maze_max; x++)
             for (y = 1; y < y_maze_max; y++) {
-                tmpmap[x][y] = levl[x][y].typ;
+                tmpmap[x][y] = NH_TILE(x, y).typ;
             }
 
         /* do the scaling */
@@ -1113,7 +1113,7 @@ const char *s;
         } while (x == xupstair || y == yupstair /*(direct line)*/
                  || abs(x - xupstair) == abs(y - yupstair)
                  || distmin(x, y, xupstair, yupstair) <= INVPOS_DISTANCE
-                 || !SPACE_POS(levl[x][y].typ) || occupied(x, y));
+                 || !SPACE_POS(NH_TILE(x, y).typ) || occupied(x, y));
         inv_pos.x = x;
         inv_pos.y = y;
         maketrap(inv_pos.x, inv_pos.y, VIBRATING_SQUARE);
@@ -1180,10 +1180,10 @@ schar typ;
     while (pos) {
         x = (int) mazex[pos];
         y = (int) mazey[pos];
-        if (!IS_DOOR(levl[x][y].typ)) {
+        if (!IS_DOOR(NH_TILE(x, y).typ)) {
             /* might still be on edge of MAP, so don't overwrite */
             SET_TYP_XY(x, y, typ);
-            levl[x][y].flags = 0;
+            NH_TILE(x, y).flags = 0;
         }
         q = 0;
         for (a = 0; a < 4; a++)
@@ -1221,10 +1221,10 @@ schar typ;
             typ = ROOM;
     }
 
-    if (!IS_DOOR(levl[x][y].typ)) {
+    if (!IS_DOOR(NH_TILE(x, y).typ)) {
         /* might still be on edge of MAP, so don't overwrite */
         SET_TYP_XY(x, y, typ);
-        levl[x][y].rmflags = 0;
+        NH_TILE(x, y).rmflags = 0;
     }
 
     while (1) {
@@ -1256,7 +1256,7 @@ coord *cc;
         cc->y = 1 + rn2(y_maze_max);
         cpt++;
     } while (cpt < 100
-             && levl[cc->x][cc->y].typ
+             && NH_TILE(cc->x, cc->y).typ
                     != (level.lflags.corrmaze ? CORR : ROOM));
     if (cpt >= 100) {
         int x, y;
@@ -1266,7 +1266,7 @@ coord *cc;
             for (y = 1; y < y_maze_max; y++) {
                 cc->x = x;
                 cc->y = y;
-                if (levl[cc->x][cc->y].typ
+                if (NH_TILE(cc->x, cc->y).typ
                     == (level.lflags.corrmaze ? CORR : ROOM))
                     return;
             }
@@ -1299,8 +1299,8 @@ bound_digging()
 
     found = nonwall = FALSE;
     for (xmin = 0; !found && xmin <= COLNO; xmin++) {
-        lev = &levl[xmin][0];
-        for (y = 0; y <= ROWNO - 1; y++, lev++) {
+        for (y = 0; y <= ROWNO - 1; y++) {
+            lev = &NH_TILE(xmin, y);
             typ = lev->typ;
             if (typ != STONE) {
                 found = TRUE;
@@ -1315,8 +1315,8 @@ bound_digging()
 
     found = nonwall = FALSE;
     for (xmax = COLNO - 1; !found && xmax >= 0; xmax--) {
-        lev = &levl[xmax][0];
-        for (y = 0; y <= ROWNO - 1; y++, lev++) {
+        for (y = 0; y <= ROWNO - 1; y++) {
+            lev = &NH_TILE(xmax, y);
             typ = lev->typ;
             if (typ != STONE) {
                 found = TRUE;
@@ -1331,8 +1331,8 @@ bound_digging()
 
     found = nonwall = FALSE;
     for (ymin = 0; !found && ymin <= ROWNO; ymin++) {
-        lev = &levl[xmin][ymin];
-        for (x = xmin; x <= xmax; x++, lev += ROWNO) {
+        for (x = xmin; x <= xmax; x++) {
+            lev = &NH_TILE(x, ymin);
             typ = lev->typ;
             if (typ != STONE) {
                 found = TRUE;
@@ -1345,8 +1345,8 @@ bound_digging()
 
     found = nonwall = FALSE;
     for (ymax = ROWNO - 1; !found && ymax >= 0; ymax--) {
-        lev = &levl[xmin][ymax];
-        for (x = xmin; x <= xmax; x++, lev += ROWNO) {
+        for (x = xmin; x <= xmax; x++) {
+            lev = &NH_TILE(x, ymax);
             typ = lev->typ;
             if (typ != STONE) {
                 found = TRUE;
@@ -1361,10 +1361,10 @@ bound_digging()
         for (y = 0; y < ROWNO; y++)
             if (y <= ymin || y >= ymax || x <= xmin || x >= xmax) {
 #ifdef DCC30_BUG
-                lev = &levl[x][y];
+                lev = &NH_TILE(x, y);
                 lev->wall_info |= W_NONDIGGABLE;
 #else
-                levl[x][y].wall_info |= W_NONDIGGABLE;
+                NH_TILE(x, y).wall_info |= W_NONDIGGABLE;
 #endif
             }
 }
@@ -1398,7 +1398,7 @@ fumaroles()
         xchar x = rn1(COLNO - 4, 3);
         xchar y = rn1(ROWNO - 4, 3);
 
-        if (levl[x][y].typ == LAVAPOOL) {
+        if (NH_TILE(x, y).typ == LAVAPOOL) {
             /* fast-nle: sequence rng draws (arg eval order unspecified) */
             int cloudsz = 4 + rn2(5), clouddur = rn1(10, 5);
             NhRegion *r = create_gas_cloud(x, y, cloudsz, clouddur);
@@ -1446,10 +1446,8 @@ STATIC_DCL void FDECL(mv_bubble, (struct bubble *, int, int, BOOLEAN_P));
 void
 movebubbles()
 {
-    static const struct rm water_pos = { cmap_to_glyph(S_water), WATER, 0, 0,
-                                         0, 0, 0, 0, 0, 0 };
-    static const struct rm air_pos = { cmap_to_glyph(S_cloud), AIR, 0, 0, 0,
-                                       1, 0, 0, 0, 0 };
+    static const struct rm water_pos = { .glyph = cmap_to_glyph(S_water), .typ = WATER };
+    static const struct rm air_pos = { .glyph = cmap_to_glyph(S_cloud), .typ = AIR, .lit = 1 };
     /* `static boolean up = FALSE;` migrated to per-env
      * nh_cur->g_mkmaze_c_movebubbles_up (calloc zero = FALSE). Renamed
      * to nle_mb_up to avoid shadowing/colliding with generic `up`
@@ -1547,8 +1545,8 @@ movebubbles()
                             b->cons = cons;
                         }
 
-                        levl[x][y] = water_pos;
-                        nh_typ_plane[x][y] = water_pos.typ;
+                        nh_copy_terrain(&NH_TILE(x, y), &water_pos);
+                        nh_move_typ_set(x, y, water_pos.typ);
                         block_point(x, y);
                     }
         }
@@ -1557,8 +1555,8 @@ movebubbles()
 
         for (x = 1; x <= (COLNO - 1); x++)
             for (y = 0; y <= (ROWNO - 1); y++) {
-                levl[x][y] = air_pos;
-                nh_typ_plane[x][y] = air_pos.typ;
+                nh_copy_terrain(&NH_TILE(x, y), &air_pos);
+                nh_move_typ_set(x, y, air_pos.typ);
                 unblock_point(x, y);
                 /* all air or all cloud around the perimeter of the Air
                    level tends to look strange; break up the pattern */
@@ -1703,7 +1701,7 @@ xchar x, y;
 
     if (!isok(x, y))
         return "drink"; /* should never happen */
-    lev = &levl[x][y];
+    lev = &NH_TILE(x, y);
     ltyp = lev->typ;
     if (ltyp == DRAWBRIDGE_UP)
         ltyp = db_under_typ(lev->drawbridgemask);
@@ -1762,8 +1760,8 @@ setup_waterlevel()
     /* set unspecified terrain (stone) and hero's memory to water or air */
     for (x = 1; x <= COLNO - 1; x++)
         for (y = 0; y <= ROWNO - 1; y++) {
-            levl[x][y].glyph = glyph;
-            if (levl[x][y].typ == STONE)
+            NH_TILE(x, y).glyph = glyph;
+            if (NH_TILE(x, y).typ == STONE)
                 SET_TYP_XY(x, y, typ);
         }
 
@@ -1928,11 +1926,11 @@ boolean ini;
             if (b->bm[j + 2] & (1 << i)) {
                 if (Is_waterlevel(&u.uz)) {
                     SET_TYP_XY(x, y, AIR);
-                    levl[x][y].lit = 1;
+                    NH_TILE(x, y).lit = 1;
                     unblock_point(x, y);
                 } else if (Is_airlevel(&u.uz)) {
                     SET_TYP_XY(x, y, CLOUD);
-                    levl[x][y].lit = 1;
+                    NH_TILE(x, y).lit = 1;
                     block_point(x, y);
                 }
             }
@@ -1982,8 +1980,13 @@ boolean ini;
             case CONS_TRAP: {
                 struct trap *btrap = (struct trap *) cons->list;
 
+            {
+                int oldx = btrap->tx, oldy = btrap->ty;
                 btrap->tx = cons->x;
                 btrap->ty = cons->y;
+                nh_trap_update(oldx, oldy);
+                nh_trap_update(btrap->tx, btrap->ty);
+            }
                 break;
             }
 

@@ -888,7 +888,7 @@ struct monst *mon;
     for (o = is_you ? invent : mon->minvent; o; o = o->nobj) {
         /* a_can field is only applicable for armor (which must be worn) */
         if ((o->owornmask & W_ARMOR) != 0L) {
-            armpro = objects[o->otyp].a_can;
+            armpro = object_defaults[o->otyp].a_can;
             if (armpro > mc)
                 mc = armpro;
         }

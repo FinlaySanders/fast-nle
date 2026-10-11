@@ -4,6 +4,8 @@
 
 #ifndef PROP_H
 #define PROP_H
+#include <stdint.h>
+typedef int32_t propbits_t;
 
 /*** What the properties are ***
  *
@@ -92,7 +94,7 @@ enum prop_types {
 /* Definitions were moved here from obj.h and you.h */
 struct prop {
     /*** Properties conveyed by objects ***/
-    long extrinsic;
+    propbits_t extrinsic;
 /* Armor */
 #define W_ARM 0x00000001L  /* Body armor */
 #define W_ARMC 0x00000002L /* Cloak */
@@ -123,10 +125,10 @@ struct prop {
 #define W_CHAIN 0x00400000L  /* Punishment chain */
 
     /*** Property is blocked by an object ***/
-    long blocked; /* Same assignments as extrinsic */
+    propbits_t blocked; /* Same assignments as extrinsic */
 
     /*** Timeouts, permanent properties, and other flags ***/
-    long intrinsic;
+    propbits_t intrinsic;
 /* Timed properties */
 #define TIMEOUT 0x00ffffffL     /* Up to 16 million turns */
                                 /* Permanent properties */

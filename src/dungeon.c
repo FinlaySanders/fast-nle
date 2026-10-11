@@ -213,6 +213,7 @@ int fd;
 
     mread(fd, (genericptr_t) &n_dgns, sizeof(n_dgns));
     mread(fd, (genericptr_t) dungeons, sizeof(dungeon) * (unsigned) n_dgns);
+    nh_deepest_dirty();
     mread(fd, (genericptr_t) &dungeon_topology, sizeof dungeon_topology);
     mread(fd, (genericptr_t) tune, sizeof tune);
 
@@ -867,6 +868,7 @@ init_dungeons()
                 dungeons[i - 1].ledger_start + dungeons[i - 1].num_dunlevs;
             dungeons[i].dunlev_ureached = 0;
         }
+        nh_deepest_dirty();
 
         dungeons[i].dflags.hellish = !!(pd.tmpdungeon[i].tflags & HELLISH);
         dungeons[i].dflags.maze_like = !!(pd.tmpdungeon[i].tflags & MAZELIKE);
@@ -1076,7 +1078,26 @@ boolean noquest;
     register int i;
     d_level tmp;
     register schar ret = 0;
+    int slot = noquest ? 1 : 0;
 
+    if (nh_deepest_valid & (1 << slot)) {
+#ifdef NLE_MISC_VERIFY
+        for (i = 0; i < n_dgns; i++) {
+            if (noquest && i == quest_dnum)
+                continue;
+            tmp.dlevel = dungeons[i].dunlev_ureached;
+            if (tmp.dlevel == 0)
+                continue;
+            tmp.dnum = i;
+            if (depth(&tmp) > ret)
+                ret = depth(&tmp);
+        }
+        if (ret != nh_deepest_val[slot])
+            fprintf(stderr, "DEEPEST_MISMATCH turn=%ld cached=%d walked=%d\n", moves, nh_deepest_val[slot], ret);
+        nh_deepest_val[slot] = ret;
+#endif
+        return (xchar) nh_deepest_val[slot];
+    }
     for (i = 0; i < n_dgns; i++) {
         if (noquest && i == quest_dnum)
             continue;
@@ -1087,6 +1108,7 @@ boolean noquest;
         if (depth(&tmp) > ret)
             ret = depth(&tmp);
     }
+    nh_deepest_val[slot] = ret; nh_deepest_valid |= 1 << slot;
     return (xchar) ret;
 }
 
@@ -2592,9 +2614,9 @@ recalc_mapseen()
     for (x = 1; x < COLNO; x++) {
         for (y = 0; y < ROWNO; y++) {
             if (cansee(x, y) || (x == u.ux && y == u.uy && !Levitation)) {
-                ltyp = levl[x][y].typ;
+                ltyp = NH_TILE(x, y).typ;
                 if (ltyp == DRAWBRIDGE_UP)
-                    ltyp = db_under_typ(levl[x][y].drawbridgemask);
+                    ltyp = db_under_typ(NH_TILE(x, y).drawbridgemask);
                 if ((mtmp = m_at(x, y)) != 0
                     && M_AP_TYPE(mtmp) == M_AP_FURNITURE && canseemon(mtmp))
                     ltyp = cmap_to_type(mtmp->mappearance);
@@ -2648,9 +2670,9 @@ recalc_mapseen()
                 break;
             case ALTAR:
                 atmp = (Is_astralevel(&u.uz)
-                        && (levl[x][y].seenv & SVALL) != SVALL)
+                        && (NH_TILE(x, y).seenv & SVALL) != SVALL)
                          ? MSA_NONE
-                         : Amask2msa(levl[x][y].altarmask);
+                         : Amask2msa(NH_TILE(x, y).altarmask);
                 if (!mptr->feat.naltar)
                     mptr->feat.msalign = atmp;
                 else if (mptr->feat.msalign != atmp)
@@ -2688,7 +2710,7 @@ recalc_mapseen()
                      * both throne and door on the lower of the two rows.
                      */
                     for (ty = y - 1; ty <= y + 1; ++ty)
-                        if (isok(tx, ty) && IS_THRONE(levl[tx][ty].typ)) {
+                        if (isok(tx, ty) && IS_THRONE(NH_TILE(tx, ty).typ)) {
                             mptr->mflags.ludios = 1;
                             break;
                         }

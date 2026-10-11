@@ -434,7 +434,7 @@ register struct obj *obj;
     if (unmap_invisible(rx,ry))
         pline_The("invisible monster must have moved.");
 
-    lev = &levl[rx][ry];
+    lev = &NH_TILE(rx, ry);
     switch (lev->typ) {
     case SDOOR:
         You_hear(hollow_str, "door");
@@ -661,7 +661,7 @@ struct obj *obj;
     spotmon = canspotmon(mtmp);
  got_target:
 
-    if (!spotmon && !glyph_is_invisible(levl[cc.x][cc.y].glyph)) {
+    if (!spotmon && !glyph_is_invisible(NH_TILE(cc.x, cc.y).glyph)) {
         /* for the unleash case, we don't verify whether this unseen
            monster is the creature attached to the current leash */
         You("fail to %sleash something.", obj->leashmon ? "un" : "");
@@ -763,6 +763,26 @@ register xchar x, y;
     register struct obj *otmp;
     register struct monst *mtmp;
 
+    /* no leash carried: nothing to check (count cached per inventory generation) */
+    if (nh_leash_valid && nh_leash_gen == nh_invgen && nh_leash_cnt == 0) {
+#ifdef NLE_MISC_VERIFY
+        for (otmp = invent; otmp; otmp = otmp->nobj)
+            if (otmp->otyp == LEASH) {
+                fprintf(stderr, "LEASH_MISMATCH turn=%ld\n", moves);
+                break;
+            }
+#endif
+        return;
+    }
+    {
+        int n = 0;
+        for (otmp = invent; otmp; otmp = otmp->nobj)
+            if (otmp->otyp == LEASH)
+                n++;
+        nh_leash_cnt = n > 255 ? 255 : n; nh_leash_gen = nh_invgen; nh_leash_valid = 1;
+        if (!n)
+            return;
+    }
     for (otmp = invent; otmp; otmp = otmp->nobj) {
         if (otmp->otyp != LEASH || otmp->leashmon == 0)
             continue;
@@ -1261,7 +1281,7 @@ struct obj **optr;
         /* candles are now gone */
         useupall(obj);
         /* candelabrum's weight is changing */
-        otmp->owt = weight(otmp);
+        nh_set_owt(otmp);
         update_inventory();
     }
 }
@@ -1394,7 +1414,7 @@ struct obj *obj;
             pline("%s flame%s %s%s", s_suffix(Yname2(obj)), plur(obj->quan),
                   otense(obj, "burn"), Blind ? "." : " brightly!");
             if (obj->unpaid && costly_spot(u.ux, u.uy)
-                && obj->age == 20L * (long) objects[obj->otyp].oc_cost) {
+                && obj->age == 20L * (long) object_defaults[obj->otyp].oc_cost) {
                 const char *ithem = (obj->quan > 1L) ? "them" : "it";
 
                 verbalize("You burn %s, you bought %s!", ithem, ithem);
@@ -1492,7 +1512,7 @@ dorub()
                to be fatal (a hostile djinni has no chance to attack yet,
                but an indebted one who grants a wish might bestow an
                artifact which blasts the hero with lethal results) */
-            uwep->otyp = OIL_LAMP;
+            NH_PILE_WRITE(uwep, (uwep->otyp = OIL_LAMP));
             uwep->spe = 0; /* for safety */
             uwep->age = rn1(500, 1000);
             if (uwep->lamplit)
@@ -1534,7 +1554,7 @@ genericptr arg;
 int x, y;
 {
     int traj = *(int *) arg;
-    struct rm *lev = &levl[x][y];
+    struct rm *lev = &NH_TILE(x, y);
 
     if (Passes_walls)
         return TRUE;
@@ -1587,7 +1607,7 @@ boolean showmsg;
         return FALSE;
     } else {
         coord uc, tc;
-        struct rm *lev = &levl[u.ux][u.uy];
+        struct rm *lev = &NH_TILE(u.ux, u.uy);
         /* we want to categorize trajectory for use in determining
            passage through doorways: horizonal, vertical, or diagonal;
            since knight's jump and other irregular directions are
@@ -1890,7 +1910,7 @@ struct obj *obj;
         can->corpsenm = corpse->corpsenm;
         can->cursed = obj->cursed;
         can->blessed = obj->blessed;
-        can->owt = weight(can);
+        nh_set_owt(can);
         can->known = 1;
         /* Mark tinned tins. No spinach allowed... */
         set_tin_variety(can, HOMEMADE_TIN);
@@ -2805,7 +2825,7 @@ struct obj *obj;
             pline1(msg_snap);
 
     } else if (mtmp) {
-        if (!canspotmon(mtmp) && !glyph_is_invisible(levl[rx][ry].glyph)) {
+        if (!canspotmon(mtmp) && !glyph_is_invisible(NH_TILE(rx, ry).glyph)) {
             pline("A monster is there that you couldn't see.");
             map_invisible(rx, ry);
         }
@@ -3450,7 +3470,7 @@ struct obj *obj;
                  */
                 typ = fillholetyp(x, y, FALSE);
                 if (typ != ROOM) {
-                    { SET_TYP_XY(x, y, typ); levl[x][y].rmflags = 0; }
+                    { SET_TYP_XY(x, y, typ); NH_TILE(x, y).rmflags = 0; }
                     liquid_flow(x, y, typ, t_at(x, y),
                                 fillmsg
                                   ? (char *) 0
@@ -3459,7 +3479,7 @@ struct obj *obj;
                 } else
                     digactualhole(x, y, BY_OBJECT, (rn2(obj->spe) < 3
                                                     || (!Can_dig_down(&u.uz)
-                                                        && !levl[x][y].candig))
+                                                        && !NH_TILE(x, y).candig))
                                                       ? PIT
                                                       : HOLE);
             }

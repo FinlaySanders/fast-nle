@@ -62,8 +62,8 @@ STATIC_DCL int FDECL(spec_applies, (const struct artifact *, struct monst *));
 STATIC_DCL int FDECL(arti_invoke, (struct obj *));
 STATIC_DCL boolean FDECL(Mb_hit, (struct monst * magr, struct monst *mdef,
                                 struct obj *, int *, int, BOOLEAN_P, char *));
-STATIC_DCL unsigned long FDECL(abil_to_spfx, (long *));
-STATIC_DCL uchar FDECL(abil_to_adtyp, (long *));
+STATIC_DCL unsigned long FDECL(abil_to_spfx, (propbits_t *));
+STATIC_DCL uchar FDECL(abil_to_adtyp, (propbits_t *));
 STATIC_DCL int FDECL(glow_strength, (int));
 STATIC_DCL boolean FDECL(untouchable, (struct obj *, BOOLEAN_P));
 STATIC_DCL int FDECL(count_surround_traps, (int, int));
@@ -166,7 +166,7 @@ aligntyp alignment; /* target alignment, or A_NONE */
     int m, n, altn;
     boolean by_align = (alignment != A_NONE);
     short o_typ = (by_align || !otmp) ? 0 : otmp->otyp;
-    boolean unique = !by_align && otmp && objects[o_typ].oc_unique;
+    boolean unique = !by_align && otmp && object_defaults[o_typ].oc_unique;
     short eligible[NROFARTIFACTS];
 
     n = altn = 0;    /* no candidates found yet */
@@ -394,7 +394,7 @@ const char *name;
     register const struct artifact *a;
     const char *aname, *odesc, *other;
     boolean sametype[NUM_OBJECTS];
-    int i, lo, hi, otyp = otmp->otyp, ocls = objects[otyp].oc_class;
+    int i, lo, hi, otyp = otmp->otyp, ocls = object_defaults[otyp].oc_class;
 
     if (!*name)
         return FALSE;
@@ -412,7 +412,7 @@ const char *name;
         && (odesc = OBJ_DESCR(objects[otyp])) != 0) {
         obj_shuffle_range(otyp, &lo, &hi);
         for (i = bases[ocls]; i < NUM_OBJECTS; i++) {
-            if (objects[i].oc_class != ocls)
+            if (object_defaults[i].oc_class != ocls)
                 break;
             if (!objects[i].oc_name_known
                 && (other = OBJ_DESCR(objects[i])) != 0
@@ -484,7 +484,7 @@ boolean being_worn;
 {
     const struct artifact *arti;
 
-    if (being_worn && objects[otmp->otyp].oc_oprop == PROTECTION)
+    if (being_worn && object_defaults[otmp->otyp].oc_oprop == PROTECTION)
         return TRUE;
     arti = get_artifact(otmp);
     if (!arti)
@@ -503,7 +503,7 @@ struct obj *otmp;
 boolean on;
 long wp_mask;
 {
-    long *mask = 0;
+    propbits_t *mask = 0;
     register const struct artifact *art, *oart = get_artifact(otmp);
     register struct obj *obj;
     register uchar dtyp;
@@ -537,7 +537,7 @@ long wp_mask;
             if (obj != otmp && obj->oartifact) {
                 art = get_artifact(obj);
                 if (art && art->cary.adtyp == dtyp) {
-                    mask = (long *) 0;
+                    mask = (propbits_t *) 0;
                     break;
                 }
             }
@@ -1631,7 +1631,7 @@ struct obj *obj;
                     otmp->spe = 0;
             } else
                 otmp->quan += rnd(5);
-            otmp->owt = weight(otmp);
+            nh_set_owt(otmp);
             otmp = hold_another_object(otmp, "Suddenly %s out.",
                                        aobjnam(otmp, "fall"), (char *) 0);
             nhUse(otmp);
@@ -1767,19 +1767,19 @@ arti_cost(otmp)
 struct obj *otmp;
 {
     if (!otmp->oartifact)
-        return (long) objects[otmp->otyp].oc_cost;
+        return (long) object_defaults[otmp->otyp].oc_cost;
     else if (artilist[(int) otmp->oartifact].cost)
         return artilist[(int) otmp->oartifact].cost;
     else
-        return (100L * (long) objects[otmp->otyp].oc_cost);
+        return (100L * (long) object_defaults[otmp->otyp].oc_cost);
 }
 
 STATIC_OVL uchar
 abil_to_adtyp(abil)
-long *abil;
+propbits_t *abil;
 {
     struct abil2adtyp_tag {
-        long *abil;
+        propbits_t *abil;
         uchar adtyp;
     } abil2adtyp[] = {
         { &EFire_resistance, AD_FIRE },
@@ -1801,9 +1801,9 @@ long *abil;
 
 STATIC_OVL unsigned long
 abil_to_spfx(abil)
-long *abil;
+propbits_t *abil;
 {
-    /* Refactor stage 4: was 'long *abil' which required static
+    /* Refactor stage 4: was 'propbits_t *abil' which required static
      * initialization with &Eprop addresses. Since 'u' is now per-instance
      * heap-alloc, those aren't compile-time constants. Store the property
      * index instead; compute the extrinsic pointer at comparison time. */
@@ -1838,7 +1838,7 @@ long *abil;
  */
 struct obj *
 what_gives(abil)
-long *abil;
+propbits_t *abil;
 {
     struct obj *obj;
     uchar dtyp;
@@ -2019,7 +2019,7 @@ boolean loseit;    /* whether to drop it if hero can longer touch it */
             hitfloor(obj, TRUE);
         } else {
             /* dropx gives a message iff item lands on an altar */
-            if (!IS_ALTAR(levl[u.ux][u.uy].typ))
+            if (!IS_ALTAR(NH_TILE(u.ux, u.uy).typ))
                 pline("%s to the %s.", Tobjnam(obj, "fall"),
                       surface(u.ux, u.uy));
             dropx(obj);
@@ -2169,7 +2169,7 @@ int x, y;
                 ++ret;
                 continue;
             }
-            levp = &levl[dx][dy];
+            levp = &NH_TILE(dx, dy);
             if (IS_DOOR(levp->typ) && (levp->doormask & D_TRAPPED) != 0) {
                 ++ret;
                 continue;

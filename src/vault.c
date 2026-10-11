@@ -83,7 +83,7 @@ boolean forceshow;
                     m_into_limbo(mtmp);
             }
         }
-        lev = &levl[fcx][fcy];
+        lev = &NH_TILE(fcx, fcy);
         if (lev->typ == CORR && cansee(fcx, fcy))
             sawcorridor = TRUE;
         SET_TYP_P(lev, egrd->fakecorr[fcbeg].ftyp);
@@ -108,7 +108,7 @@ boolean forceshow;
     /* only give encased message if hero is still alive (might get here
        via paygd() -> mongone() -> grddead() when game is over;
        died: no message, quit: message) */
-    if (IS_ROCK(levl[u.ux][u.uy].typ) && (Upolyd ? u.mh : u.uhp) > 0
+    if (IS_ROCK(NH_TILE(u.ux, u.uy).typ) && (Upolyd ? u.mh : u.uhp) > 0
         && !silently)
         You("are encased in rock.");
     return TRUE;
@@ -129,7 +129,7 @@ int x, y;
         for (j = y - 1; j <= y + 1; ++j) {
             if (!isok(i, j))
                 continue;
-            lev = &levl[i][j];
+            lev = &NH_TILE(i, j);
             /* [possible bug: when (i != x || j != y), perhaps we ought
                to check whether the spot on the far side is lit instead
                of doing a blanket blackout of adjacent locations] */
@@ -283,10 +283,10 @@ xchar *rx, *ry;
                 if (guard && ((x == guard->mx && y == guard->my)
                               || (guard->isgd && in_fcorridor(guard, x, y))))
                     continue;
-                if (levl[x][y].typ == CORR) {
+                if (NH_TILE(x, y).typ == CORR) {
                     lx = (x < u.ux) ? x + 1 : (x > u.ux) ? x - 1 : x;
                     ly = (y < u.uy) ? y + 1 : (y > u.uy) ? y - 1 : y;
-                    if (levl[lx][ly].typ != STONE && levl[lx][ly].typ != CORR)
+                    if (NH_TILE(lx, ly).typ != STONE && NH_TILE(lx, ly).typ != CORR)
                         goto incr_radius;
                     *rx = x;
                     *ry = y;
@@ -334,30 +334,30 @@ invault()
         /* next find a good place for a door in the wall */
         x = u.ux;
         y = u.uy;
-        if (levl[x][y].typ != ROOM) { /* player dug a door and is in it */
-            if (levl[x + 1][y].typ == ROOM)
+        if (NH_TILE(x, y).typ != ROOM) { /* player dug a door and is in it */
+            if (NH_TILE(x + 1, y).typ == ROOM)
                 x = x + 1;
-            else if (levl[x][y + 1].typ == ROOM)
+            else if (NH_TILE(x, y + 1).typ == ROOM)
                 y = y + 1;
-            else if (levl[x - 1][y].typ == ROOM)
+            else if (NH_TILE(x - 1, y).typ == ROOM)
                 x = x - 1;
-            else if (levl[x][y - 1].typ == ROOM)
+            else if (NH_TILE(x, y - 1).typ == ROOM)
                 y = y - 1;
-            else if (levl[x + 1][y + 1].typ == ROOM) {
+            else if (NH_TILE(x + 1, y + 1).typ == ROOM) {
                 x = x + 1;
                 y = y + 1;
-            } else if (levl[x - 1][y - 1].typ == ROOM) {
+            } else if (NH_TILE(x - 1, y - 1).typ == ROOM) {
                 x = x - 1;
                 y = y - 1;
-            } else if (levl[x + 1][y - 1].typ == ROOM) {
+            } else if (NH_TILE(x + 1, y - 1).typ == ROOM) {
                 x = x + 1;
                 y = y - 1;
-            } else if (levl[x - 1][y + 1].typ == ROOM) {
+            } else if (NH_TILE(x - 1, y + 1).typ == ROOM) {
                 x = x - 1;
                 y = y + 1;
             }
         }
-        while (levl[x][y].typ == ROOM) {
+        while (NH_TILE(x, y).typ == ROOM) {
             register int dx, dy;
 
             dx = (gx > x) ? 1 : (gx < x) ? -1 : 0;
@@ -368,16 +368,16 @@ invault()
                 y += dy;
         }
         if (x == u.ux && y == u.uy) {
-            if (levl[x + 1][y].typ == HWALL || levl[x + 1][y].typ == DOOR)
+            if (NH_TILE(x + 1, y).typ == HWALL || NH_TILE(x + 1, y).typ == DOOR)
                 x = x + 1;
-            else if (levl[x - 1][y].typ == HWALL
-                     || levl[x - 1][y].typ == DOOR)
+            else if (NH_TILE(x - 1, y).typ == HWALL
+                     || NH_TILE(x - 1, y).typ == DOOR)
                 x = x - 1;
-            else if (levl[x][y + 1].typ == VWALL
-                     || levl[x][y + 1].typ == DOOR)
+            else if (NH_TILE(x, y + 1).typ == VWALL
+                     || NH_TILE(x, y + 1).typ == DOOR)
                 y = y + 1;
-            else if (levl[x][y - 1].typ == VWALL
-                     || levl[x][y - 1].typ == DOOR)
+            else if (NH_TILE(x, y - 1).typ == VWALL
+                     || NH_TILE(x, y - 1).typ == DOOR)
                 y = y - 1;
             else
                 return;
@@ -523,8 +523,8 @@ invault()
         EGD(guard)->fcbeg = 0;
         EGD(guard)->fakecorr[0].fx = x;
         EGD(guard)->fakecorr[0].fy = y;
-        if (IS_WALL(levl[x][y].typ)) {
-            EGD(guard)->fakecorr[0].ftyp = levl[x][y].typ;
+        if (IS_WALL(NH_TILE(x, y).typ)) {
+            EGD(guard)->fakecorr[0].ftyp = NH_TILE(x, y).typ;
         } else { /* the initial guard location is a dug door */
             int vlt = EGD(guard)->vroom;
             xchar lowx = rooms[vlt].lx, hix = rooms[vlt].hx;
@@ -544,7 +544,7 @@ invault()
                 EGD(guard)->fakecorr[0].ftyp = VWALL;
         }
         SET_TYP_XY(x, y, DOOR);
-        levl[x][y].doormask = D_NODOOR;
+        NH_TILE(x, y).doormask = D_NODOOR;
         unblock_point(x, y); /* doesn't block light */
         EGD(guard)->fcend = 1;
         EGD(guard)->warncnt = 1;
@@ -588,7 +588,7 @@ struct monst *grd;
             if (x != lox && x != hix && y != loy && y != hiy)
                 continue;
 
-            if (!IS_WALL(levl[x][y].typ) && !in_fcorridor(grd, x, y)) {
+            if (!IS_WALL(NH_TILE(x, y).typ) && !in_fcorridor(grd, x, y)) {
                 if ((mon = m_at(x, y)) != 0 && mon != grd) {
                     if (mon->mtame)
                         yelp(mon);
@@ -609,7 +609,7 @@ struct monst *grd;
                 else /* not left or right side, must be top or bottom */
                     typ = HWALL;
                 SET_TYP_XY(x, y, typ);
-                levl[x][y].doormask = 0;
+                NH_TILE(x, y).doormask = 0;
                 /*
                  * hack: player knows walls are restored because of the
                  * message, below, so show this on the screen.
@@ -857,7 +857,7 @@ register struct monst *grd;
     if (egrd->fcend > 1) {
         if (egrd->fcend > 2 && in_fcorridor(grd, grd->mx, grd->my)
             && !egrd->gddone && !in_fcorridor(grd, u.ux, u.uy)
-            && levl[egrd->fakecorr[0].fx][egrd->fakecorr[0].fy].typ
+            && NH_TILE(egrd->fakecorr[0].fx, egrd->fakecorr[0].fy).typ
                    == egrd->fakecorr[0].ftyp) {
             pline("%s, confused, disappears.", noit_Monnam(grd));
             disappear_msg_seen = TRUE;
@@ -927,7 +927,7 @@ register struct monst *grd;
         for (ny = y - 1; ny <= y + 1; ny++) {
             if ((nx == x || ny == y) && (nx != x || ny != y)
                 && isok(nx, ny)) {
-                typ = (crm = &levl[nx][ny])->typ;
+                typ = (crm = &NH_TILE(nx, ny))->typ;
                 if (!IS_STWALL(typ) && !IS_POOL(typ)) {
                     if (in_fcorridor(grd, nx, ny))
                         goto nextnxy;
@@ -967,11 +967,11 @@ register struct monst *grd;
     else
         ny += dy;
 
-    while ((typ = (crm = &levl[nx][ny])->typ) != STONE) {
+    while ((typ = (crm = &NH_TILE(nx, ny))->typ) != STONE) {
         /* in view of the above we must have IS_WALL(typ) or typ == POOL */
         /* must be a wall here */
         if (isok(nx + nx - x, ny + ny - y) && !IS_POOL(typ)
-            && IS_ROOM(levl[nx + nx - x][ny + ny - y].typ)) {
+            && IS_ROOM(NH_TILE(nx + nx - x, ny + ny - y).typ)) {
             SET_TYP_P(crm, DOOR);
             crm->doormask = D_NODOOR;
             goto proceed;
@@ -1099,7 +1099,7 @@ boolean silently;
     }
     for (coins = invent; coins; coins = nextcoins) {
         nextcoins = coins->nobj;
-        if (objects[coins->otyp].oc_class == COIN_CLASS) {
+        if (object_defaults[coins->otyp].oc_class == COIN_CLASS) {
             freeinv(coins);
             place_object(coins, gx, gy);
             stackobj(coins);
@@ -1116,11 +1116,26 @@ hidden_gold()
     long value = 0L;
     struct obj *obj;
 
+    /* cached until the set of objects reachable from invent changes */
+    if (nh_hgold_valid && nh_hgold_gen == nh_invgen) {
+#ifdef NLE_MISC_VERIFY
+        for (obj = invent; obj; obj = obj->nobj)
+            if (Has_contents(obj))
+                value += contained_gold(obj);
+        if (value != nh_hgold_val) {
+            fprintf(stderr, "HGOLD_MISMATCH turn=%ld cached=%ld walked=%ld\n", moves, nh_hgold_val, value);
+            nh_hgold_val = value;
+        }
+        return value;
+#else
+        return nh_hgold_val;
+#endif
+    }
     for (obj = invent; obj; obj = obj->nobj)
         if (Has_contents(obj))
             value += contained_gold(obj);
     /* unknown gold stuck inside statues may cause some consternation... */
-
+    nh_hgold_val = value; nh_hgold_gen = nh_invgen; nh_hgold_valid = 1;
     return value;
 }
 

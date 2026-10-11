@@ -462,14 +462,14 @@ struct obj *obj;
         return TRUE;
     /* known && !oc_name_known is possible after amnesia/mind flayer */
     if (obj->oclass == RING_CLASS)
-        return (boolean) (objects[obj->otyp].oc_charged
+        return (boolean) (object_defaults[obj->otyp].oc_charged
                           && (obj->known
                               || (obj->dknown
                                   && objects[obj->otyp].oc_name_known)));
     if (is_weptool(obj)) /* specific check before general tools */
         return FALSE;
     if (obj->oclass == TOOL_CLASS)
-        return (boolean) objects[obj->otyp].oc_charged;
+        return (boolean) object_defaults[obj->otyp].oc_charged;
     return FALSE; /* why are weapons/armor considered charged anyway? */
 }
 
@@ -545,7 +545,7 @@ int curse_bless;
 #endif
         }
 
-    } else if (obj->oclass == RING_CLASS && objects[obj->otyp].oc_charged) {
+    } else if (obj->oclass == RING_CLASS && object_defaults[obj->otyp].oc_charged) {
         /* charging does not affect ring's curse/bless status */
         int s = is_blessed ? rnd(3) : is_cursed ? -rnd(2) : 1;
         boolean is_on = (obj == uleft || obj == uright);
@@ -582,7 +582,7 @@ int curse_bless;
     } else if (obj->oclass == TOOL_CLASS) {
         int rechrg = (int) obj->recharged;
 
-        if (objects[obj->otyp].oc_charged) {
+        if (object_defaults[obj->otyp].oc_charged) {
             /* tools don't have a limit, but the counter used does */
             if (rechrg < 7) /* recharge_limit */
                 obj->recharged++;
@@ -731,6 +731,7 @@ forget_single_object(obj_id)
 int obj_id;
 {
     objects[obj_id].oc_name_known = 0;
+    nle_discoveries_changed();
     objects[obj_id].oc_pre_discovered = 0; /* a discovery when relearned */
     if (objects[obj_id].oc_uname) {
         free((genericptr_t) objects[obj_id].oc_uname);
@@ -750,7 +751,7 @@ int oclass;
     int i;
 
     for (i = bases[oclass];
-         i < NUM_OBJECTS && objects[i].oc_class == oclass; i++)
+         i < NUM_OBJECTS && object_defaults[i].oc_class == oclass; i++)
         forget_single_object(i);
 }
 #endif
@@ -818,9 +819,9 @@ int howmuch;
         for (zy = 0; zy < ROWNO; zy++)
             if (howmuch & ALL_MAP || rn2(7)) {
                 /* Zonk all memory of this location. */
-                levl[zx][zy].seenv = 0;
-                levl[zx][zy].waslit = 0;
-                levl[zx][zy].glyph = cmap_to_glyph(S_stone);
+                NH_TILE(zx, zy).seenv = 0;
+                NH_TILE(zx, zy).waslit = 0;
+                NH_TILE(zx, zy).glyph = cmap_to_glyph(S_stone);
                 lastseentyp[zx][zy] = STONE;
             }
     /* forget overview data for this level */
@@ -966,7 +967,7 @@ get_valid_stinking_cloud_pos(x,y)
 int x,y;
 {
     return (!(!isok(x,y) || !cansee(x, y)
-              || !ACCESSIBLE(levl[x][y].typ)
+              || !ACCESSIBLE(NH_TILE(x, y).typ)
               || distu(x, y) >= 32));
 }
 
@@ -1017,7 +1018,7 @@ struct obj *sobj; /* scroll, or fake spellbook object for scroll-like spell */
             new_erodeproof;
     struct obj *otmp;
 
-    if (objects[otyp].oc_magic)
+    if (object_defaults[otyp].oc_magic)
         exercise(A_WIS, TRUE);                       /* just for trying */
     already_known = (sobj->oclass == SPBOOK_CLASS /* spell */
                      || objects[otyp].oc_name_known);
@@ -1121,7 +1122,7 @@ struct obj *sobj; /* scroll, or fake spellbook object for scroll-like spell */
             pline("%s merges and hardens!", Yname2(otmp));
             setworn((struct obj *) 0, W_ARM);
             /* assumes same order */
-            otmp->otyp += GRAY_DRAGON_SCALE_MAIL - GRAY_DRAGON_SCALES;
+            NH_PILE_WRITE(otmp, (otmp->otyp += GRAY_DRAGON_SCALE_MAIL - GRAY_DRAGON_SCALES));
             if (sblessed) {
                 otmp->spe++;
                 if (!otmp->blessed)
@@ -1313,7 +1314,7 @@ struct obj *sobj; /* scroll, or fake spellbook object for scroll-like spell */
                         if (obj->oclass == WEAPON_CLASS) {
                             /* mergeable weapon test covers ammo,
                                missiles, spears, daggers & knives */
-                            if (!objects[obj->otyp].oc_merge)
+                            if (!object_defaults[obj->otyp].oc_merge)
                                 wornmask = 0L;
                         } else if (obj->oclass == GEM_CLASS) {
                             /* possibly ought to check whether
@@ -1568,8 +1569,8 @@ struct obj *sobj; /* scroll, or fake spellbook object for scroll-like spell */
 
             for (x = 1; x < COLNO; x++)
                 for (y = 0; y < ROWNO; y++)
-                    if (levl[x][y].typ == SDOOR)
-                        cvt_sdoor_to_door(&levl[x][y]);
+                    if (NH_TILE(x, y).typ == SDOOR)
+                        cvt_sdoor_to_door(&NH_TILE(x, y));
             /* do_mapping() already reveals secret passages */
         }
         scr_known = TRUE;
@@ -1682,8 +1683,8 @@ struct obj *sobj; /* scroll, or fake spellbook object for scroll-like spell */
                     for (y = u.uy - 1; y <= u.uy + 1; y++) {
                         /* Is this a suitable spot? */
                         if (isok(x, y) && !closed_door(x, y)
-                            && !IS_ROCK(levl[x][y].typ)
-                            && !IS_AIR(levl[x][y].typ)
+                            && !IS_ROCK(NH_TILE(x, y).typ)
+                            && !IS_AIR(NH_TILE(x, y).typ)
                             && (x != u.ux || y != u.uy)) {
                             nboulders +=
                                 drop_boulder_on_monster(x, y, confused, TRUE);
@@ -1755,7 +1756,7 @@ boolean confused, helmet_protects, byu, skip_uswallow;
     if (!otmp2)
         return;
     otmp2->quan = confused ? rn1(5, 2) : 1;
-    otmp2->owt = weight(otmp2);
+    nh_set_owt(otmp2);
     if (!amorphous(youmonst.data) && !Passes_walls
         && !noncorporeal(youmonst.data) && !unsolid(youmonst.data)) {
         You("are hit by %s!", doname(otmp2));
@@ -1795,7 +1796,7 @@ boolean confused, byu;
     if (!otmp2)
         return FALSE; /* Shouldn't happen */
     otmp2->quan = confused ? rn1(5, 2) : 1;
-    otmp2->owt = weight(otmp2);
+    nh_set_owt(otmp2);
 
     /* Find the monster here (won't be player) */
     mtmp = m_at(x, y);
@@ -1926,7 +1927,7 @@ genericptr_t val;
     struct litmon *gremlin;
 
     if (val) {
-        levl[x][y].lit = 1;
+        NH_TILE(x, y).lit = 1;
         if ((mtmp = m_at(x, y)) != 0 && mtmp->data == &mons[PM_GREMLIN]) {
             gremlin = (struct litmon *) alloc(sizeof *gremlin);
             gremlin->mon = mtmp;
@@ -1934,7 +1935,7 @@ genericptr_t val;
             gremlins = gremlin;
         }
     } else {
-        levl[x][y].lit = 0;
+        NH_TILE(x, y).lit = 0;
         snuff_light_source(x, y);
     }
 }
@@ -1996,7 +1997,7 @@ struct obj *obj;
     if (Is_rogue_level(&u.uz)) {
         /* Can't use do_clear_area because MAX_RADIUS is too small */
         /* rogue lighting must light the entire room */
-        int rnum = levl[u.ux][u.uy].roomno - ROOMOFFSET;
+        int rnum = NH_TILE(u.ux, u.uy).roomno - ROOMOFFSET;
         int rx, ry;
 
         if (rnum >= 0) {
@@ -2586,7 +2587,7 @@ struct _create_particular_data *d;
         }
         if (d->invisible) {
             mon_set_minvis(mtmp);
-            if (does_block(mx, my, &levl[mx][my]))
+            if (does_block(mx, my, &NH_TILE(mx, my)))
                 block_point(mx, my);
             else
                 unblock_point(mx, my);

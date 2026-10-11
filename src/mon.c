@@ -8,7 +8,9 @@
 #define MKROOM_H
 #endif
 
+#include <stddef.h>
 #include "hack.h"
+extern int FDECL(dochugw, (struct monst *)) __attribute__((always_inline));
 
 /* Function-local statics migrated to nle_ctx_t */
 #define msgmv (nh_cur->g_mon_c_elemental_clog_msgmv)
@@ -22,6 +24,77 @@
 /* Monster-death flags per-env (were STATIC_VAR boolean). */
 #define vamp_rise_msg (nh_cur->g_mon_c_vamp_rise_msg)
 #define disintegested (nh_cur->g_mon_c_disintegested)
+
+/* Stable addresses, reusable storage and ownership follow the game, not the
+ * worker thread. Monster layout and level serialization remain unchanged. */
+#define NH_MON_BLOCK_SIZE 64
+struct nh_mon_slot {
+    struct monst value;
+    unsigned char padding[8];
+};
+struct nh_mon_block {
+    struct nh_mon_block *next;
+    unsigned char padding[56];
+    struct nh_mon_slot slots[NH_MON_BLOCK_SIZE];
+};
+_Static_assert(sizeof(struct nh_mon_slot)==128,"two lines per monster");
+_Static_assert(offsetof(struct nh_mon_block,slots)==64,"aligned slots");
+_Static_assert(offsetof(struct monst,minvent)==64,"hot prefix in first line");
+struct nh_mon_pool {
+    struct nh_mon_block *blocks;
+    struct monst *available;
+};
+
+struct monst *
+nh_mon_alloc(void)
+{
+    struct nh_mon_pool *pool = nh_cur->g_mon_c_mon_pool;
+    struct monst *mon;
+    if (!pool) {
+        pool = (struct nh_mon_pool *) alloc(sizeof *pool);
+        pool->blocks = (struct nh_mon_block *) 0;
+        pool->available = (struct monst *) 0;
+        nh_cur->g_mon_c_mon_pool = pool;
+    }
+    if (!pool->available) {
+        int i;
+        struct nh_mon_block *block = (struct nh_mon_block *) 0;
+        if (posix_memalign((void **) &block,64,sizeof *block))
+            panic("monster pool allocation failed");
+        block->next = pool->blocks;
+        pool->blocks = block;
+        for (i = NH_MON_BLOCK_SIZE - 1; i >= 0; --i) {
+            block->slots[i].value.nmon = pool->available;
+            pool->available = &block->slots[i].value;
+        }
+    }
+    mon = pool->available;
+    pool->available = mon->nmon;
+    return mon;
+}
+
+void
+nh_mon_free(struct monst *mon)
+{
+    struct nh_mon_pool *pool = nh_cur->g_mon_c_mon_pool;
+    mon->nmon = pool->available;
+    pool->available = mon;
+}
+
+void
+nh_mon_pool_release(genericptr_t storage)
+{
+    struct nh_mon_pool *pool = (struct nh_mon_pool *) storage;
+    if (pool) {
+        struct nh_mon_block *block = pool->blocks;
+        while (block) {
+            struct nh_mon_block *next = block->next;
+            free((genericptr_t) block);
+            block = next;
+        }
+        free((genericptr_t) pool);
+    }
+}
 
 STATIC_DCL void FDECL(sanity_check_single_mon,
                       (struct monst *, BOOLEAN_P, const char *) );
@@ -394,7 +467,7 @@ unsigned corpseflags;
     case PM_CLAY_GOLEM:
         obj = mksobj_at(ROCK, x, y, FALSE, FALSE);
         obj->quan = (long) (rn2(20) + 50);
-        obj->owt = weight(obj);
+        nh_set_owt(obj);
         free_mname(mtmp);
         break;
     case PM_STONE_GOLEM:
@@ -495,6 +568,17 @@ unsigned corpseflags;
 int minliquid(mtmp) register struct monst *mtmp;
 {
     boolean inpool, inlava, infountain;
+
+    /* Eels also have effects on dry land; keep their original path. */
+    if (mtmp->data->mlet != S_EEL) {
+        switch (TYP_AT(mtmp->mx, mtmp->my)) {
+        case POOL: case MOAT: case WATER: case DRAWBRIDGE_UP:
+        case LAVAPOOL: case FOUNTAIN:
+            break;
+        default:
+            return 0;
+        }
+    }
 
     /* [ceiling clingers are handled below] */
     inpool = (is_pool(mtmp->mx, mtmp->my)
@@ -911,7 +995,7 @@ int meatmetal(mtmp) register struct monst *mtmp;
                 mtmp->meating = otmp->owt / 2 + 1;
                 /* Heal up to the object's weight in hp */
                 if (mtmp->mhp < mtmp->mhpmax) {
-                    mtmp->mhp += objects[otmp->otyp].oc_weight;
+                    mtmp->mhp += object_defaults[otmp->otyp].oc_weight;
                     if (mtmp->mhp > mtmp->mhpmax)
                         mtmp->mhp = mtmp->mhpmax;
                 }
@@ -1043,7 +1127,7 @@ int meatobj(mtmp) /* for gelatinous cubes */
             }
             /* Heal up to the object's weight in hp */
             if (mtmp->mhp < mtmp->mhpmax) {
-                mtmp->mhp += objects[otmp->otyp].oc_weight;
+                mtmp->mhp += object_defaults[otmp->otyp].oc_weight;
                 if (mtmp->mhp > mtmp->mhpmax)
                     mtmp->mhp = mtmp->mhpmax;
             }
@@ -1290,8 +1374,9 @@ struct obj *otmp;
     return iquan;
 }
 
+#ifdef NH_MOVEMENT_MASK_VERIFY
 /* return number of acceptable neighbour positions */
-int mfndpos(mon, poss, info, flag) struct monst *mon;
+static int mfndpos_reference(mon, poss, info, flag) struct monst *mon;
 coord *poss; /* coord poss[9] */
 long *info;  /* long info[9] */
 long flag;
@@ -1375,13 +1460,13 @@ nexttry: /* eels prefer the water, but if there is no water nearby,
             /* KMH -- Added iron bars */
             if (ntyp == IRONBARS
                 && (!(flag & ALLOW_BARS)
-                    || ((levl[nx][ny].wall_info & W_NONDIGGABLE)
+                    || ((NH_TILE(nx, ny).wall_info & W_NONDIGGABLE)
                         && (dmgtype(mdat, AD_RUST)
                             || dmgtype(mdat, AD_CORR)))))
                 continue;
             if (IS_DOOR(ntyp) && !(amorphous(mdat) || can_fog(mon))
-                && (((levl[nx][ny].doormask & D_CLOSED) && !(flag & OPENDOOR))
-                    || ((levl[nx][ny].doormask & D_LOCKED)
+                && (((NH_TILE(nx, ny).doormask & D_CLOSED) && !(flag & OPENDOOR))
+                    || ((NH_TILE(nx, ny).doormask & D_LOCKED)
                         && !(flag & UNLOCKDOOR)))
                 && !thrudoor)
                 continue;
@@ -1393,8 +1478,8 @@ nexttry: /* eels prefer the water, but if there is no water nearby,
             /* first diagonal checks (tight squeezes handled below) */
             if (nx != x && ny != y
                 && (nodiag
-                    || (IS_DOOR(nowtyp) && (levl[x][y].doormask & ~D_BROKEN))
-                    || (IS_DOOR(ntyp) && (levl[nx][ny].doormask & ~D_BROKEN))
+                    || (IS_DOOR(nowtyp) && (NH_TILE(x, y).doormask & ~D_BROKEN))
+                    || (IS_DOOR(ntyp) && (NH_TILE(nx, ny).doormask & ~D_BROKEN))
                     || ((IS_DOOR(nowtyp) || IS_DOOR(ntyp))
                         && Is_rogue_level(&u.uz))
                     /* mustn't pass between adjacent long worm segments,
@@ -1551,6 +1636,469 @@ nexttry: /* eels prefer the water, but if there is no water nearby,
         goto nexttry;
     }
     return cnt;
+}
+
+#endif
+/* Locally maintained summaries and query-local capabilities. */
+static unsigned int
+nh_move_terrain(int x, int y)
+{
+    unsigned int f = 0;
+    int typ = TYP_AT(x, y), tile_flags = NH_TILE(x, y).rmflags;
+    if (IS_ROCK(typ)) f |= MV_ROCK;
+    if (IS_TREE(typ)) f |= MV_TREE;
+    if (may_passwall(x, y)) f |= MV_PASSWALL;
+    if (may_dig(x, y)) f |= MV_DIG;
+    if (typ == IRONBARS) f |= MV_BARS;
+    if (tile_flags & W_NONDIGGABLE) f |= MV_NONDIG;
+    if (IS_DOOR(typ)) {
+        f |= MV_DOOR;
+        if (tile_flags & D_CLOSED) f |= MV_CLOSED;
+        if (tile_flags & D_LOCKED) f |= MV_LOCKED;
+        if (tile_flags & ~D_BROKEN) f |= MV_DOOR_DIAG;
+    }
+    if (is_pool(x, y)) f |= MV_POOL;
+    if (is_lava(x, y)) f |= MV_LAVA;
+    if (IS_ALTAR(typ)) f |= MV_ALTAR;
+    return f;
+}
+static unsigned int
+nh_move_pile(int typ)
+{
+    return typ == BOULDER ? MV_BOULDER : typ == CLOVE_OF_GARLIC ? MV_GARLIC
+           : typ == SCR_SCARE_MONSTER ? MV_SCARE : 0;
+}
+void
+nh_pile_update(int x, int y)
+{
+    struct obj *o; unsigned int f = 0;
+    if ((unsigned) x >= COLNO || (unsigned) y >= ROWNO) return;
+    for (o = level.objs[x][y]; o; o = o->nexthere) f |= nh_move_pile(o->otyp);
+    NH_SUMMARY(x, y).move_pile = f >> 13;
+    NH_SUMMARY(x, y).move_obj_present = OBJ_AT(x, y);
+}
+void
+nh_trap_update(int x, int y)
+{
+    struct trap *t;
+    if ((unsigned) x >= COLNO || (unsigned) y >= ROWNO) return;
+    t = t_at(x, y);
+    NH_SUMMARY(x, y).move_trap = t ? t->ttyp : 0;
+    NH_SUMMARY(x, y).move_trap_present = t != 0;
+}
+/* Only used during level load/release, never on a movement query. */
+void
+nh_tile_clear_entities(unsigned int domains)
+{
+    int x, y;
+    for (x = 0; x < COLNO; x++) for (y = 0; y < ROWNO; y++) {
+        if (domains & NH_MOVE_PILES) {
+            NH_SUMMARY(x, y).move_pile = 0;
+            NH_SUMMARY(x, y).move_obj_present = 0;
+        }
+        if (domains & NH_MOVE_TRAPS) {
+            NH_SUMMARY(x, y).move_trap = 0; NH_SUMMARY(x, y).move_trap_present = 0;
+        }
+        if (domains & NH_MOVE_GAS) NH_SUMMARY(x, y).move_gas = 0;
+    }
+}
+/* The release query reads primary fields directly, without constructing
+ * a second packed fact record. Reference materialization is verification only. */
+static inline const struct rm *
+nh_move_cell(int x, int y)
+{
+    const struct rm *cell = &NH_TILE(x, y);
+#ifdef NH_MOVEMENT_MASK_VERIFY
+    unsigned int f = nh_move_terrain(x, y) | ((unsigned int)NH_SUMMARY(x, y).move_pile << 13)
+        | ((unsigned int)NH_SUMMARY(x, y).move_trap << MV_TRAP_SHIFT)
+        | (NH_SUMMARY(x, y).move_trap_present ? MV_TRAP : 0) | (NH_SUMMARY(x, y).move_gas ? MV_GAS : 0);
+    struct obj *o; struct trap *trap = t_at(x, y);
+    NhRegion *reg = visible_region_at(x, y);
+    unsigned int ref = nh_move_terrain(x, y);
+    for (o = level.objs[x][y]; o; o = o->nexthere) ref |= nh_move_pile(o->otyp);
+    if (trap) ref |= MV_TRAP | ((unsigned int)trap->ttyp << MV_TRAP_SHIFT);
+    if (reg && reg->glyph == cmap_to_glyph(S_poisoncloud)) ref |= MV_GAS;
+    if (f != ref) panic("primary movement mismatch %d,%d tile=%x ref=%x", x, y, f, ref);
+    if (NH_SUMMARY(x, y).move_obj_present != OBJ_AT(x, y))
+        panic("object presence mismatch in query %d,%d", x, y);
+#endif
+    return cell;
+}
+static inline boolean nh_cell_passwall(const struct rm *c, int x, int y)
+{
+    return !(IS_STWALL(TYP_AT(x, y)) && (c->rmflags & W_NONPASSWALL));
+}
+static inline boolean nh_cell_dig(const struct rm *c)
+{
+    return !((IS_STWALL(c->typ) || IS_TREE(c->typ)) && (c->rmflags & W_NONDIGGABLE));
+}
+static inline boolean nh_cell_pool(const struct rm *c, int x, int y)
+{
+    return isok(x, y) && (TYP_AT(x, y) == POOL || TYP_AT(x, y) == MOAT
+        || TYP_AT(x, y) == WATER
+        || (!Is_juiblex_level(&u.uz) && (c->typ == MOAT
+            || (c->typ == DRAWBRIDGE_UP && (c->rmflags & DB_UNDER) == DB_MOAT))));
+}
+static inline boolean nh_cell_lava(const struct rm *c, int x, int y)
+{
+    return isok(x, y) && (TYP_AT(x, y) == LAVAPOOL
+        || (TYP_AT(x, y) == DRAWBRIDGE_UP && (c->rmflags & DB_UNDER) == DB_LAVA));
+}
+
+/* Query-local capability state; no cached monster state survives the query. */
+struct nh_mover {
+    struct monst *mon;
+    struct permonst *data;
+    int fog, squeeze, scary_immune;
+    boolean rogue, sokoban, monseeu;
+};
+static inline boolean nh_mover_fog(struct nh_mover *m)
+{
+    if (m->fog < 0) m->fog = can_fog(m->mon);
+    return m->fog;
+}
+static inline int nh_mover_squeeze(struct nh_mover *m)
+{
+    if (m->squeeze < 0) m->squeeze = cant_squeeze_thru(m->mon);
+    return m->squeeze;
+}
+static inline boolean nh_mover_bad_rock(struct nh_mover *m, int x, int y)
+{
+    const struct rm *f = nh_move_cell(x, y);
+    return (m->sokoban && (NH_SUMMARY(x, y).move_pile & 1U))
+           || (IS_ROCK(TYP_AT(x, y))
+               && !(SPWQ(m->data, SPW_TUNNELS, tunnels(m->data)) && !SPWQ(m->data, SPW_NEEDSPICK, needspick(m->data)) && nh_cell_dig(f))
+               && !(SPWQ(m->data, SPW_PASSWALL, passes_walls(m->data)) && nh_cell_passwall(f, x, y)));
+}
+static boolean
+nh_mover_scary(struct nh_mover *m, int x, int y)
+{
+    struct monst *mon = m->mon;
+    const struct rm *f;
+    if (m->scary_immune < 0)
+        m->scary_immune = mon->iswiz || is_lminion(mon) || m->data == &mons[PM_ANGEL]
+            || SPWQ(m->data, SPW_RIDER, is_rider(m->data)) || (mon->isshk && inhishop(mon))
+            || (mon->ispriest && inhistemple(mon));
+    if (m->scary_immune) return FALSE;
+    if (!x && !y) return TRUE;
+    f = nh_move_cell(x, y);
+    if (IS_ALTAR(TYP_AT(x, y)) && (m->data->mlet == S_VAMPIRE || is_vampshifter(mon))) return TRUE;
+    if (NH_SUMMARY(x, y).move_pile & 4U) return TRUE;
+    return (((u.ux == x && u.uy == y)
+             || (Displaced && mon->mux == x && mon->muy == y))
+            && !(mon->isshk || mon->isgd || !mon->mcansee || mon->mpeaceful
+                 || m->data->mlet == S_HUMAN || m->data == &mons[PM_MINOTAUR]
+                 || Inhell || In_endgame(&u.uz))
+            && sengr_at("Elbereth", x, y, TRUE));
+}
+
+/* return number of acceptable neighbour positions */
+static int mfndpos_masked(mon, poss, info, flag) struct monst *mon;
+coord *poss; /* coord poss[9] */
+long *info;  /* long info[9] */
+long flag;
+{
+    struct permonst *mdat = mon->data;
+    int trap_type, origin_typ, cell_typ;
+    const struct rm *origin, *cell;
+    struct nh_mover mover;
+    xchar x, y, nx, ny;
+    int cnt = 0;
+
+    boolean wantpool, poolok, lavaok, nodiag;
+    boolean rockok = FALSE, treeok = FALSE, thrudoor;
+    unsigned int candidates, occupied;
+    struct nh_move_column *cols;
+    int bit;
+    boolean poisongas_ok, in_poisongas;
+
+
+    x = mon->mx;
+    y = mon->my;
+    origin = nh_move_cell(x, y);
+    origin_typ = TYP_AT(x, y);
+    mover.mon = mon; mover.data = mdat;
+    mover.fog = mover.squeeze = mover.scary_immune = -1;
+    mover.rogue = Is_rogue_level(&u.uz);
+    mover.sokoban = Sokoban;
+    mover.monseeu = mon->mcansee && (!Invis || SPWQ(mdat, SPW_PERCEIVES, perceives(mdat)));
+
+    nodiag = NODIAG(mdat - mons);
+    wantpool = (mdat->mlet == S_EEL);
+    poolok = ((!Is_waterlevel(&u.uz)
+               && (SPWQ(mdat, SPW_FLYER, is_flyer(mdat)) || SPWQ(mdat, SPW_FLOATER, is_floater(mdat)) || SPWQ(mdat, SPW_CLINGER, is_clinger(mdat))))
+              || (SPWQ(mdat, SPW_SWIMMER, is_swimmer(mdat)) && !wantpool));
+    /* note: floating eye is the only is_floater() so this could be
+       simplified, but then adding another floater would be error prone */
+    lavaok = (SPWQ(mdat, SPW_FLYER, is_flyer(mdat)) || SPWQ(mdat, SPW_FLOATER, is_floater(mdat)) || SPWQ(mdat, SPW_CLINGER, is_clinger(mdat))
+              || SPWQ(mdat, SPW_LIKELAVA, likes_lava(mdat)));
+    if (mdat == &mons[PM_FLOATING_EYE]) /* prefers to avoid heat */
+        lavaok = FALSE;
+    thrudoor = ((flag & (ALLOW_WALL | BUSTDOOR)) != 0L);
+    poisongas_ok =
+        ((SPWQ(mdat, SPW_NONLIVING, nonliving(mdat)) || is_vampshifter(mon) || SPWQ(mdat, SPW_BREATHLESS, breathless(mdat)))
+         || resists_poison(mon));
+    in_poisongas = (NH_SUMMARY(x, y).move_gas != 0) != 0;
+
+    if (flag & ALLOW_DIG) {
+        struct obj *mw_tmp;
+
+        /* need to be specific about what can currently be dug */
+        if (!SPWQ(mdat, SPW_NEEDSPICK, needspick(mdat))) {
+            rockok = treeok = TRUE;
+        } else if ((mw_tmp = MON_WEP(mon)) && mw_tmp->cursed
+                   && mon->weapon_check == NO_WEAPON_WANTED) {
+            rockok = is_pick(mw_tmp);
+            treeok = is_axe(mw_tmp);
+        } else {
+            rockok = (m_carrying(mon, PICK_AXE)
+                      || (m_carrying(mon, DWARVISH_MATTOCK)
+                          && !which_armor(mon, W_ARMS)));
+            treeok = (m_carrying(mon, AXE)
+                      || (m_carrying(mon, BATTLE_AXE)
+                          && !which_armor(mon, W_ARMS)));
+        }
+        if (rockok || treeok)
+            thrudoor = TRUE;
+    }
+
+nexttry: /* eels prefer the water, but if there is no water nearby,
+            they will crawl over land */
+    if (mon->mconf) {
+        flag |= ALLOW_ALL;
+        flag &= ~NOTONL;
+    }
+    if (!mon->mcansee)
+        flag |= ALLOW_SSM;
+    cols = &level.move_columns[x];
+    if (!(flag & ALLOW_WALL) && !rockok && !treeok)
+        candidates = nh_move_neighbours(cols[0].nonrock, cols[1].nonrock,
+                                        cols[2].nonrock, y);
+    else
+        candidates = nh_move_valid(x, y);
+    if (!(flag & (ALLOW_M | ALLOW_MDISP))
+        && !SPWQ(mdat, SPW_DISPLACES, (mdat->mflags3 & M3_DISPLACES))
+        && mdat != &mons[PM_PURPLE_WORM]) {
+        occupied = nh_move_neighbours(cols[0].occupied, cols[1].occupied,
+                                      cols[2].occupied, y);
+        /* Both hero positions stay on the original path. The old image may
+           become obsolete during this loop, so keep the full checks below. */
+        occupied &= ~(nh_move_position_bit(x, y, u.ux, u.uy)
+                       | nh_move_position_bit(x, y, mon->mux, mon->muy));
+        candidates &= ~occupied;
+    }
+    while (candidates) {
+            bit = __builtin_ctz(candidates);
+            candidates &= candidates - 1;
+            nx = x - 1 + bit / 3;
+            ny = y - 1 + bit % 3;
+            cell = nh_move_cell(nx, ny);
+            cell_typ = TYP_AT(nx, ny);
+            if (IS_ROCK(cell_typ)
+                && !((flag & ALLOW_WALL) && nh_cell_passwall(cell, nx, ny))
+                && !((IS_TREE(cell_typ) ? treeok : rockok) && nh_cell_dig(cell)))
+                continue;
+            /* KMH -- Added iron bars */
+            if ((cell_typ == IRONBARS)
+                && (!(flag & ALLOW_BARS)
+                    || ((cell->rmflags & W_NONDIGGABLE)
+                        && (SPWQ(mdat, SPW_RUSTDMG, dmgtype(mdat, AD_RUST))
+                            || SPWQ(mdat, SPW_CORRDMG, dmgtype(mdat, AD_CORR))))))
+                continue;
+            if (IS_DOOR(cell_typ) && !(SPWQ(mdat, SPW_AMORPHOUS, amorphous(mdat)) || nh_mover_fog(&mover))
+                && (((cell->rmflags & D_CLOSED) && !(flag & OPENDOOR))
+                    || ((cell->rmflags & D_LOCKED)
+                        && !(flag & UNLOCKDOOR)))
+                && !thrudoor)
+                continue;
+            /* avoid poison gas? */
+            if (!poisongas_ok && !in_poisongas
+                && (NH_SUMMARY(nx, ny).move_gas != 0))
+                continue;
+            /* first diagonal checks (tight squeezes handled below) */
+            if (nx != x && ny != y
+                && (nodiag
+                    || (IS_DOOR(origin_typ) && (origin->rmflags & ~D_BROKEN))
+                    || (IS_DOOR(cell_typ) && (cell->rmflags & ~D_BROKEN))
+                    || ((IS_DOOR(origin_typ) || IS_DOOR(cell_typ))
+                        && mover.rogue)
+                    /* mustn't pass between adjacent long worm segments,
+                       but can attack that way */
+                    || (m_at(x, ny) && m_at(nx, y) && worm_cross(x, y, nx, ny)
+                        && !m_at(nx, ny) && (nx != u.ux || ny != u.uy))))
+                continue;
+            if (((nh_cell_pool(cell, nx, ny) != 0) == wantpool || poolok)
+                && (lavaok || !nh_cell_lava(cell, nx, ny))) {
+                int dispx, dispy;
+                boolean monseeu = mover.monseeu;
+
+                /* Displacement also displaces the Elbereth/scare monster,
+                 * as long as you are visible.
+                 */
+                if (Displaced && monseeu && mon->mux == nx
+                    && mon->muy == ny) {
+                    dispx = u.ux;
+                    dispy = u.uy;
+                } else {
+                    dispx = nx;
+                    dispy = ny;
+                }
+
+                info[cnt] = 0;
+                if (nh_mover_scary(&mover, dispx, dispy)) {
+                    if (!(flag & ALLOW_SSM))
+                        continue;
+                    info[cnt] |= ALLOW_SSM;
+                }
+                if ((nx == u.ux && ny == u.uy)
+                    || (nx == mon->mux && ny == mon->muy)) {
+                    if (nx == u.ux && ny == u.uy) {
+                        /* If it's right next to you, it found you,
+                         * displaced or no.  We must set mux and muy
+                         * right now, so when we return we can tell
+                         * that the ALLOW_U means to attack _you_ and
+                         * not the image.
+                         */
+                        mon->mux = u.ux;
+                        mon->muy = u.uy;
+                    }
+                    if (!(flag & ALLOW_U))
+                        continue;
+                    info[cnt] |= ALLOW_U;
+                } else {
+                    if (MON_AT(nx, ny)) {
+                        struct monst *mtmp2 = m_at(nx, ny);
+                        long mmflag = flag | mm_aggression(mon, mtmp2);
+
+                        if (mmflag & ALLOW_M) {
+                            info[cnt] |= ALLOW_M;
+                            if (mtmp2->mtame) {
+                                if (!(mmflag & ALLOW_TM))
+                                    continue;
+                                info[cnt] |= ALLOW_TM;
+                            }
+                        } else {
+                            mmflag = flag | mm_displacement(mon, mtmp2);
+                            if (!(mmflag & ALLOW_MDISP))
+                                continue;
+                            info[cnt] |= ALLOW_MDISP;
+                        }
+                    }
+                    /* Note: ALLOW_SANCT only prevents movement, not
+                       attack, into a temple. */
+                    if (level.lflags.has_temple && *in_rooms(nx, ny, TEMPLE)
+                        && !*in_rooms(x, y, TEMPLE)
+                        && in_your_sanctuary((struct monst *) 0, nx, ny)) {
+                        if (!(flag & ALLOW_SANCT))
+                            continue;
+                        info[cnt] |= ALLOW_SANCT;
+                    }
+                }
+                if (NH_SUMMARY(nx, ny).move_pile & 2U) {
+                    if (flag & NOGARLIC) continue;
+                    info[cnt] |= NOGARLIC;
+                }
+                if (NH_SUMMARY(nx, ny).move_pile & 1U) {
+                    if (!(flag & ALLOW_ROCK)) continue;
+                    info[cnt] |= ALLOW_ROCK;
+                }
+                if (monseeu && onlineu(nx, ny)) {
+                    if (flag & NOTONL)
+                        continue;
+                    info[cnt] |= NOTONL;
+                }
+                /* check for diagonal tight squeeze */
+                if (nx != x && ny != y && nh_mover_bad_rock(&mover, x, ny)
+                    && nh_mover_bad_rock(&mover, nx, y) && nh_mover_squeeze(&mover))
+                    continue;
+                /* The monster avoids a particular type of trap if it's
+                 * familiar with the trap type.  Pets get ALLOW_TRAPS
+                 * and checking is done in dogmove.c.  In either case,
+                 * "harmless" traps are neither avoided nor marked in info[].
+                 */
+                if (NH_SUMMARY(nx, ny).move_trap_present != 0) {
+                    trap_type = NH_SUMMARY(nx, ny).move_trap;
+                    if (trap_type >= TRAPNUM || trap_type == 0) {
+                        impossible("A monster looked at a very strange trap "
+                                   "of type %d.",
+                                   trap_type);
+                        continue;
+                    }
+                    if ((trap_type != RUST_TRAP
+                         || mdat == &mons[PM_IRON_GOLEM])
+                        && trap_type != STATUE_TRAP
+                        && trap_type != VIBRATING_SQUARE
+                        && ((!is_pit(trap_type) && !is_hole(trap_type))
+                            || (!SPWQ(mdat, SPW_FLYER, is_flyer(mdat)) && !SPWQ(mdat, SPW_FLOATER, is_floater(mdat))
+                                && !SPWQ(mdat, SPW_CLINGER, is_clinger(mdat)))
+                            || mover.sokoban)
+                        && (trap_type != SLP_GAS_TRAP || !resists_sleep(mon))
+                        && (trap_type != BEAR_TRAP
+                            || (mdat->msize > MZ_SMALL && !SPWQ(mdat, SPW_AMORPHOUS, amorphous(mdat))
+                                && !SPWQ(mdat, SPW_FLYER, is_flyer(mdat)) && !SPWQ(mdat, SPW_FLOATER, is_floater(mdat))
+                                && !SPWQ(mdat, SPW_WHIRLY, is_whirly(mdat)) && !SPWQ(mdat, SPW_UNSOLID, unsolid(mdat))))
+                        && (trap_type != FIRE_TRAP || !resists_fire(mon))
+                        && (trap_type != SQKY_BOARD || !SPWQ(mdat, SPW_FLYER, is_flyer(mdat)))
+                        && (trap_type != WEB
+                            || (!SPWQ(mdat, SPW_AMORPHOUS, amorphous(mdat)) && !SPWQ(mdat, SPW_WEBMAKER, webmaker(mdat))
+                                && !SPWQ(mdat, SPW_WHIRLY, is_whirly(mdat)) && !SPWQ(mdat, SPW_UNSOLID, unsolid(mdat))))
+                        && (trap_type != ANTI_MAGIC || !resists_magm(mon))) {
+                        if (!(flag & ALLOW_TRAPS)) {
+                            if (mon->mtrapseen & (1L << (trap_type - 1)))
+                                continue;
+                        }
+                        info[cnt] |= ALLOW_TRAPS;
+                    }
+                }
+                poss[cnt].x = nx;
+                poss[cnt].y = ny;
+                cnt++;
+            }
+        }
+    if (!cnt && wantpool && !nh_cell_pool(origin, x, y)) {
+        wantpool = FALSE;
+        goto nexttry;
+    }
+    return cnt;
+}
+
+
+int
+mfndpos(struct monst *mon, coord *poss, long *info, long flag)
+{
+#ifdef NH_MOVEMENT_MASK_VERIFY
+    coord reference[9];
+    long refinfo[9];
+    int i, nref, count;
+    xchar mx = mon->mux, my = mon->muy, afterx, aftery;
+    int x = mon->mx, y = mon->my, nx, ny;
+    unsigned int terrain = 0, occupied = 0;
+    struct nh_move_column *cols = &level.move_columns[x];
+    for (nx = max(0, x - 1); nx <= min(x + 1, COLNO - 1); nx++)
+        for (ny = max(0, y - 1); ny <= min(y + 1, ROWNO - 1); ny++) {
+            unsigned int b = nh_move_position_bit(x, y, nx, ny) & 0x1efU;
+            if (nx && !IS_ROCK(TYP_AT(nx, ny))) terrain |= b;
+            if (MON_AT(nx, ny)) occupied |= b;
+        }
+    if (terrain != nh_move_neighbours(cols[0].nonrock, cols[1].nonrock,
+                                     cols[2].nonrock, y)
+        || occupied != nh_move_neighbours(cols[0].occupied, cols[1].occupied,
+                                         cols[2].occupied, y))
+        panic("movement column desync at %d,%d", x, y);
+    count = mfndpos_masked(mon, poss, info, flag);
+    afterx = mon->mux; aftery = mon->muy;
+    mon->mux = mx; mon->muy = my;
+    nref = mfndpos_reference(mon, reference, refinfo, flag);
+    if (nref != count || mon->mux != afterx || mon->muy != aftery)
+        panic("movement count/state mismatch at %d,%d", x, y);
+    for (i = 0; i < count; i++)
+        if (poss[i].x != reference[i].x || poss[i].y != reference[i].y
+            || info[i] != refinfo[i])
+            panic("movement ordered candidate mismatch at %d,%d", x, y);
+    return count;
+#else
+    return mfndpos_masked(mon, poss, info, flag);
+#endif
 }
 
 /* Monster against monster special attacks; for the specified monster
@@ -1828,7 +2376,7 @@ void dealloc_monst(mon) struct monst *mon;
     }
     if (mon->mextra)
         dealloc_mextra(mon);
-    free((genericptr_t) mon);
+    nh_mon_free(mon);
 }
 
 /* remove effects of mtmp from other data structures */
@@ -2071,7 +2619,7 @@ void mondead(mtmp) register struct monst *mtmp;
         nemdead();
     if (mtmp->data == &mons[PM_MEDUSA])
         u.uachieve.killed_medusa = 1;
-    if (glyph_is_invisible(levl[mtmp->mx][mtmp->my].glyph))
+    if (glyph_is_invisible(NH_TILE(mtmp->mx, mtmp->my).glyph))
         unmap_object(mtmp->mx, mtmp->my);
     m_detach(mtmp, mptr);
 }
@@ -2242,13 +2790,13 @@ void monstone(mdef) struct monst *mdef;
         /* Archeologists should not break unique statues */
         if (mdef->data->geno & G_UNIQ)
             otmp->spe = 1;
-        otmp->owt = weight(otmp);
+        nh_set_owt(otmp);
     } else
         otmp = mksobj_at(ROCK, x, y, TRUE, FALSE);
 
     stackobj(otmp);
     /* mondead() already does this, but we must do it before the newsym */
-    if (glyph_is_invisible(levl[x][y].glyph))
+    if (glyph_is_invisible(NH_TILE(x, y).glyph))
         unmap_object(x, y);
     if (cansee(x, y))
         newsym(x, y);
@@ -2428,7 +2976,7 @@ int xkill_flags; /* 1: suppress message, 2: suppress corpse, 4: pacifist */
             if (mdat->msize < MZ_HUMAN
                 && otyp != FIGURINE
                 /* oc_big is also oc_bimanual and oc_bulky */
-                && (otmp->owt > 30 || objects[otyp].oc_big)) {
+                && (otmp->owt > 30 || object_defaults[otyp].oc_big)) {
                 delobj(otmp);
             } else if (!flooreffects(otmp, x, y, nomsg ? "" : "fall")) {
                 place_object(otmp, x, y);
@@ -3062,7 +3610,7 @@ void seemimic(mtmp) register struct monst *mtmp;
      *  Discovered mimics don't block light.
      */
     if (is_blocker_appear
-        && !does_block(mtmp->mx, mtmp->my, &levl[mtmp->mx][mtmp->my]))
+        && !does_block(mtmp->mx, mtmp->my, &NH_TILE(mtmp->mx, mtmp->my)))
         unblock_point(mtmp->mx, mtmp->my);
 
     newsym(mtmp->mx, mtmp->my);

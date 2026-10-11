@@ -708,12 +708,11 @@ struct obj *obj; /* only scatter this obj        */
             if ((stmp->range-- > 0) && (!stmp->stopped)) {
                 bhitpos.x = stmp->ox + stmp->dx;
                 bhitpos.y = stmp->oy + stmp->dy;
-                typ = levl[bhitpos.x][bhitpos.y].typ;
                 if (!isok(bhitpos.x, bhitpos.y)) {
                     bhitpos.x -= stmp->dx;
                     bhitpos.y -= stmp->dy;
                     stmp->stopped = TRUE;
-                } else if (!ZAP_POS(typ)
+                } else if (!ZAP_POS(typ = NH_TILE(bhitpos.x, bhitpos.y).typ)
                            || closed_door(bhitpos.x, bhitpos.y)) {
                     bhitpos.x -= stmp->dx;
                     bhitpos.y -= stmp->dy;

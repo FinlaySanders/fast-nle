@@ -5,6 +5,8 @@
 
 #ifndef HACK_H
 #define HACK_H
+#include <stdint.h>
+#include "movement_facts.h"
 
 #ifndef CONFIG_H
 #include "config.h"
@@ -487,10 +489,71 @@ enum bodypart_types {
 #define plur(x) (((x) == 1) ? "" : "s")
 
 #define ARM_BONUS(obj)                      \
-    (objects[(obj)->otyp].a_ac + (obj)->spe \
-     - min((int) greatest_erosion(obj), objects[(obj)->otyp].a_ac))
+    (object_defaults[(obj)->otyp].a_ac + (obj)->spe \
+     - min((int) greatest_erosion(obj), object_defaults[(obj)->otyp].a_ac))
 
 #define makeknown(x) discover_object((x), TRUE, TRUE)
+/* inventory-weight cache (hack.c inv_weight): invalidate when the hero's top-level inventory changes */
+#define nh_invwt_dirty() ((void) (nh_invwt_valid = 0))
+#define nh_deepest_dirty() ((void) (nh_deepest_valid = 0))
+/* Species word: every species-only predicate the monster turn asks, as bits of one 64-bit word per species.
+ * mons[] is const, so the table is built once at library load. SPWQ(p, bit, orig) reads the bit; the verify
+ * build also evaluates the original macro and reports any disagreement. */
+#define SPW_TUNNELS (1ULL << 0)
+#define SPW_NEEDSPICK (1ULL << 1)
+#define SPW_NOHANDS (1ULL << 2)
+#define SPW_VERYSMALL (1ULL << 3)
+#define SPW_GIANT (1ULL << 4)
+#define SPW_COVETOUS (1ULL << 5)
+#define SPW_MINION (1ULL << 6)
+#define SPW_RIDER (1ULL << 7)
+#define SPW_UNICORN (1ULL << 8)
+#define SPW_PASSWALL (1ULL << 9)
+#define SPW_PASSBARS (1ULL << 10)
+#define SPW_HUMAN (1ULL << 11)
+#define SPW_UNDEAD (1ULL << 12)
+#define SPW_THROWSROCKS (1ULL << 13)
+#define SPW_HIDESUNDER (1ULL << 14)
+#define SPW_LIKEGOLD (1ULL << 15)
+#define SPW_LIKEGEMS (1ULL << 16)
+#define SPW_LIKEOBJS (1ULL << 17)
+#define SPW_LIKEMAGIC (1ULL << 18)
+#define SPW_MINDLESS (1ULL << 19)
+#define SPW_ANIMAL (1ULL << 20)
+#define SPW_MERC (1ULL << 21)
+#define SPW_FLYER (1ULL << 22)
+#define SPW_FLOATER (1ULL << 23)
+#define SPW_CLINGER (1ULL << 24)
+#define SPW_SWIMMER (1ULL << 25)
+#define SPW_LIKELAVA (1ULL << 26)
+#define SPW_NONLIVING (1ULL << 27)
+#define SPW_BREATHLESS (1ULL << 28)
+#define SPW_AMORPHOUS (1ULL << 29)
+#define SPW_WHIRLY (1ULL << 30)
+#define SPW_UNSOLID (1ULL << 31)
+#define SPW_WEBMAKER (1ULL << 32)
+#define SPW_TPORT (1ULL << 33)
+#define SPW_WANDER (1ULL << 34)
+#define SPW_PERCEIVES (1ULL << 35)
+#define SPW_INFRAVISIBLE (1ULL << 36)
+#define SPW_NOATTACKS (1ULL << 37)
+#define SPW_WATCH (1ULL << 38)
+#define SPW_MINDFLAYER (1ULL << 39)
+#define SPW_DEMON (1ULL << 40)
+#define SPW_DISPLACES (1ULL << 41)
+#define SPW_RUSTDMG (1ULL << 42)
+#define SPW_CORRDMG (1ULL << 43)
+#define SPW_WEAPATTK (1ULL << 44)
+#define SPW_RANGED (1ULL << 45)
+extern unsigned long long nh_spw[NUMMONS];
+#ifdef NLE_SPW_VERIFY
+#define SPWQ(p, bit, orig) ({ const struct permonst *spw_p_ = (p); int spw_a_ = (nh_spw[spw_p_ - mons] & (bit)) != 0; \
+    int spw_b_ = (orig) != 0; if (spw_a_ != spw_b_) fprintf(stderr, "SPW_MISMATCH %s idx=%d\n", #orig, (int) (spw_p_ - mons)); spw_b_; })
+#else
+#define SPWQ(p, bit, orig) ((nh_spw[(const struct permonst *) (p) - mons] & (bit)) != 0)
+#endif
+
+#define nh_set_owt(o) ((o)->owt = weight(o), ((o)->where == OBJ_INVENT ? nh_invwt_dirty() : (void) 0))
 #define distu(xx, yy) dist2((int)(xx), (int)(yy), (int) u.ux, (int) u.uy)
 #define onlineu(xx, yy) online2((int)(xx), (int)(yy), (int) u.ux, (int) u.uy)
 
@@ -577,29 +640,41 @@ is_moat(int x, int y)
 
     if (!isok(x, y))
         return FALSE;
-    ltyp = levl[x][y].typ;
+    ltyp = NH_TILE(x, y).typ;
     if (!Is_juiblex_level(&u.uz)
         && (ltyp == MOAT
             || (ltyp == DRAWBRIDGE_UP
-                && (levl[x][y].drawbridgemask & DB_UNDER) == DB_MOAT)))
+                && (NH_TILE(x, y).drawbridgemask & DB_UNDER) == DB_MOAT)))
         return TRUE;
     return FALSE;
 }
 
-#define TYP_AT(x, y) (nh_typ_plane[x][y])
+static inline void
+nh_move_typ_set(int x, int y, schar typ)
+{
+    nh_typ_plane[x][y] = typ;
+    nh_move_set_terrain(level.move_columns, x, y, !IS_ROCK(typ));
+}
+#define TYP_AT(x, y) (nh_typ_plane[(x)][(y)])
 #define SET_TYP_XY(x, y, ...) \
-    do { schar set_typ_v_ = (__VA_ARGS__); levl[x][y].typ = set_typ_v_; \
-         nh_typ_plane[x][y] = set_typ_v_; } while (0)
+    do { schar set_typ_v_ = (__VA_ARGS__); NH_TILE(x, y).typ = set_typ_v_; \
+         nh_move_typ_set((x), (y), set_typ_v_); } while (0)
 #define SET_TYP_P(p, ...) \
     do { schar set_typ_v_ = (__VA_ARGS__); \
-         (p)->typ = set_typ_v_; /* through the CALLER pointer type */ \
-         long set_typ_i_ = \
-             (long)((struct rm *) (genericptr_t) (p) - &levl[0][0]); \
-         if (set_typ_i_ >= 0 && set_typ_i_ < COLNO * ROWNO) \
-             (&nh_typ_plane[0][0])[set_typ_i_] = set_typ_v_; } while (0)
+         (p)->typ = set_typ_v_; \
+         uintptr_t set_typ_p_ = (uintptr_t) (p); \
+         uintptr_t set_typ_b_ = (uintptr_t) &level.locations[0][0]; \
+         if (set_typ_p_ >= set_typ_b_ \
+             && set_typ_p_ - set_typ_b_ < sizeof(level.locations) \
+             && (set_typ_p_ - set_typ_b_) % sizeof(struct rm) == 0) { \
+             unsigned int i_ = (set_typ_p_ - set_typ_b_) / sizeof(struct rm); \
+             nh_move_typ_set(i_ / ROWNO, i_ % ROWNO, set_typ_v_); \
+         } } while (0)
 extern void NDECL(nh_typ_sync);
 struct nh_fobj_cursor { unsigned long generation; int index, fallback; unsigned int mask; int base, lx, hx, ly, hy; };
 extern void NDECL(nh_fobj_invalidate);
+extern void FDECL(nh_fobj_placed, (struct obj *));
+extern void FDECL(nh_fobj_removed, (struct obj *));
 extern struct obj *FDECL(nh_fobj_next, (struct nh_fobj_cursor *, struct obj *, int, int, int, int));
 extern void FDECL(nh_typ_verify, (const char *));
 
@@ -629,7 +704,7 @@ is_lava(int x, int y)
     ltyp = TYP_AT(x, y);
     if (ltyp == LAVAPOOL
         || (ltyp == DRAWBRIDGE_UP
-            && (levl[x][y].drawbridgemask & DB_UNDER) == DB_LAVA))
+            && (NH_TILE(x, y).drawbridgemask & DB_UNDER) == DB_LAVA))
         return TRUE;
     return FALSE;
 }
@@ -652,7 +727,7 @@ is_ice(int x, int y)
         return FALSE;
     ltyp = TYP_AT(x, y);
     if (ltyp == ICE || (ltyp == DRAWBRIDGE_UP
-                        && (levl[x][y].drawbridgemask & DB_UNDER) == DB_ICE))
+                        && (NH_TILE(x, y).drawbridgemask & DB_UNDER) == DB_ICE))
         return TRUE;
     return FALSE;
 }

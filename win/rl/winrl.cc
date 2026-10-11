@@ -230,7 +230,6 @@ class NetHackRL
     // TODO: Don't heap allocate this stuff.
     std::vector<std::unique_ptr<rl_window> > windows_;
 
-    std::array<int16_t, (COLNO - 1) * ROWNO> glyphs_;
 
     /* Output of mapglyph */
     std::array<uint8_t, (COLNO - 1) * ROWNO> chars_;
@@ -243,6 +242,9 @@ class NetHackRL
        must be stable per env — any buffer-pointer change forces a full
        copy). All-dirty on construction, map clears, not-in-game fills. */
     uint32_t dirty_rows_ = ~0u;
+    uint32_t glyph_export_rows_ = ~0u; /* rows rewritten by the last full fill */
+    int underfoot_prev_ = -1; /* obs cell overwritten by the underfoot patch in the previous fill */
+    unsigned disc_gen_ = 1, disc_gen_seen_ = 0; /* objects[].oc_name_known generation */
     const int16_t *last_glyphs_buf_ = nullptr;
     bool inv_synced_ = false;
     const uint8_t *last_chars_buf_ = nullptr;
@@ -253,6 +255,11 @@ class NetHackRL
         screen_descriptions_;
 
     void store_glyph(XCHAR_P x, XCHAR_P y, int glyph);
+public:
+    void glyphs_cleared() { dirty_rows_ = ~0u; }
+    void discoveries_changed() { disc_gen_++; }
+    uint32_t glyph_export_rows() const { return glyph_export_rows_; }
+private:
     void store_mapped_glyph(int ch, int color, int special, XCHAR_P x,
                             XCHAR_P y);
     void store_screen_description(XCHAR_P x, XCHAR_P y, int glyph);
@@ -277,6 +284,9 @@ class NetHackRL
     void putstr_method(winid wid, int attr, const char *str);
 
     std::vector<rl_inventory_item> inventory_;
+    std::array<short, NLE_INVENTORY_SIZE> inv_glyphs_cache_;
+    std::array<unsigned char, NLE_INVENTORY_SIZE> inv_letters_cache_;
+    std::array<unsigned char, NLE_INVENTORY_SIZE> inv_oclasses_cache_;
 
     void start_menu_method(winid wid);
     void add_menu_method(winid wid, int glyph, const anything *identifier,
@@ -295,13 +305,15 @@ class NetHackRL
  * in rl_exit_nhwindows / error paths below. */
 #define instance (*(NetHackRL **) &current_nle_ctx->rl_instance)
 
-NetHackRL::NetHackRL(int &argc, char **argv) : glyphs_(), blstats_{}
+NetHackRL::NetHackRL(int &argc, char **argv) : blstats_{}
 {
+    inv_glyphs_cache_.fill(NO_GLYPH);
+    inv_letters_cache_.fill(0);
+    inv_oclasses_cache_.fill(MAXOCLASSES);
     // create base window
     // (done in tty_init_nhwindows before this NetHackRL object got created).
     assert(BASE_WINDOW == 0);
     windows_.emplace_back(new rl_window({ NHW_BASE }));
-    glyphs_.fill(nul_glyph);
     true_glyphs_ = getenv("NLE_TRUE_GLYPHS") != NULL;
 }
 
@@ -374,6 +386,7 @@ NetHackRL::update_blstats_direct()
 void
 NetHackRL::fill_obs(nle_obs *obs)
 {
+    uint32_t glyph_rows = ~0u; /* declared before any goto below */
     {
         static int verify = -1;
         if (verify < 0)
@@ -449,7 +462,7 @@ NetHackRL::fill_obs(nle_obs *obs)
         // observations.
         obs->in_normal_game = false;
         if (obs->glyphs)
-            std::fill_n(obs->glyphs, glyphs_.size(), nul_glyph);
+            std::fill_n(obs->glyphs, (COLNO - 1) * ROWNO, nul_glyph);
         if (obs->chars)
             std::memset(obs->chars, 0, chars_.size()); /* Or fill with ' '? */
         if (obs->colors)
@@ -464,6 +477,7 @@ NetHackRL::fill_obs(nle_obs *obs)
             std::memset(obs->screen_descriptions, 0,
                         screen_descriptions_.size());
         dirty_rows_ = ~0u; /* obs no longer mirrors the display arrays */
+        glyph_export_rows_ = ~0u;
         return;
     }
     obs->in_normal_game = true;
@@ -487,9 +501,6 @@ NetHackRL::fill_obs(nle_obs *obs)
                 if (!(dirty & (1u << j)))
                     continue;
                 size_t off = j * W;
-                if (obs->glyphs)
-                    std::memcpy(obs->glyphs + off, glyphs_.data() + off,
-                                sizeof(int16_t) * W);
                 if (obs->chars)
                     std::memcpy(obs->chars + off, chars_.data() + off, W);
                 if (obs->colors)
@@ -500,28 +511,57 @@ NetHackRL::fill_obs(nle_obs *obs)
             }
             dirty_rows_ = 0;
         }
-    }
-    if (obs->glyphs) { // eager identity mapping: every cell reflects the discoveries list now, not at its next
-        // reprint. The screen buffer holds true glyphs; maybe_true_glyph hides the ones the player has not identified.
-        nle_copy_glyphs(obs->glyphs);
-        int i = 0;
-#ifdef __SSE2__
-        const __m128i lo = _mm_set1_epi16(GLYPH_OBJ_OFF - 1);
-        const __m128i hi = _mm_set1_epi16(GLYPH_OBJ_OFF + NUM_OBJECTS);
-        for (; i + 8 <= ROWNO * (COLNO - 1); i += 8) {
-            const __m128i g = _mm_loadu_si128((const __m128i *) (obs->glyphs + i));
-            unsigned int mask = _mm_movemask_epi8(_mm_and_si128(
-                _mm_cmpgt_epi16(g, lo), _mm_cmpgt_epi16(hi, g)));
-            while (mask) {
-                unsigned int bit = __builtin_ctz(mask);
-                int j = i + bit / 2;
-                obs->glyphs[j] = maybe_true_glyph(obs->glyphs[j]);
-                mask &= ~(3U << (bit & ~1U));
-            }
+        /* Glyph rows to rewrite: rows flushed since the last fill (dirty) plus
+           show_glyph() writes not yet flushed to the port; every row when the
+           buffers changed or the discoveries list did, because
+           maybe_true_glyph depends on objects[].oc_name_known and the mapping
+           is not idempotent. Untouched rows keep the previous fill's values,
+           computed from the same screen glyphs and the same discoveries. */
+        glyph_rows = dirty | nle_gbuf_pending_rows();
+        if (disc_gen_seen_ != disc_gen_) {
+            glyph_rows = ~0u;
+            disc_gen_seen_ = disc_gen_;
         }
+    }
+    if (obs->glyphs) { // identity mapping on the rewritten rows: the screen buffer holds true glyphs;
+        // maybe_true_glyph hides the ones the player has not identified.
+        constexpr int W = COLNO - 1;
+        glyph_rows &= (1u << ROWNO) - 1u;
+        nle_copy_glyph_rows(obs->glyphs, glyph_rows);
+        for (int y = 0; y < ROWNO; y++) {
+            if (!(glyph_rows & (1u << y)))
+                continue;
+            int i = y * W, end = i + W;
+#ifdef __SSE2__
+            const __m128i lo = _mm_set1_epi16(GLYPH_OBJ_OFF - 1);
+            const __m128i hi = _mm_set1_epi16(GLYPH_OBJ_OFF + NUM_OBJECTS);
+            for (; i + 8 <= end; i += 8) {
+                const __m128i g = _mm_loadu_si128((const __m128i *) (obs->glyphs + i));
+                unsigned int mask = _mm_movemask_epi8(_mm_and_si128(
+                    _mm_cmpgt_epi16(g, lo), _mm_cmpgt_epi16(hi, g)));
+                while (mask) {
+                    unsigned int bit = __builtin_ctz(mask);
+                    int j = i + bit / 2;
+                    obs->glyphs[j] = maybe_true_glyph(obs->glyphs[j]);
+                    mask &= ~(3U << (bit & ~1U));
+                }
+            }
 #endif
-        for (; i < ROWNO * (COLNO - 1); i++)
-            obs->glyphs[i] = maybe_true_glyph(obs->glyphs[i]);
+            for (; i < end; i++)
+                obs->glyphs[i] = maybe_true_glyph(obs->glyphs[i]);
+        }
+        glyph_export_rows_ = glyph_rows;
+        /* The underfoot patch below overwrites the hero's cell with terrain/object instead of the
+           screen glyph. The old full copy repaired that cell once the hero moved on; with row copies
+           the previous patched cell must be restored from the screen buffer explicitly unless its
+           row was just recopied. Report its row so incremental consumers re-read it. */
+        if (underfoot_prev_ >= 0) {
+            int py = underfoot_prev_ / W, px = underfoot_prev_ % W + 1;
+            if (!(glyph_rows & (1u << py)))
+                obs->glyphs[underfoot_prev_] = maybe_true_glyph(glyph_at(px, py));
+            glyph_export_rows_ |= 1u << py;
+            underfoot_prev_ = -1;
+        }
     }
     if (obs->glyphs && nle_underfoot_glyphs() && u.ux >= 1 && u.ux < COLNO
         && u.uy >= 0 && u.uy < ROWNO) {
@@ -544,6 +584,8 @@ NetHackRL::fill_obs(nle_obs *obs)
         }
         obs->glyphs[(size_t) u.uy * (COLNO - 1) + (u.ux - 1)] =
             maybe_true_glyph(g);
+        glyph_export_rows_ |= 1u << u.uy;
+        underfoot_prev_ = (int) ((size_t) u.uy * (COLNO - 1) + (u.ux - 1));
     }
 fill_message:
     if (obs->message) {
@@ -605,15 +647,8 @@ fill_message:
             update_inventory_method();
             inv_synced_ = true;
         }
-        /* This iterates over the inventory_ vector list once per inv
-           observation instead of only once. I guess that's fine. */
-        int i = 0;
-        for (const rl_inventory_item &item : inventory_) {
-            obs->inv_glyphs[i++] = item.glyph;
-        }
-        for (; i < NLE_INVENTORY_SIZE; ++i) {
-            obs->inv_glyphs[i] = NO_GLYPH;
-        }
+        std::memcpy(obs->inv_glyphs, inv_glyphs_cache_.data(),
+                    sizeof(short) * NLE_INVENTORY_SIZE);
     }
     if (obs->inv_strs && !nle_partial) {
         int i = 0;
@@ -632,22 +667,12 @@ fill_message:
         }
     }
     if (obs->inv_letters && !nle_partial) {
-        int i = 0;
-        for (const rl_inventory_item &item : inventory_) {
-            obs->inv_letters[i++] = item.letter;
-        }
-        for (; i < NLE_INVENTORY_SIZE; ++i) {
-            obs->inv_letters[i] = 0;
-        }
+        std::memcpy(obs->inv_letters, inv_letters_cache_.data(),
+                    NLE_INVENTORY_SIZE);
     }
     if (obs->inv_oclasses && !nle_partial) {
-        int i = 0;
-        for (const rl_inventory_item &item : inventory_) {
-            obs->inv_oclasses[i++] = item.object_class;
-        }
-        for (; i < NLE_INVENTORY_SIZE; ++i) {
-            obs->inv_oclasses[i] = MAXOCLASSES;
-        }
+        std::memcpy(obs->inv_oclasses, inv_oclasses_cache_.data(),
+                    NLE_INVENTORY_SIZE);
     }
     if (obs->inv_state && !nle_partial) {
         /* Identification-gated per-slot state: exactly what doname would
@@ -669,7 +694,7 @@ fill_message:
             boolean shows_spe =
                 otmp->oclass == WEAPON_CLASS || otmp->oclass == ARMOR_CLASS
                 || otmp->oclass == RING_CLASS || otmp->oclass == WAND_CLASS
-                || is_weptool(otmp) || objects[otmp->otyp].oc_charged;
+                || is_weptool(otmp) || object_defaults[otmp->otyp].oc_charged;
             st[1] =
                 (otmp->known && shows_spe) ? otmp->spe : (signed char) -128;
             if (otmp->oclass == RING_CLASS && !(otmp->dknown && objects[otmp->otyp].oc_name_known)) st[1] = 0;
@@ -783,19 +808,21 @@ NetHackRL::update_inventory_method()
             want_strs ? std::string(let_to_name(otmp->oclass, false, false))
                       : std::string() });
     }
+    inv_glyphs_cache_.fill(NO_GLYPH);
+    inv_letters_cache_.fill(0);
+    inv_oclasses_cache_.fill(MAXOCLASSES);
+    size_t count = min(inventory_.size(), (size_t) NLE_INVENTORY_SIZE);
+    for (size_t i = 0; i < count; ++i) {
+        inv_glyphs_cache_[i] = inventory_[i].glyph;
+        inv_letters_cache_[i] = inventory_[i].letter;
+        inv_oclasses_cache_[i] = inventory_[i].object_class;
+    }
 }
 
 void
 NetHackRL::store_glyph(XCHAR_P x, XCHAR_P y, int glyph)
 {
-    // 1 <= x < cols, 0 <= y < rows (!)
-    size_t i = (x - 1) % (COLNO - 1);
-    size_t j = y % ROWNO;
-    size_t offset = j * (COLNO - 1) + i;
-
-    // TODO: Glyphs might be taken from gbuf[y][x].glyph.
-    glyphs_[offset] = maybe_true_glyph(glyph);
-    dirty_rows_ |= 1u << j;
+    dirty_rows_ |= 1u << (y % ROWNO);
 }
 
 void
@@ -970,7 +997,6 @@ NetHackRL::clear_nhwindow_method(winid wid)
     rl_win->strings.clear();
 
     if (wid == WIN_MAP) {
-        glyphs_.fill(nul_glyph);
         chars_.fill(' ');
         colors_.fill(0);
         specials_.fill(0);
@@ -1566,3 +1592,25 @@ const struct window_procs rl_procs = {
     nethack_rl::NetHackRL::rl_status_update,
     genl_can_suspend_yes,
 };
+
+using nethack_rl::NetHackRL;
+
+/* C-callable hooks (declared in extern.h). display.c and o_init.c/read.c call
+   these; the env reads the last fill's rewritten glyph rows. */
+extern "C" void
+nle_glyphs_cleared(void)
+{
+    if (current_nle_ctx && instance)
+        instance->glyphs_cleared();
+}
+extern "C" void
+nle_discoveries_changed(void)
+{
+    if (current_nle_ctx && instance)
+        instance->discoveries_changed();
+}
+extern "C" unsigned
+nle_glyph_dirty_rows(void)
+{
+    return (current_nle_ctx && instance) ? instance->glyph_export_rows() : ~0u;
+}

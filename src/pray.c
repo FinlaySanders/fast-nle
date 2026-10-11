@@ -99,9 +99,9 @@ static const char *godvoices[] = {
 
 
 #define ugod_is_angry() (u.ualign.record < 0)
-#define on_altar() IS_ALTAR(levl[u.ux][u.uy].typ)
-#define on_shrine() ((levl[u.ux][u.uy].altarmask & AM_SHRINE) != 0)
-#define a_align(x, y) ((aligntyp) Amask2align(levl[x][y].altarmask & AM_MASK))
+#define on_altar() IS_ALTAR(NH_TILE(u.ux, u.uy).typ)
+#define on_shrine() ((NH_TILE(u.ux, u.uy).altarmask & AM_SHRINE) != 0)
+#define a_align(x, y) ((aligntyp) Amask2align(NH_TILE(x, y).altarmask & AM_MASK))
 
 /* critically low hit points if hp <= 5 or hp <= maxhp/N for some N */
 boolean
@@ -162,8 +162,8 @@ stuck_in_wall()
                 continue;
             y = u.uy + j;
             if (!isok(x, y)
-                || (IS_ROCK(levl[x][y].typ)
-                    && (levl[x][y].typ != SDOOR && levl[x][y].typ != SCORR))
+                || (IS_ROCK(NH_TILE(x, y).typ)
+                    && (NH_TILE(x, y).typ != SDOOR && NH_TILE(x, y).typ != SCORR))
                 || (blocked_boulder(i, j) && !throws_rocks(youmonst.data)))
                 ++count;
         }
@@ -823,7 +823,7 @@ gcrownu()
         break;
     }
 
-    if (objects[class_gift].oc_class == SPBOOK_CLASS) {
+    if (object_defaults[class_gift].oc_class == SPBOOK_CLASS) {
         obj = mksobj(class_gift, TRUE, FALSE);
         bless(obj);
         obj->bknown = 1; /* ok to skip set_bknown() */
@@ -1210,7 +1210,7 @@ aligntyp g_align;
                         || carrying(MAGIC_MARKER))
                         break;
                 }
-                otmp->otyp = rnd_class(bases[SPBOOK_CLASS], SPE_BLANK_PAPER);
+                NH_PILE_WRITE(otmp, (otmp->otyp = rnd_class(bases[SPBOOK_CLASS], SPE_BLANK_PAPER)));
             }
             bless(otmp);
             at_your_feet("A spellbook");
@@ -1344,7 +1344,7 @@ dosacrifice()
         return 0;
     }
     highaltar = ((Is_astralevel(&u.uz) || Is_sanctum(&u.uz))
-                 && (levl[u.ux][u.uy].altarmask & AM_SHRINE));
+                 && (NH_TILE(u.ux, u.uy).altarmask & AM_SHRINE));
 
     otmp = floorfood("sacrifice", 1);
     if (!otmp)
@@ -1395,7 +1395,7 @@ dosacrifice()
             } else if (altaralign != A_CHAOTIC && altaralign != A_NONE) {
                 /* curse the lawful/neutral altar */
                 pline_The("altar is stained with %s blood.", urace.adj);
-                levl[u.ux][u.uy].altarmask = AM_CHAOTIC;
+                NH_TILE(u.ux, u.uy).altarmask = AM_CHAOTIC;
                 angry_priest();
             } else {
                 struct monst *dmon;
@@ -1408,7 +1408,7 @@ dosacrifice()
                     "The blood floods the altar, which vanishes in %s cloud!",
                           an(hcolor(NH_BLACK)));
                     SET_TYP_XY(u.ux, u.uy, ROOM);
-                    levl[u.ux][u.uy].altarmask = 0;
+                    NH_TILE(u.ux, u.uy).altarmask = 0;
                     newsym(u.ux, u.uy);
                     angry_priest();
                     demonless_msg = "cloud dissipates";
@@ -1656,10 +1656,10 @@ dosacrifice()
                     exercise(A_WIS, TRUE);
                     change_luck(1);
                     /* Yes, this is supposed to be &=, not |= */
-                    levl[u.ux][u.uy].altarmask &= AM_SHRINE;
+                    NH_TILE(u.ux, u.uy).altarmask &= AM_SHRINE;
                     /* the following accommodates stupid compilers */
-                    levl[u.ux][u.uy].altarmask =
-                        levl[u.ux][u.uy].altarmask
+                    NH_TILE(u.ux, u.uy).altarmask =
+                        NH_TILE(u.ux, u.uy).altarmask
                         | (Align2amask(u.ualign.type));
                     if (!Blind)
                         pline_The("altar glows %s.",
@@ -2097,7 +2097,7 @@ const char *
 a_gname_at(x, y)
 xchar x, y;
 {
-    if (!IS_ALTAR(levl[x][y].typ))
+    if (!IS_ALTAR(NH_TILE(x, y).typ))
         return (char *) 0;
 
     return align_gname(a_align(x, y));
@@ -2297,7 +2297,7 @@ int dx, dy;
         return TRUE;
     if (!isok(nx, ny))
         return TRUE;
-    if (IS_ROCK(levl[nx][ny].typ))
+    if (IS_ROCK(NH_TILE(nx, ny).typ))
         return TRUE;
     if (sobj_at(BOULDER, nx, ny))
         return TRUE;

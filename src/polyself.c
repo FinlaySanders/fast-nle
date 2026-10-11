@@ -518,7 +518,7 @@ int psflags;
                     /* uarm->spe enchantment remains unchanged;
                        re-converting scales to mail poses risk
                        of evaporation due to over enchanting */
-                    uarm->otyp += GRAY_DRAGON_SCALES - GRAY_DRAGON_SCALE_MAIL;
+                    NH_PILE_WRITE(uarm, (uarm->otyp += GRAY_DRAGON_SCALES - GRAY_DRAGON_SCALE_MAIL));
                     uarm->dknown = 1;
                     context.botl = 1; /* AC is changing */
                 }
@@ -1290,7 +1290,7 @@ dospinweb()
     } else if (On_stairs(u.ux, u.uy)) {
         /* cop out: don't let them hide the stairs */
         Your("web fails to impede access to the %s.",
-             (levl[u.ux][u.uy].typ == STAIRS) ? "stairs" : "ladder");
+             (NH_TILE(u.ux, u.uy).typ == STAIRS) ? "stairs" : "ladder");
         return 1;
     }
     ttmp = maketrap(u.ux, u.uy, WEB);
@@ -1481,7 +1481,7 @@ dohide()
     /* note: the eel and hides_under cases are hypothetical;
        such critters aren't offered the option of hiding via #monster */
     if (youmonst.data->mlet == S_EEL && !is_pool(u.ux, u.uy)) {
-        if (IS_FOUNTAIN(levl[u.ux][u.uy].typ))
+        if (IS_FOUNTAIN(NH_TILE(u.ux, u.uy).typ))
             The("fountain is not deep enough to hide in.");
         else
             There("is no %s to hide in here.", hliquid("water"));

@@ -791,7 +791,7 @@ struct obj *obj;
     bareobj.known = (obj->oclass == AMULET_CLASS)
                         ? obj->known
                         /* default is "on" for types which don't use it */
-                        : !objects[otyp].oc_uses_known;
+                        : !object_defaults[otyp].oc_uses_known;
     bareobj.quan = 1L;         /* don't want plural */
     bareobj.corpsenm = NON_PM; /* suppress statue and figurine details */
     /* but suppressing fruit details leads to "bad fruit #0"
@@ -837,7 +837,7 @@ struct obj *obj;
     else if (obj->otyp == FAKE_AMULET_OF_YENDOR && !known)
         return TRUE; /* lie */
     else
-        return (boolean) (objects[obj->otyp].oc_unique
+        return (boolean) (object_defaults[obj->otyp].oc_unique
                           && (known || obj->otyp == AMULET_OF_YENDOR));
 }
 
@@ -1034,7 +1034,7 @@ unsigned doname_flags;
              * printed to avoid ambiguity between an item whose curse
              * status is unknown, and an item known to be uncursed.
              */
-                 || ((!known || !objects[obj->otyp].oc_charged
+                 || ((!known || !object_defaults[obj->otyp].oc_charged
                       || obj->oclass == ARMOR_CLASS
                       || obj->oclass == RING_CLASS)
 #ifdef MAIL
@@ -1130,13 +1130,13 @@ unsigned doname_flags;
         } else if (obj->otyp == OIL_LAMP || obj->otyp == MAGIC_LAMP
                    || obj->otyp == BRASS_LANTERN || Is_candle(obj)) {
             if (Is_candle(obj)
-                && obj->age < 20L * (long) objects[obj->otyp].oc_cost)
+                && obj->age < 20L * (long) object_defaults[obj->otyp].oc_cost)
                 Strcat(prefix, "partly used ");
             if (obj->lamplit)
                 Strcat(bp, " (lit)");
             break;
         }
-        if (objects[obj->otyp].oc_charged)
+        if (object_defaults[obj->otyp].oc_charged)
             goto charges;
         break;
     case WAND_CLASS:
@@ -1158,7 +1158,7 @@ unsigned doname_flags;
             Strcat(bp, body_part(HAND));
             Strcat(bp, ")");
         }
-        if (known && objects[obj->otyp].oc_charged) {
+        if (known && object_defaults[obj->otyp].oc_charged) {
             Strcat(prefix, sitoa(obj->spe));
             Strcat(prefix, " ");
         }
@@ -1232,7 +1232,7 @@ unsigned doname_flags;
         switch (obj->oclass) {
         case WEAPON_CLASS:
             if (is_ammo(obj)) {
-                if (objects[obj->otyp].oc_skill == -P_BOW) {
+                if (object_defaults[obj->otyp].oc_skill == -P_BOW) {
                     /* Ammo for a bow */
                     Strcat(bp, " (in quiver)");
                     break;
@@ -1969,7 +1969,7 @@ struct obj *obj;
        any `known' and `dknown' checking necessary) */
     if (otyp == FAKE_AMULET_OF_YENDOR)
         otyp = AMULET_OF_YENDOR;
-    if (objects[otyp].oc_unique
+    if (object_defaults[otyp].oc_unique
         && !strcmp(simpleoname, OBJ_NAME(objects[otyp])))
         return the(simpleoname);
 
@@ -2851,16 +2851,16 @@ schar skill;
     short otyp = STRANGE_OBJECT;
 
     for (i = bases[WEAPON_CLASS];
-         i < NUM_OBJECTS && objects[i].oc_class == WEAPON_CLASS; i++)
-        if (objects[i].oc_skill == skill) {
+         i < NUM_OBJECTS && object_defaults[i].oc_class == WEAPON_CLASS; i++)
+        if (object_defaults[i].oc_skill == skill) {
             n++;
             otyp = i;
         }
     if (n > 0) {
         n = rn2(n);
         for (i = bases[WEAPON_CLASS];
-             i < NUM_OBJECTS && objects[i].oc_class == WEAPON_CLASS; i++)
-            if (objects[i].oc_skill == skill)
+             i < NUM_OBJECTS && object_defaults[i].oc_class == WEAPON_CLASS; i++)
+            if (object_defaults[i].oc_skill == skill)
                 if (--n < 0)
                     return i;
     }
@@ -2892,7 +2892,7 @@ int xtra_prob; /* to force 0% random generation items to also be considered */
      * scrolls are supposed to be much more common than books.]
      */
     for (i = oclass ? bases[(int) oclass] : STRANGE_OBJECT + 1;
-         i < NUM_OBJECTS && (!oclass || objects[i].oc_class == oclass);
+         i < NUM_OBJECTS && (!oclass || object_defaults[i].oc_class == oclass);
          ++i) {
         /* don't match extra descriptions (w/o real name) */
         if ((zn = OBJ_NAME(objects[i])) == 0)
@@ -3396,7 +3396,7 @@ struct obj *no_wish;
             cnt = 1;
         otmp = mksobj(GOLD_PIECE, FALSE, FALSE);
         otmp->quan = (long) cnt;
-        otmp->owt = weight(otmp);
+        nh_set_owt(otmp);
         context.botl = 1;
         return otmp;
     }
@@ -3535,7 +3535,7 @@ struct obj *no_wish;
         if (!strcmpi(g, "glass")) { /* choose random color */
             /* 9 different kinds */
             typ = LAST_GEM + rnd(9);
-            if (objects[typ].oc_class == GEM_CLASS)
+            if (object_defaults[typ].oc_class == GEM_CLASS)
                 goto typfnd;
             else
                 typ = 0; /* somebody changed objects[]? punt */
@@ -3717,7 +3717,7 @@ struct obj *no_wish;
 
         /* furniture and terrain (use at your own risk; can clobber stairs
            or place furniture on existing traps which shouldn't be allowed) */
-        lev = &levl[x][y];
+        lev = &NH_TILE(x, y);
         p = eos(bp);
         if (!BSTRCMPI(bp, p - 8, "fountain")) {
             SET_TYP_P(lev, FOUNTAIN);
@@ -3822,7 +3822,7 @@ struct obj *no_wish;
         oclass = wrpsym[rn2((int) sizeof wrpsym)];
  typfnd:
     if (typ)
-        oclass = objects[typ].oc_class;
+        oclass = object_defaults[typ].oc_class;
 
     /* handle some objects that are only allowed in wizard mode */
     if (typ && !wizard) {
@@ -3844,7 +3844,7 @@ struct obj *no_wish;
             break;
         default:
             /* catch any other non-wishable objects (venom) */
-            if (objects[typ].oc_nowish)
+            if (object_defaults[typ].oc_nowish)
                 return (struct obj *) 0;
             break;
         }
@@ -3864,7 +3864,7 @@ struct obj *no_wish;
     }
 
     /* if player specified a reasonable count, maybe honor it */
-    if (cnt > 0 && objects[typ].oc_merge
+    if (cnt > 0 && object_defaults[typ].oc_merge
         && (wizard || cnt < rnd(6) || (cnt <= 7 && Is_candle(otmp))
             || (cnt <= 20 && ((oclass == WEAPON_CLASS && is_ammo(otmp))
                               || typ == ROCK || is_missile(otmp)))))
@@ -3879,7 +3879,7 @@ struct obj *no_wish;
         ; /* no alteration to spe */
     } else if (oclass == ARMOR_CLASS || oclass == WEAPON_CLASS
                || is_weptool(otmp)
-               || (oclass == RING_CLASS && objects[typ].oc_charged)) {
+               || (oclass == RING_CLASS && object_defaults[typ].oc_charged)) {
         if (spe > rnd(5) && spe > otmp->spe)
             spe = 0;
         if (spe > 2 && Luck < 0)
@@ -3988,7 +3988,7 @@ struct obj *no_wish;
         case SCALE_MAIL:
             /* Dragon mail - depends on the order of objects & dragons. */
             if (mntmp >= PM_GRAY_DRAGON && mntmp <= PM_YELLOW_DRAGON)
-                otmp->otyp = GRAY_DRAGON_SCALE_MAIL + mntmp - PM_GRAY_DRAGON;
+                NH_PILE_WRITE(otmp, (otmp->otyp = GRAY_DRAGON_SCALE_MAIL + mntmp - PM_GRAY_DRAGON));
             break;
         }
     }
@@ -4054,7 +4054,7 @@ struct obj *no_wish;
             /* this assumes that artifacts can't be randomly generated
                inside containers */
             delete_contents(otmp);
-            otmp->owt = weight(otmp);
+            nh_set_owt(otmp);
         }
     }
     /* set locked/unlocked/broken */
@@ -4120,11 +4120,11 @@ struct obj *no_wish;
         if (otmp->otyp == CORPSE)
             otmp->oeaten = mons[otmp->corpsenm].cnutrit;
         else
-            otmp->oeaten = objects[otmp->otyp].oc_nutrition;
+            otmp->oeaten = object_defaults[otmp->otyp].oc_nutrition;
         /* (do this adjustment before setting up object's weight) */
         consume_oeaten(otmp, 1);
     }
-    otmp->owt = weight(otmp);
+    nh_set_owt(otmp);
     if (very && otmp->otyp == HEAVY_IRON_BALL)
         otmp->owt += IRON_BALL_W_INCR;
     else if (gsize > 1 && otmp->globby)

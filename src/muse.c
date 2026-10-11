@@ -561,7 +561,7 @@ struct monst *mtmp;
             /* monsters digging in Sokoban can ruin things */
             && !Sokoban
             /* digging wouldn't be effective; assume they know that */
-            && !(levl[x][y].wall_info & W_NONDIGGABLE)
+            && !(NH_TILE(x, y).wall_info & W_NONDIGGABLE)
             && !(Is_botlevel(&u.uz) || In_endgame(&u.uz))
             && !(is_ice(x, y) || is_pool(x, y) || is_lava(x, y))
             && !(mtmp->data == &mons[PM_VLAD_THE_IMPALER]
@@ -777,7 +777,7 @@ struct monst *mtmp;
             pline_The("digging ray is ineffective.");
             return 2;
         }
-        if (!Can_dig_down(&u.uz) && !levl[mtmp->mx][mtmp->my].candig) {
+        if (!Can_dig_down(&u.uz) && !NH_TILE(mtmp->mx, mtmp->my).candig) {
             if (canseemon(mtmp))
                 pline_The("%s here is too hard to dig in.",
                           surface(mtmp->mx, mtmp->my));
@@ -1404,7 +1404,7 @@ struct obj *obj;                     /* 2nd arg to fhitm/fhito */
                         makeknown(obj->otyp);
                     /* if a shop door gets broken, add it to
                        the shk's fix list (no cost to player) */
-                    if (levl[bhitpos.x][bhitpos.y].doormask == D_BROKEN
+                    if (NH_TILE(bhitpos.x, bhitpos.y).doormask == D_BROKEN
                         && *in_rooms(bhitpos.x, bhitpos.y, SHOPBASE))
                         add_damage(bhitpos.x, bhitpos.y, 0L);
                 }
@@ -1412,7 +1412,7 @@ struct obj *obj;                     /* 2nd arg to fhitm/fhito */
             }
         }
         if (!ZAP_POS(typ)
-            || (IS_DOOR(typ) && (levl[bhitpos.x][bhitpos.y].doormask
+            || (IS_DOOR(typ) && (NH_TILE(bhitpos.x, bhitpos.y).doormask
                                  & (D_LOCKED | D_CLOSED)))) {
             bhitpos.x -= ddx;
             bhitpos.y -= ddy;
@@ -2378,8 +2378,8 @@ struct monst *mon;
 
         if (obj->otyp == TIN_OPENER
             || (obj->oclass == WEAPON_CLASS
-                && (objects[obj->otyp].oc_skill == P_DAGGER
-                    || objects[obj->otyp].oc_skill == P_KNIFE)))
+                && (object_defaults[obj->otyp].oc_skill == P_DAGGER
+                    || object_defaults[obj->otyp].oc_skill == P_KNIFE)))
             return TRUE;
     }
     return FALSE;

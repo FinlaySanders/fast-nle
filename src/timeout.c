@@ -282,7 +282,7 @@ levitation_dialogue()
     if (ELevitation)
         return;
 
-    if (!ACCESSIBLE(levl[u.ux][u.uy].typ)
+    if (!ACCESSIBLE(NH_TILE(u.ux, u.uy).typ)
         && !is_pool_or_lava(u.ux,u.uy))
         return;
 
@@ -465,7 +465,7 @@ STATIC_OVL void
 done_timeout(how, which)
 int how, which;
 {
-    long *intrinsic_p = &u.uprops[which].intrinsic;
+    propbits_t *intrinsic_p = &u.uprops[which].intrinsic;
 
     *intrinsic_p |= I_SPECIAL; /* affects final disclosure */
     done(how);
@@ -1149,7 +1149,7 @@ long timeout;
 
             if (menorah) {
                 obj->spe = 0; /* no more candles */
-                obj->owt = weight(obj);
+                nh_set_owt(obj);
             } else if (Is_candle(obj) || obj->otyp == POT_OIL) {
                 /* get rid of candles and burning oil potions;
                    we know this object isn't carried by hero,
@@ -1368,7 +1368,7 @@ long timeout;
 
             if (menorah) {
                 obj->spe = 0;
-                obj->owt = weight(obj);
+                nh_set_owt(obj);
             } else {
                 if (carried(obj)) {
                     useupall(obj);
@@ -1596,7 +1596,7 @@ do_storms()
         do {
             x = rnd(COLNO - 1);
             y = rn2(ROWNO);
-        } while (++count < 100 && levl[x][y].typ != CLOUD);
+        } while (++count < 100 && NH_TILE(x, y).typ != CLOUD);
 
         if (count < 100) {
             dirx = rn2(3) - 1;
@@ -1607,7 +1607,7 @@ do_storms()
         }
     }
 
-    if (levl[u.ux][u.uy].typ == CLOUD) {
+    if (NH_TILE(u.ux, u.uy).typ == CLOUD) {
         /* Inside a cloud during a thunder storm is deafening. */
         /* Even if already deaf, we sense the thunder's vibrations. */
         pline("Kaboom!!!  Boom!!  Boom!!");

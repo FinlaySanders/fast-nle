@@ -267,9 +267,9 @@ const void *b;
 
 #define IS_UNEXPLORED_LOC(x,y) \
     (isok((x), (y))                                     \
-     && glyph_is_cmap(levl[(x)][(y)].glyph)             \
-     && glyph_to_cmap(levl[(x)][(y)].glyph) == S_stone  \
-     && !levl[(x)][(y)].seenv)
+     && glyph_is_cmap(NH_TILE((x), (y)).glyph)             \
+     && glyph_to_cmap(NH_TILE((x), (y)).glyph) == S_stone  \
+     && !NH_TILE((x), (y)).seenv)
 
 /* gloc_filter_map moved into nle_ctx_t — macro above.
  * Default is NULL via calloc; matches original (struct opvar *) 0. */
@@ -310,7 +310,7 @@ int x, y;
 {
     int glyph = back_to_glyph(x, y);
 
-    if (!levl[x][y].seenv)
+    if (!NH_TILE(x, y).seenv)
         return FALSE;
 
     if (glyph == gloc_filter_floodfill_match_glyph)
@@ -342,7 +342,7 @@ gloc_filter_init()
         }
         /* special case: if we're in a doorway, try to figure out which
            direction we're moving, and use that side of the doorway */
-        if (IS_DOOR(levl[u.ux][u.uy].typ)) {
+        if (IS_DOOR(NH_TILE(u.ux, u.uy).typ)) {
             if (u.dx || u.dy) {
                 gloc_filter_floodfill(u.ux + u.dx, u.uy + u.dy);
             } else {
@@ -952,14 +952,14 @@ const char *goal;
                                     /* !terrainmode: don't move to remembered
                                        trap or object if not currently shown */
                                     && !iflags.terrainmode) {
-                                    k = levl[tx][ty].glyph;
+                                    k = NH_TILE(tx, ty).glyph;
                                     if (glyph_is_cmap(k)
                                         && matching[glyph_to_cmap(k)])
                                         goto foundc;
                                 }
                                 /* last, try actual terrain here (shouldn't
                                    we be using lastseentyp[][] instead?) */
-                                if (levl[tx][ty].seenv) {
+                                if (NH_TILE(tx, ty).seenv) {
                                     k = back_to_glyph(tx, ty);
                                     if (glyph_is_cmap(k)
                                         && matching[glyph_to_cmap(k)])
@@ -1378,7 +1378,7 @@ int i;
 {
     return (boolean) (objects[i].oc_uname
                       || (OBJ_DESCR(objects[i])
-                          && index(callable, objects[i].oc_class)));
+                          && index(callable, object_defaults[i].oc_class)));
 }
 
 /* C and #name commands - player can name monster or object or type of obj */
@@ -1498,7 +1498,7 @@ struct obj *obj;
     else if (otemp.otyp == FIGURINE)
         otemp.corpsenm = NON_PM; /* suppress mon type */
     else if (otemp.otyp == HEAVY_IRON_BALL)
-        otemp.owt = objects[HEAVY_IRON_BALL].oc_weight; /* not "very heavy" */
+        otemp.owt = object_defaults[HEAVY_IRON_BALL].oc_weight; /* not "very heavy" */
     else if (otemp.oclass == FOOD_CLASS && otemp.globby)
         otemp.owt = 120; /* 6*20, neither a small glob nor a large one */
 

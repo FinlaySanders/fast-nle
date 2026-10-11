@@ -5,4 +5,5 @@
 #ifndef NH_CTX_FILE_MKOBJ_C_H
 #define NH_CTX_FILE_MKOBJ_C_H
 #define unknown (nh_cur->g_mkobj_c_unknown)
+#define obj_pool (nh_cur->g_mkobj_c_obj_pool)
 #endif /* NH_CTX_FILE_MKOBJ_C_H */

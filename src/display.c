@@ -171,7 +171,7 @@ STATIC_DCL void FDECL(set_seenv, (struct rm *, int, int, int, int));
 STATIC_DCL void FDECL(t_warn, (struct rm *));
 STATIC_DCL int FDECL(wall_angle, (struct rm *));
 
-#define remember_topology(x, y) (lastseentyp[x][y] = levl[x][y].typ)
+#define remember_topology(x, y) (lastseentyp[x][y] = NH_TILE(x, y).typ)
 
 /*
  * magic_map_background()
@@ -185,7 +185,7 @@ xchar x, y;
 int show;
 {
     int glyph = back_to_glyph(x, y); /* assumes hero can see x,y */
-    struct rm *lev = &levl[x][y];
+    struct rm *lev = &NH_TILE(x, y);
 
     /*
      * Correct for out of sight lit corridors and rooms that the hero
@@ -237,7 +237,7 @@ register int show;
     register int glyph = back_to_glyph(x, y);
 
     if (level.lflags.hero_memory)
-        levl[x][y].glyph = glyph;
+        NH_TILE(x, y).glyph = glyph;
     if (show)
         show_glyph(x, y, glyph);
 }
@@ -257,7 +257,7 @@ register int show;
     register int glyph = trap_to_glyph(trap, newsym_rn2);
 
     if (level.lflags.hero_memory)
-        levl[x][y].glyph = glyph;
+        NH_TILE(x, y).glyph = glyph;
     if (show)
         show_glyph(x, y, glyph);
 }
@@ -281,9 +281,9 @@ register int show;
         /*       but remembered as random objects.                        */
 
         if (Hallucination && obj->otyp == STATUE) {
-            levl[x][y].glyph = random_obj_to_glyph(newsym_rn2);
+            NH_TILE(x, y).glyph = random_obj_to_glyph(newsym_rn2);
         } else {
-            levl[x][y].glyph = glyph;
+            NH_TILE(x, y).glyph = glyph;
         }
     }
     if (show)
@@ -305,7 +305,7 @@ register xchar x, y;
 {
     if (x != u.ux || y != u.uy) { /* don't display I at hero's location */
         if (level.lflags.hero_memory)
-            levl[x][y].glyph = GLYPH_INVISIBLE;
+            NH_TILE(x, y).glyph = GLYPH_INVISIBLE;
         show_glyph(x, y, GLYPH_INVISIBLE);
     }
 }
@@ -314,7 +314,7 @@ boolean
 unmap_invisible(x, y)
 int x, y;
 {
-    if (isok(x,y) && glyph_is_invisible(levl[x][y].glyph)) {
+    if (isok(x,y) && glyph_is_invisible(NH_TILE(x, y).glyph)) {
         unmap_object(x, y);
         newsym(x, y);
         return TRUE;
@@ -343,8 +343,8 @@ register int x, y;
 
     if ((trap = t_at(x, y)) != 0 && trap->tseen && !covers_traps(x, y)) {
         map_trap(trap, 0);
-    } else if (levl[x][y].seenv) {
-        struct rm *lev = &levl[x][y];
+    } else if (NH_TILE(x, y).seenv) {
+        struct rm *lev = &NH_TILE(x, y);
 
         map_background(x, y, 0);
 
@@ -353,7 +353,7 @@ register int x, y;
             && lev->typ == ROOM)
             lev->glyph = cmap_to_glyph(S_stone);
     } else {
-        levl[x][y].glyph = cmap_to_glyph(S_stone); /* default val */
+        NH_TILE(x, y).glyph = cmap_to_glyph(S_stone); /* default val */
     }
 }
 
@@ -397,7 +397,7 @@ int x, y, monglyph;
     /* "remembered, unseen monster" is tracked by object layer so if we're
        putting something on monster layer at same spot, stop remembering
        that; if an object is in view there, start remembering it instead */
-    if (glyph_is_invisible(levl[x][y].glyph)) {
+    if (glyph_is_invisible(NH_TILE(x, y).glyph)) {
         unmap_object(x, y);
         if (cansee(x, y) && (o = vobj_at(x, y)) != 0)
             map_object(o, FALSE);
@@ -461,7 +461,7 @@ xchar worm_tail;            /* mon is actually a worm tail */
              */
             int sym = mon->mappearance, glyph = cmap_to_glyph(sym);
 
-            levl[x][y].glyph = glyph;
+            NH_TILE(x, y).glyph = glyph;
             if (!sensed) {
                 show_glyph(x, y, glyph);
                 /* override real topology with mimic's fake one */
@@ -605,7 +605,7 @@ xchar x, y;
 
     if (!isok(x, y))
         return;
-    lev = &(levl[x][y]);
+    lev = &(NH_TILE(x, y));
     /* If hero's memory of an invisible monster is accurate, we want to keep
      * him from detecting the same monster over and over again on each turn.
      * We must return (so we don't erase the monster).  (We must also, in the
@@ -759,7 +759,7 @@ newsym(x, y)
 register int x, y;
 {
     register struct monst *mon;
-    register struct rm *lev = &(levl[x][y]);
+    register struct rm *lev = &(NH_TILE(x, y));
     register int see_it;
     register xchar worm_tail;
 
@@ -1143,7 +1143,7 @@ int tg, rpt;
 
     rpt *= 2; /* two loop iterations per 'count' */
     glyph[0] = tg;
-    glyph[1] = (level.lflags.hero_memory) ? levl[x][y].glyph
+    glyph[1] = (level.lflags.hero_memory) ? NH_TILE(x, y).glyph
                                          : back_to_glyph(x, y);
     /* even iteration count (guaranteed) ends with glyph[1] showing;
        caller might want to override that, but no newsym() calls here
@@ -1451,10 +1451,9 @@ docrt()
 
     /* display memory */
     for (x = 1; x < COLNO; x++) {
-        lev = &levl[x][0];
-        for (y = 0; y < ROWNO; y++, lev++)
-            if (lev->glyph != cmap_to_glyph(S_stone))
-                show_glyph(x, y, lev->glyph);
+        for (y = 0; y < ROWNO; y++)
+            if (NH_TILE(x, y).glyph != cmap_to_glyph(S_stone))
+                show_glyph(x, y, NH_TILE(x, y).glyph);
     }
 
     /* see what is to be seen */
@@ -1496,7 +1495,7 @@ redraw_map()
      */
     for (y = 0; y < ROWNO; ++y)
         for (x = 1; x < COLNO; ++x) {
-            glyph = glyph_at(x, y); /* not levl[x][y].glyph */
+            glyph = glyph_at(x, y); /* not NH_TILE(x, y).glyph */
             print_glyph(WIN_MAP, x, y, glyph, get_bk_glyph(x, y));
         }
     flush_screen(1);
@@ -1506,21 +1505,23 @@ redraw_map()
 /* Glyph Buffering (3rd screen) =========================================== */
 
 typedef struct {
-    xchar new; /* perhaps move this bit into the rm structure. */
-    int glyph;
-} gbuf_entry;
+    short glyph[ROWNO][COLNO];
+    xchar changed[ROWNO][COLNO];
+} gbuf_state;
+_Static_assert(MAX_GLYPH < 32767, "glyphs and NO_GLYPH fit in a signed short");
 
 /* gbuf — per-env display buffer migrated to nle_ctx_t.
  * ROWNO*COLNO entries; macro casts the flat allocation to a 2D pointer. */
-/* slot 15: per-env glyph buffer (gbuf_entry is private to display.c) */
+/* slot 15: separate glyph and change planes, private to display.c */
 static void *
 nle_gbuf_blob(void)
 {
     if (!nh_cur->nh_lazy[15])
-        nh_cur->nh_lazy[15] = calloc(ROWNO * COLNO, sizeof(gbuf_entry));
+        nh_cur->nh_lazy[15] = calloc(1, sizeof(gbuf_state));
     return nh_cur->nh_lazy[15];
 }
-#define gbuf       ((gbuf_entry (*)[COLNO]) nle_gbuf_blob())
+#define gbuf_glyph (((gbuf_state *) nle_gbuf_blob())->glyph)
+#define gbuf_changed (((gbuf_state *) nle_gbuf_blob())->changed)
 #define gbuf_start (nh_cur->g_display_c_gbuf_start)
 #define gbuf_stop  (nh_cur->g_display_c_gbuf_stop)
 
@@ -1532,7 +1533,7 @@ newsym_force(x, y)
 register int x, y;
 {
     newsym(x,y);
-    gbuf[y][x].new = 1;
+    gbuf_changed[y][x] = 1;
     if (gbuf_start[y] > x)
         gbuf_start[y] = x;
     if (gbuf_stop[y] < x)
@@ -1612,9 +1613,9 @@ int x, y, glyph;
         return;
     }
 
-    if (gbuf[y][x].glyph != glyph || iflags.use_background_glyph) {
-        gbuf[y][x].glyph = glyph;
-        gbuf[y][x].new = 1;
+    if (gbuf_glyph[y][x] != glyph || iflags.use_background_glyph) {
+        gbuf_glyph[y][x] = glyph;
+        gbuf_changed[y][x] = 1;
         if (gbuf_start[y] > x)
             gbuf_start[y] = x;
         if (gbuf_stop[y] < x)
@@ -1647,23 +1648,20 @@ void
 clear_glyph_buffer()
 {
     register int x, y;
-    register gbuf_entry *gptr;
-    gbuf_entry nul_gbuf;
 
     /* Lazy init for the per-env nul_gbuf payload.
      * Original was a static struct initializer using cmap_to_glyph(S_stone).
      * GLYPH_CMAP_OFF is always nonzero, so a 0 glyph means uninitialized. */
     if (nh_cur->g_display_c_nul_gbuf_glyph == 0)
         nh_cur->g_display_c_nul_gbuf_glyph = cmap_to_glyph(S_stone);
-    nul_gbuf.new = (xchar) nh_cur->g_display_c_nul_gbuf_new;
-    nul_gbuf.glyph = nh_cur->g_display_c_nul_gbuf_glyph;
     for (y = 0; y < ROWNO; y++) {
-        gptr = &gbuf[y][0];
-        for (x = COLNO; x; x--) {
-            *gptr++ = nul_gbuf;
+        for (x = 0; x < COLNO; x++) {
+            gbuf_glyph[y][x] = (short) nh_cur->g_display_c_nul_gbuf_glyph;
+            gbuf_changed[y][x] = (xchar) nh_cur->g_display_c_nul_gbuf_new;
         }
     }
     reset_glyph_bbox();
+    nle_glyphs_cleared();
 }
 
 /*
@@ -1676,8 +1674,8 @@ int start, stop, y;
     register int x;
 
     for (x = start; x <= stop; x++)
-        if (gbuf[y][x].glyph != cmap_to_glyph(S_stone))
-            print_glyph(WIN_MAP, x, y, gbuf[y][x].glyph, get_bk_glyph(x, y));
+        if (gbuf_glyph[y][x] != cmap_to_glyph(S_stone))
+            print_glyph(WIN_MAP, x, y, gbuf_glyph[y][x], get_bk_glyph(x, y));
 }
 
 void
@@ -1722,12 +1720,10 @@ int cursor_on_u;
 #endif
 
     for (y = 0; y < ROWNO; y++) {
-        register gbuf_entry *gptr = &gbuf[y][x = gbuf_start[y]];
-
-        for (; x <= gbuf_stop[y]; gptr++, x++)
-            if (gptr->new) {
-                print_glyph(WIN_MAP, x, y, gptr->glyph, get_bk_glyph(x, y));
-                gptr->new = 0;
+        for (x = gbuf_start[y]; x <= gbuf_stop[y]; x++)
+            if (gbuf_changed[y][x]) {
+                print_glyph(WIN_MAP, x, y, gbuf_glyph[y][x], get_bk_glyph(x, y));
+                gbuf_changed[y][x] = 0;
             }
     }
 
@@ -1764,7 +1760,7 @@ back_to_glyph(x, y)
 xchar x, y;
 {
     int idx;
-    struct rm *ptr = &(levl[x][y]);
+    struct rm *ptr = &(NH_TILE(x, y));
 
     switch (ptr->typ) {
     case SCORR:
@@ -1938,10 +1934,34 @@ int beam_type;
 void
 nle_copy_glyphs(short *dst)
 {
-    int x, y;
+    int y;
+    for (y = 0; y < ROWNO; y++) {
+        memcpy(dst, &gbuf_glyph[y][1], (COLNO - 1) * sizeof(*dst));
+        dst += COLNO - 1;
+    }
+}
+
+/* Copy only the rows in mask (bit y = row y). */
+void
+nle_copy_glyph_rows(short *dst, unsigned mask)
+{
+    int y;
     for (y = 0; y < ROWNO; y++)
-        for (x = 1; x < COLNO; x++)
-            *dst++ = (short) gbuf[y][x].glyph;
+        if (mask & (1u << y))
+            memcpy(dst + (size_t) y * (COLNO - 1), &gbuf_glyph[y][1],
+                   (COLNO - 1) * sizeof(*dst));
+}
+
+/* Rows with show_glyph() writes not yet flushed to the window port. */
+unsigned
+nle_gbuf_pending_rows()
+{
+    unsigned m = 0;
+    int y;
+    for (y = 0; y < ROWNO; y++)
+        if (gbuf_start[y] <= gbuf_stop[y])
+            m |= 1u << y;
+    return m;
 }
 
 int
@@ -1950,7 +1970,7 @@ xchar x, y;
 {
     if (x < 0 || y < 0 || x >= COLNO || y >= ROWNO)
         return cmap_to_glyph(S_room); /* XXX */
-    return gbuf[y][x].glyph;
+    return gbuf_glyph[y][x];
 }
 
 /*
@@ -1971,10 +1991,10 @@ get_bk_glyph(x, y)
 xchar x, y;
 {
     int idx, bkglyph = NO_GLYPH;
-    struct rm *lev = &levl[x][y];
+    struct rm *lev = &NH_TILE(x, y);
 
     if (iflags.use_background_glyph && lev->seenv != 0
-        && gbuf[y][x].glyph != cmap_to_glyph(S_stone)) {
+        && gbuf_glyph[y][x] != cmap_to_glyph(S_stone)) {
         switch (lev->typ) {
         case SCORR:
         case STONE:
@@ -2058,9 +2078,9 @@ error4(x, y, a, b, c, dd)
 int x, y, a, b, c, dd;
 {
     pline("set_wall_state: %s @ (%d,%d) %s%s%s%s",
-          type_to_name(levl[x][y].typ), x, y,
+          type_to_name(NH_TILE(x, y).typ), x, y,
           a ? "1" : "", b ? "2" : "", c ? "3" : "", dd ? "4" : "");
-    bad_count[levl[x][y].typ]++;
+    bad_count[NH_TILE(x, y).typ]++;
 }
 #endif /* WA_VERBOSE */
 
@@ -2078,7 +2098,7 @@ int x, y, which;
 
     if (!isok(x, y))
         return which;
-    type = levl[x][y].typ;
+    type = NH_TILE(x, y).typ;
     if (IS_ROCK(type) || type == CORR || type == SCORR)
         return which;
     return 0;
@@ -2228,7 +2248,8 @@ set_wall_state()
 #endif
 
     for (x = 0; x < COLNO; x++)
-        for (lev = &levl[x][0], y = 0; y < ROWNO; y++, lev++) {
+        for (y = 0; y < ROWNO; y++) {
+            lev = &NH_TILE(x, y);
             switch (lev->typ) {
             case SDOOR:
                 wmode = set_wall(x, y, (int) lev->horizontal);
@@ -2316,7 +2337,7 @@ int x0, y0, x, y; /* from, to */
    turning spot <x0,y0> back into stone; <x1,y1> is an adjacent spot. */
 void
 unset_seenv(lev, x0, y0, x1, y1)
-struct rm *lev;     /* &levl[x1][y1] */
+struct rm *lev;     /* &NH_TILE(x1, y1) */
 int x0, y0, x1, y1; /* from, to; abs(x1-x0)==1 && abs(y0-y1)==1 */
 {
     int dx = x1 - x0, dy = y0 - y1;

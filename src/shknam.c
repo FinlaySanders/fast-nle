@@ -384,7 +384,7 @@ int otyp; /* used iff obj is null */
         corpsenm = obj->corpsenm;
     } else {
         /* just a type; caller will have to handle tins and corpses */
-        oclass = objects[otyp].oc_class;
+        oclass = object_defaults[otyp].oc_class;
         corpsenm = PM_LICHEN; /* veggy standin */
     }
 
@@ -410,7 +410,7 @@ shkveg()
     j = maxprob = 0;
     ok[0] = 0; /* lint suppression */
     for (i = bases[(int) oclass]; i < NUM_OBJECTS; ++i) {
-        if (objects[i].oc_class != oclass)
+        if (object_defaults[i].oc_class != oclass)
             break;
 
         if (veggy_item((struct obj *) 0, i)) {
@@ -429,7 +429,7 @@ shkveg()
         i = ok[j];
     }
 
-    if (objects[i].oc_class != oclass || !OBJ_NAME(objects[i]))
+    if (object_defaults[i].oc_class != oclass || !OBJ_NAME(objects[i]))
         panic("shkveg probtype error, oclass=%d i=%d", (int) oclass, i);
     return i;
 }
@@ -603,17 +603,17 @@ struct mkroom *sroom;
     if (sroom->irregular) {
         int rmno = (int) ((sroom - rooms) + ROOMOFFSET);
 
-        if (isok(sx - 1, sy) && !levl[sx - 1][sy].edge
-            && (int) levl[sx - 1][sy].roomno == rmno)
+        if (isok(sx - 1, sy) && !NH_TILE(sx - 1, sy).edge
+            && (int) NH_TILE(sx - 1, sy).roomno == rmno)
             sx--;
-        else if (isok(sx + 1, sy) && !levl[sx + 1][sy].edge
-                 && (int) levl[sx + 1][sy].roomno == rmno)
+        else if (isok(sx + 1, sy) && !NH_TILE(sx + 1, sy).edge
+                 && (int) NH_TILE(sx + 1, sy).roomno == rmno)
             sx++;
-        else if (isok(sx, sy - 1) && !levl[sx][sy - 1].edge
-                 && (int) levl[sx][sy - 1].roomno == rmno)
+        else if (isok(sx, sy - 1) && !NH_TILE(sx, sy - 1).edge
+                 && (int) NH_TILE(sx, sy - 1).roomno == rmno)
             sy--;
-        else if (isok(sx, sy + 1) && !levl[sx][sy + 1].edge
-                 && (int) levl[sx][sy + 1].roomno == rmno)
+        else if (isok(sx, sy + 1) && !NH_TILE(sx, sy + 1).edge
+                 && (int) NH_TILE(sx, sy + 1).roomno == rmno)
             sy++;
         else
             goto shk_failed;
@@ -685,8 +685,8 @@ struct mkroom *sroom;
 int rmno, sh, sx,sy;
 {
     if (sroom->irregular) {
-        if (levl[sx][sy].edge
-            || (int) levl[sx][sy].roomno != rmno
+        if (NH_TILE(sx, sy).edge
+            || (int) NH_TILE(sx, sy).roomno != rmno
             || distmin(sx, sy, doors[sh].x, doors[sh].y) <= 1)
             return FALSE;
     } else if ((sx == sroom->lx && doors[sh].x == sx - 1)
@@ -722,18 +722,18 @@ register struct mkroom *sroom;
     /* make sure no doorways without doors, and no trapped doors, in shops */
     sx = doors[sroom->fdoor].x;
     sy = doors[sroom->fdoor].y;
-    if (levl[sx][sy].doormask == D_NODOOR) {
-        levl[sx][sy].doormask = D_ISOPEN;
+    if (NH_TILE(sx, sy).doormask == D_NODOOR) {
+        NH_TILE(sx, sy).doormask = D_ISOPEN;
         newsym(sx, sy);
     }
-    if (levl[sx][sy].typ == SDOOR) {
-        cvt_sdoor_to_door(&levl[sx][sy]); /* .typ = DOOR */
+    if (NH_TILE(sx, sy).typ == SDOOR) {
+        cvt_sdoor_to_door(&NH_TILE(sx, sy)); /* .typ = DOOR */
         newsym(sx, sy);
     }
-    if (levl[sx][sy].doormask & D_TRAPPED)
-        levl[sx][sy].doormask = D_LOCKED;
+    if (NH_TILE(sx, sy).doormask & D_TRAPPED)
+        NH_TILE(sx, sy).doormask = D_LOCKED;
 
-    if (levl[sx][sy].doormask == D_LOCKED) {
+    if (NH_TILE(sx, sy).doormask == D_LOCKED) {
         register int m = sx, n = sy;
 
         if (inside_shop(sx + 1, sy))

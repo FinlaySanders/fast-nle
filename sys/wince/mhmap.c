@@ -898,10 +898,10 @@ nhglyph2charcolor(short g, uchar *ch, int *color)
         *ch = showsyms[offset + SYM_OFF_P];
         cmap_color(offset);
     } else if ((offset = (g - GLYPH_OBJ_OFF)) >= 0) { /* object */
-        *ch = showsyms[(int) objects[offset].oc_class + SYM_OFF_O];
+        *ch = showsyms[(int) object_defaults[offset].oc_class + SYM_OFF_O];
         obj_color(offset);
     } else if ((offset = (g - GLYPH_BODY_OFF)) >= 0) { /* a corpse */
-        *ch = showsyms[(int) objects[CORPSE].oc_class + SYM_OFF_O];
+        *ch = showsyms[(int) object_defaults[CORPSE].oc_class + SYM_OFF_O];
         mon_color(offset);
     } else if ((offset = (g - GLYPH_PET_OFF)) >= 0) { /* a pet */
         *ch = showsyms[(int) mons[offset].mlet + SYM_OFF_M];

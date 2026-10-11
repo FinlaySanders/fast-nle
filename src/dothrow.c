@@ -109,7 +109,7 @@ int shotlimit;
      * (potential volley of up to N missiles; default for N is 1)
      */
     multishot = 1;
-    skill = objects[obj->otyp].oc_skill;
+    skill = object_defaults[obj->otyp].oc_skill;
     if (obj->quan > 1L /* no point checking if there's only 1 */
         /* ammo requires corresponding launcher be wielded */
         && (is_ammo(obj) ? matching_launcher(obj, uwep)
@@ -331,7 +331,7 @@ autoquiver()
             omissile = otmp;
         } else if (otmp->oclass == WEAPON_CLASS && throwing_weapon(otmp)) {
             /* Ordinary weapon */
-            if (objects[otmp->otyp].oc_skill == P_DAGGER && !omissile)
+            if (object_defaults[otmp->otyp].oc_skill == P_DAGGER && !omissile)
                 omissile = otmp;
             else
                 omisc = otmp;
@@ -596,7 +596,7 @@ int x, y;
 
     if (!Passes_walls || !(may_pass = may_passwall(x, y))) {
         boolean odoor_diag = (IS_DOOR(TYP_AT(x, y))
-                              && (levl[x][y].doormask & D_ISOPEN)
+                              && (NH_TILE(x, y).doormask & D_ISOPEN)
                               && (u.ux - x) && (u.uy - y));
 
         if (IS_ROCK(TYP_AT(x, y)) || closed_door(x, y) || odoor_diag) {
@@ -1570,7 +1570,7 @@ register struct obj *obj; /* thrownobj or kickedobj or uwep */
     tmp += disttmp;
 
     /* gloves are a hindrance to proper use of bows */
-    if (uarmg && uwep && objects[uwep->otyp].oc_skill == P_BOW) {
+    if (uarmg && uwep && object_defaults[uwep->otyp].oc_skill == P_BOW) {
         switch (uarmg->otyp) {
         case GAUNTLETS_OF_POWER: /* metal */
             tmp -= 2;
@@ -1662,7 +1662,7 @@ register struct obj *obj; /* thrownobj or kickedobj or uwep */
                  */
                 if ((Race_if(PM_ELF) || Role_if(PM_SAMURAI))
                     && (!Upolyd || your_race(youmonst.data))
-                    && objects[uwep->otyp].oc_skill == P_BOW) {
+                    && object_defaults[uwep->otyp].oc_skill == P_BOW) {
                     tmp++;
                     if (Race_if(PM_ELF) && uwep->otyp == ELVEN_BOW)
                         tmp++;
@@ -1705,9 +1705,9 @@ register struct obj *obj; /* thrownobj or kickedobj or uwep */
             /* projectiles other than magic stones sometimes disappear
                when thrown; projectiles aren't among the types of weapon
                that hmon() might have destroyed so obj is intact */
-            if (objects[otyp].oc_skill < P_NONE
-                && objects[otyp].oc_skill > -P_BOOMERANG
-                && !objects[otyp].oc_magic) {
+            if (object_defaults[otyp].oc_skill < P_NONE
+                && object_defaults[otyp].oc_skill > -P_BOOMERANG
+                && !object_defaults[otyp].oc_magic) {
                 /* we were breaking 2/3 of everything unconditionally.
                  * we still don't want anything to survive unconditionally,
                  * but we need ammo to stay around longer on average.

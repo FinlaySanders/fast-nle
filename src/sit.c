@@ -36,7 +36,7 @@ dosit()
 {
     static const char sit_message[] = "sit on the %s.";
     register struct trap *trap = t_at(u.ux, u.uy);
-    register int typ = levl[u.ux][u.uy].typ;
+    register int typ = NH_TILE(u.ux, u.uy).typ;
 
     if (u.usteed) {
         You("are already sitting on %s.", mon_nam(u.usteed));
@@ -285,9 +285,9 @@ dosit()
                 You_feel("somehow out of place...");
         }
 
-        if (!rn2(3) && IS_THRONE(levl[u.ux][u.uy].typ)) {
+        if (!rn2(3) && IS_THRONE(NH_TILE(u.ux, u.uy).typ)) {
             /* may have teleported */
-            { SET_TYP_XY(u.ux, u.uy, ROOM); levl[u.ux][u.uy].rmflags = 0; }
+            { SET_TYP_XY(u.ux, u.uy, ROOM); NH_TILE(u.ux, u.uy).rmflags = 0; }
             pline_The("throne vanishes in a puff of logic.");
             newsym(u.ux, u.uy);
         }
@@ -300,7 +300,7 @@ dosit()
                       ? "You may think you are a platypus, but a male still"
                       : "Males");
             return 0;
-        } else if (u.uhunger < (int) objects[EGG].oc_nutrition) {
+        } else if (u.uhunger < (int) object_defaults[EGG].oc_nutrition) {
             You("don't have enough energy to lay an egg.");
             return 0;
         } else if (eggs_in_water(youmonst.data)) {
@@ -318,14 +318,14 @@ dosit()
         uegg = mksobj(EGG, FALSE, FALSE);
         uegg->spe = 1;
         uegg->quan = 1L;
-        uegg->owt = weight(uegg);
+        nh_set_owt(uegg);
         /* this sets hatch timers if appropriate */
         set_corpsenm(uegg, egg_type_from_parent(u.umonnum, FALSE));
         uegg->known = uegg->dknown = 1;
         You("%s an egg.", eggs_in_water(youmonst.data) ? "spawn" : "lay");
         dropy(uegg);
         stackobj(uegg);
-        morehungry((int) objects[EGG].oc_nutrition);
+        morehungry((int) object_defaults[EGG].oc_nutrition);
     } else {
         pline("Having fun sitting on the %s?", surface(u.ux, u.uy));
     }

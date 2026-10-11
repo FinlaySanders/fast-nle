@@ -124,7 +124,7 @@ struct obj *obj;
             armcat[ARM_SUIT]   = 7; /* [0] */
             armcat[7]          = 8; /* sanity protection */
         }
-        k = objects[otyp].oc_armcat;
+        k = object_defaults[otyp].oc_armcat;
         /* oc_armcat overloads oc_subtyp which is an 'schar' so guard
            against somebody assigning something unexpected to it */
         if (k < 0 || k >= 7)
@@ -135,7 +135,7 @@ struct obj *obj;
         /* for weapons, group by ammo (arrows, bolts), launcher (bows),
            missile (darts, boomerangs), stackable (daggers, knives, spears),
            'other' (swords, axes, &c), polearms */
-        k = objects[otyp].oc_skill;
+        k = object_defaults[otyp].oc_skill;
         k = (k < 0) ? ((k >= -P_CROSSBOW && k <= -P_BOW) ? 1 : 3)
                     : ((k >= P_BOW && k <= P_CROSSBOW) ? 2
                        : (k == P_SPEAR || k == P_DAGGER || k == P_KNIFE) ? 4
@@ -439,7 +439,7 @@ const genericptr vptr2;
        below the range of obj->spe.  oc_uses_known means that obj->known
        matters, which usually indirectly means that obj->spe is relevant.
        Lots of objects use obj->spe for some other purpose (see obj.h). */
-    if (objects[obj1->otyp].oc_uses_known
+    if (object_defaults[obj1->otyp].oc_uses_known
         /* exclude eggs (laid by you) and tins (homemade, pureed, &c) */
         && obj1->oclass != FOOD_CLASS) {
         val1 = obj1->known ? obj1->spe : -1000;
@@ -653,7 +653,7 @@ reorder_invent()
     struct obj *otmp, *prev, *next;
     boolean need_more_sorting;
 
-    nh_no_hero_gold = 0;
+    nh_no_hero_gold = 0; nh_invgen++;
     do {
         /*
          * We expect at most one item to be out of order, so this
@@ -747,10 +747,11 @@ struct obj **potmp, **pobj;
             otmp->quan += obj->quan;
         /* temporary special case for gold objects!!!! */
         if (otmp->oclass == COIN_CLASS)
-            otmp->owt = weight(otmp), otmp->bknown = 0;
+            nh_set_owt(otmp), otmp->bknown = 0;
         /* and puddings!!!1!!one! */
         else if (!Is_pudding(otmp))
             otmp->owt += obj->owt;
+            if (otmp->where == OBJ_INVENT) nh_invwt_dirty();
         if (!has_oname(otmp) && has_oname(obj))
             otmp = *potmp = oname(otmp, ONAME(obj));
         obj_extract_self(obj);
@@ -945,7 +946,7 @@ struct obj *obj;
     if (flags.invlet_constant || !prev) {
         obj->nobj = invent; /* insert at beginning */
         invent = obj;
-        nh_no_hero_gold = 0;
+        nh_no_hero_gold = 0; nh_invgen++;
         if (flags.invlet_constant)
             reorder_invent();
     } else {
@@ -964,8 +965,9 @@ struct obj *obj;
         && (throwing_weapon(obj) || is_ammo(obj)))
         setuqwep(obj);
  added:
-    nh_no_hero_gold = 0;
+    nh_no_hero_gold = 0; nh_invgen++;
     addinv_core2(obj);
+    nh_invwt_dirty();
     carry_obj_effects(obj); /* carrying affects the obj */
     update_inventory();
     return obj;
@@ -1029,7 +1031,7 @@ const char *drop_fmt, *drop_arg, *hold_msg;
         }
         obj_extract_self(obj);
         if (crysknife) {
-            obj->otyp = CRYSKNIFE;
+            NH_PILE_WRITE(obj, (obj->otyp = CRYSKNIFE));
             obj->oerodeproof = oerode;
         }
     }
@@ -1100,7 +1102,7 @@ register struct obj *obj;
     if (obj->quan > 1L) {
         obj->in_use = FALSE; /* no longer in use */
         obj->quan--;
-        obj->owt = weight(obj);
+        nh_set_owt(obj);
         update_inventory();
     } else {
         useupall(obj);
@@ -1581,7 +1583,7 @@ register const char *let, *word;
                      || (otmp->oclass == GEM_CLASS && !is_graystone(otmp))))
              || (!strcmp(word, "invoke")
                  && !otmp->oartifact
-                 && !objects[otyp].oc_unique
+                 && !object_defaults[otyp].oc_unique
                  && (otyp != FAKE_AMULET_OF_YENDOR || otmp->known)
                  && otyp != CRYSTAL_BALL /* synonym for apply */
                  /* note: presenting the possibility of invoking non-artifact
@@ -3327,7 +3329,7 @@ dfeature_at(x, y, buf)
 int x, y;
 char *buf;
 {
-    struct rm *lev = &levl[x][y];
+    struct rm *lev = &NH_TILE(x, y);
     int ltyp = lev->typ, cmap = -1;
     const char *dfeature = 0;
     /* Altbuf migrated to nle_ctx_t */
@@ -3646,7 +3648,7 @@ register struct obj *otmp, *obj;
     /* fail if already the same object, if different types, if either is
        explicitly marked to prevent merge, or if not mergable in general */
     if (obj == otmp || obj->otyp != otmp->otyp
-        || obj->nomerge || otmp->nomerge || !objects[obj->otyp].oc_merge)
+        || obj->nomerge || otmp->nomerge || !object_defaults[obj->otyp].oc_merge)
         return FALSE;
 
     /* coins of the same kind will always merge */
@@ -3724,8 +3726,8 @@ register struct obj *otmp, *obj;
     if (obj->oartifact != otmp->oartifact)
         return FALSE;
 
-    if (obj->known == otmp->known || !objects[otmp->otyp].oc_uses_known) {
-        return (boolean) objects[obj->otyp].oc_merge;
+    if (obj->known == otmp->known || !object_defaults[otmp->otyp].oc_uses_known) {
+        return (boolean) object_defaults[obj->otyp].oc_merge;
     } else
         return FALSE;
 }
@@ -4025,7 +4027,7 @@ reassign()
         goldobj->invlet = GOLD_SYM;
         goldobj->nobj = invent;
         invent = goldobj;
-        nh_no_hero_gold = 0;
+        nh_no_hero_gold = 0; nh_invgen++;
     }
     if (i >= 52)
         i = 52 - 1;
@@ -4280,7 +4282,7 @@ doorganize() /* inventory organizer by Del Lamb */
     obj->nobj = invent;
     obj->where = OBJ_INVENT;
     invent = obj;
-    nh_no_hero_gold = 0;
+    nh_no_hero_gold = 0; nh_invgen++;
     reorder_invent();
     if (bumped) {
         /* splitting the 'from' stack is causing an incompatible
@@ -4290,7 +4292,7 @@ doorganize() /* inventory organizer by Del Lamb */
         bumped->nobj = invent;
         bumped->where = OBJ_INVENT;
         invent = bumped;
-        nh_no_hero_gold = 0;
+        nh_no_hero_gold = 0; nh_invgen++;
         reorder_invent();
     }
 

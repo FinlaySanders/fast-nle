@@ -139,6 +139,7 @@ struct objdescr {
  * those utilities can scratch oc_name_idx etc. while generating their
  * outputs. They don't have a per-env ctx. */
 extern struct objclass objects[];
+#define object_defaults objects
 extern struct objdescr obj_descr[];
 #else
 /* libnethack: per-env tables (per-game object randomization). Baseline
@@ -148,6 +149,7 @@ extern struct objdescr *nle_obj_descr(void);
 #define objects   (nle_objects())
 #define obj_descr (nle_obj_descr())
 extern const struct objclass objects_baseline[];
+#define object_defaults objects_baseline
 extern const struct objdescr obj_descr_baseline[];
 #endif
 

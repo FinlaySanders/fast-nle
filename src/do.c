@@ -68,10 +68,10 @@ boolean pushing;
             struct trap *ttmp = t_at(rx, ry);
 
             if (ltyp == DRAWBRIDGE_UP) {
-                levl[rx][ry].drawbridgemask &= ~DB_UNDER; /* clear lava */
-                levl[rx][ry].drawbridgemask |= DB_FLOOR;
+                NH_TILE(rx, ry).drawbridgemask &= ~DB_UNDER; /* clear lava */
+                NH_TILE(rx, ry).drawbridgemask |= DB_FLOOR;
             } else
-                { SET_TYP_XY(rx, ry, ROOM); levl[rx][ry].rmflags = 0; }
+                { SET_TYP_XY(rx, ry, ROOM); NH_TILE(rx, ry).rmflags = 0; }
 
             if (ttmp)
                 (void) delfloortrap(ttmp);
@@ -319,15 +319,15 @@ polymorph_sink()
     if (TYP_AT(u.ux, u.uy) != SINK)
         return;
 
-    sinklooted = levl[u.ux][u.uy].looted != 0;
+    sinklooted = NH_TILE(u.ux, u.uy).looted != 0;
     level.lflags.nsinks--;
-    levl[u.ux][u.uy].doormask = 0; /* levl[][].flags */
+    NH_TILE(u.ux, u.uy).doormask = 0; /* NH_TILE(, ).flags */
     switch (rn2(4)) {
     default:
     case 0:
         sym = S_fountain;
         SET_TYP_XY(u.ux, u.uy, FOUNTAIN);
-        levl[u.ux][u.uy].blessedftn = 0;
+        NH_TILE(u.ux, u.uy).blessedftn = 0;
         if (sinklooted)
             SET_FOUNTAIN_LOOTED(u.ux, u.uy);
         level.lflags.nfountains++;
@@ -336,7 +336,7 @@ polymorph_sink()
         sym = S_throne;
         SET_TYP_XY(u.ux, u.uy, THRONE);
         if (sinklooted)
-            levl[u.ux][u.uy].looted = T_LOOTED;
+            NH_TILE(u.ux, u.uy).looted = T_LOOTED;
         break;
     case 2:
         sym = S_altar;
@@ -344,7 +344,7 @@ polymorph_sink()
         /* 3.6.3: this used to pass 'rn2(A_LAWFUL + 2) - 1' to
            Align2amask() but that evaluates its argument more than once */
         algn = rn2(3) - 1; /* -1 (A_Cha) or 0 (A_Neu) or +1 (A_Law) */
-        levl[u.ux][u.uy].altarmask = ((Inhell && rn2(3)) ? AM_NONE
+        NH_TILE(u.ux, u.uy).altarmask = ((Inhell && rn2(3)) ? AM_NONE
                                       : Align2amask(algn));
         break;
     case 3:
@@ -385,11 +385,11 @@ teleport_sink()
     if (TYP_AT(cx, cy) == ROOM && !trp && !eng) {
         /* create sink at new position */
         SET_TYP_XY(cx, cy, SINK);
-        levl[cx][cy].looted = levl[u.ux][u.uy].looted;
+        NH_TILE(cx, cy).looted = NH_TILE(u.ux, u.uy).looted;
         newsym(cx, cy);
         /* remove old sink */
         SET_TYP_XY(u.ux, u.uy, ROOM);
-        levl[u.ux][u.uy].looted = 0;
+        NH_TILE(u.ux, u.uy).looted = 0;
         newsym(u.ux, u.uy);
         return TRUE;
     }
@@ -790,7 +790,7 @@ struct obj *obj;
             /* if monsters aren't moving, assume player is responsible */
             if (!context.mon_moving && !program_state.gameover)
                 costly_alteration(obj, COST_DEGRD);
-            obj->otyp = WORM_TOOTH;
+            NH_PILE_WRITE(obj, (obj->otyp = WORM_TOOTH));
             obj->oerodeproof = 0;
         }
         break;
@@ -991,10 +991,10 @@ dodown()
              */
             if (stairs_down)
                 stairs_down =
-                    (glyph_to_cmap(levl[u.ux][u.uy].glyph) == S_dnstair);
+                    (glyph_to_cmap(NH_TILE(u.ux, u.uy).glyph) == S_dnstair);
             else if (ladder_down)
                 ladder_down =
-                    (glyph_to_cmap(levl[u.ux][u.uy].glyph) == S_dnladder);
+                    (glyph_to_cmap(NH_TILE(u.ux, u.uy).glyph) == S_dnladder);
         }
         if (Is_airlevel(&u.uz))
             You("are floating in the %s.", surface(u.ux, u.uy));
@@ -1434,11 +1434,11 @@ boolean at_stairs, falling, portal;
     u.utotype = 0;
     if (!builds_up(&u.uz)) { /* usual case */
         if (dunlev(&u.uz) > dunlev_reached(&u.uz))
-            dunlev_reached(&u.uz) = dunlev(&u.uz);
+            dunlev_reached(&u.uz) = dunlev(&u.uz), nh_deepest_dirty();
     } else {
         if (dunlev_reached(&u.uz) == 0
             || dunlev(&u.uz) < dunlev_reached(&u.uz))
-            dunlev_reached(&u.uz) = dunlev(&u.uz);
+            dunlev_reached(&u.uz) = dunlev(&u.uz), nh_deepest_dirty();
     }
     reset_rndmonst(NON_PM); /* u.uz change affects monster generation */
 

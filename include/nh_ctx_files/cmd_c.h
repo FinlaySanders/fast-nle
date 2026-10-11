@@ -4,16 +4,16 @@
  * Include ONLY from cmd.c, after hack.h. */
 #ifndef NH_CTX_FILE_CMD_C_H
 #define NH_CTX_FILE_CMD_C_H
-#define alt_esc (nh_cur->g_cmd_c_alt_esc)
-#define timed_occ_fn (nh_cur->g_cmd_c_timed_occ_fn)
-#define pushq (nh_cur->g_cmd_c_pushq)
-#define saveq (nh_cur->g_cmd_c_saveq)
 #define phead (nh_cur->g_cmd_c_phead)
 #define ptail (nh_cur->g_cmd_c_ptail)
 #define shead (nh_cur->g_cmd_c_shead)
 #define stail (nh_cur->g_cmd_c_stail)
+#define pushq (nh_cur->g_cmd_c_pushq)
+#define saveq (nh_cur->g_cmd_c_saveq)
+#define readchar_queue (nh_cur->g_cmd_c_readchar_queue)
+#define alt_esc (nh_cur->g_cmd_c_alt_esc)
+#define timed_occ_fn (nh_cur->g_cmd_c_timed_occ_fn)
 #define en_win (nh_cur->g_cmd_c_en_win)
 #define en_via_menu (nh_cur->g_cmd_c_en_via_menu)
-#define readchar_queue (nh_cur->g_cmd_c_readchar_queue)
 #define travelcmd (nh_cur->g_cmd_c_travelcmd)
 #endif /* NH_CTX_FILE_CMD_C_H */

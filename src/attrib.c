@@ -20,7 +20,7 @@ const char
     *const attrname[] = { "strength", "intelligence", "wisdom",
                           "dexterity", "constitution", "charisma" };
 
-/* Refactor stage 4: was `long *ability` pointing into u.uprops[X].intrinsic.
+/* Refactor stage 4: was `propbits_t *ability` pointing into u.uprops[X].intrinsic.
  * Since `u` is now per-instance (heap), &u.uprops[X].intrinsic is a runtime
  * address — can't be used in static initializers. Instead store the
  * property index; consumers compute the address at runtime via
@@ -111,20 +111,20 @@ static const struct innate {
 
 /* Helper: compute the runtime address of an intrinsic flag for a given
  * property index. Used by check_innate_abil to bridge between the static
- * table (which holds indices) and the existing 'long *ability' API. */
-static long *
+ * table (which holds indices) and the existing 'propbits_t *ability' API. */
+static propbits_t *
 innate_prop_addr(int prop_idx)
 {
     if (prop_idx < 0)
-        return (long *) 0;
+        return (propbits_t *) 0;
     return &u.uprops[prop_idx].intrinsic;
 }
 
 STATIC_DCL void NDECL(exerper);
-STATIC_DCL void FDECL(postadjabil, (long *));
+STATIC_DCL void FDECL(postadjabil, (propbits_t *));
 STATIC_DCL const struct innate *FDECL(role_abil, (int));
-STATIC_DCL const struct innate *FDECL(check_innate_abil, (long *, long));
-STATIC_DCL int FDECL(innately, (long *));
+STATIC_DCL const struct innate *FDECL(check_innate_abil, (propbits_t *, long));
+STATIC_DCL int FDECL(innately, (propbits_t *));
 
 /* adjust an attribute; return TRUE if change is made, FALSE otherwise */
 boolean
@@ -703,7 +703,7 @@ redist_attr()
 STATIC_OVL
 void
 postadjabil(ability)
-long *ability;
+propbits_t *ability;
 {
     if (!ability)
         return;
@@ -743,7 +743,7 @@ int r;
 
 STATIC_OVL const struct innate *
 check_innate_abil(ability, frommask)
-long *ability;
+propbits_t *ability;
 long frommask;
 {
     const struct innate *abil = 0;
@@ -792,7 +792,7 @@ long frommask;
 /* check whether particular ability has been obtained via innate attribute */
 STATIC_OVL int
 innately(ability)
-long *ability;
+propbits_t *ability;
 {
     const struct innate *iptr;
 
@@ -948,7 +948,7 @@ int oldlevel, newlevel;
     }
 
     while (abil || rabil) {
-        long *abil_ptr;
+        propbits_t *abil_ptr;
         /* Have we finished with the intrinsics list? */
         if (!abil || abil->prop_idx < 0) {
             /* Try the race intrinsics */

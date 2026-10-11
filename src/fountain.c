@@ -137,7 +137,7 @@ genericptr_t poolcnt;
         pline("Water gushes forth from the overflowing fountain!");
 
     /* Put a pool at x, y */
-    { SET_TYP_XY(x, y, POOL); levl[x][y].rmflags = 0; }
+    { SET_TYP_XY(x, y, POOL); NH_TILE(x, y).rmflags = 0; }
     /* No kelp! */
     del_engr_at(x, y);
     water_damage_chain(level.objs[x][y], TRUE);
@@ -205,8 +205,8 @@ boolean isyou;
                 return;
         }
         /* replace the fountain with ordinary floor */
-        { SET_TYP_XY(x, y, ROOM); levl[x][y].rmflags = 0; }
-        levl[x][y].blessedftn = 0;
+        { SET_TYP_XY(x, y, ROOM); NH_TILE(x, y).rmflags = 0; }
+        NH_TILE(x, y).blessedftn = 0;
         if (cansee(x, y))
             pline_The("fountain dries up!");
         /* The location is seen if the hero/monster is invisible
@@ -222,7 +222,7 @@ void
 drinkfountain()
 {
     /* What happens when you drink from a fountain? */
-    register boolean mgkftn = (levl[u.ux][u.uy].blessedftn == 1);
+    register boolean mgkftn = (NH_TILE(u.ux, u.uy).blessedftn == 1);
     register int fate = rnd(30);
 
     if (Levitation) {
@@ -251,7 +251,7 @@ drinkfountain()
         display_nhwindow(WIN_MESSAGE, FALSE);
         pline("A wisp of vapor escapes the fountain...");
         exercise(A_WIS, TRUE);
-        levl[u.ux][u.uy].blessedftn = 0;
+        NH_TILE(u.ux, u.uy).blessedftn = 0;
         return;
     }
 
@@ -396,7 +396,7 @@ register struct obj *obj;
             exercise(A_WIS, TRUE);
         }
         update_inventory();
-        { SET_TYP_XY(u.ux, u.uy, ROOM); levl[u.ux][u.uy].rmflags = 0; }
+        { SET_TYP_XY(u.ux, u.uy, ROOM); NH_TILE(u.ux, u.uy).rmflags = 0; }
         newsym(u.ux, u.uy);
         level.lflags.nfountains--;
         if (in_town(u.ux, u.uy))
@@ -465,7 +465,7 @@ register struct obj *obj;
                 money = somegold(money) / 10;
                 for (otmp = invent; otmp && money > 0; otmp = otmp->nobj)
                     if (otmp->oclass == COIN_CLASS) {
-                        int denomination = objects[otmp->otyp].oc_cost;
+                        int denomination = object_defaults[otmp->otyp].oc_cost;
                         long coin_loss =
                             (money + denomination - 1) / denomination;
                         coin_loss = min(coin_loss, otmp->quan);
@@ -509,8 +509,8 @@ int x, y;
     if (cansee(x, y) || (x == u.ux && y == u.uy))
         pline_The("pipes break!  Water spurts out!");
     level.lflags.nsinks--;
-    { SET_TYP_XY(x, y, FOUNTAIN); levl[x][y].looted = 0; }
-    levl[x][y].blessedftn = 0;
+    { SET_TYP_XY(x, y, FOUNTAIN); NH_TILE(x, y).looted = 0; }
+    NH_TILE(x, y).blessedftn = 0;
     SET_FOUNTAIN_LOOTED(x, y);
     level.lflags.nfountains++;
     newsym(x, y);
@@ -570,10 +570,10 @@ drinksink()
         obfree(otmp, (struct obj *) 0);
         break;
     case 5:
-        if (!(levl[u.ux][u.uy].looted & S_LRING)) {
+        if (!(NH_TILE(u.ux, u.uy).looted & S_LRING)) {
             You("find a ring in the sink!");
             (void) mkobj_at(RING_CLASS, u.ux, u.uy, TRUE);
-            levl[u.ux][u.uy].looted |= S_LRING;
+            NH_TILE(u.ux, u.uy).looted |= S_LRING;
             exercise(A_WIS, TRUE);
             newsym(u.ux, u.uy);
         } else

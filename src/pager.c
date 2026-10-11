@@ -124,7 +124,7 @@ char *outbuf;
     struct obj *otmp;
     boolean fakeobj, isyou = (mon == &youmonst);
     int x = isyou ? u.ux : mon->mx, y = isyou ? u.uy : mon->my,
-        glyph = (level.lflags.hero_memory && !isyou) ? levl[x][y].glyph
+        glyph = (level.lflags.hero_memory && !isyou) ? NH_TILE(x, y).glyph
                                                     : glyph_at(x, y);
 
     *outbuf = '\0';
@@ -272,9 +272,9 @@ int x, y, glyph;
 
     if (otmp && otmp->where == OBJ_BURIED)
         Strcat(buf, " (buried)");
-    else if (levl[x][y].typ == STONE || levl[x][y].typ == SCORR)
+    else if (NH_TILE(x, y).typ == STONE || NH_TILE(x, y).typ == SCORR)
         Strcat(buf, " embedded in stone");
-    else if (IS_WALL(levl[x][y].typ) || levl[x][y].typ == SDOOR)
+    else if (IS_WALL(NH_TILE(x, y).typ) || NH_TILE(x, y).typ == SDOOR)
         Strcat(buf, " embedded in a wall");
     else if (closed_door(x, y))
         Strcat(buf, " embedded in a door");
@@ -505,7 +505,7 @@ char *buf, *monbuf;
             amsk = ((mtmp = m_at(x, y)) != 0 && has_mcorpsenm(mtmp)
                     && M_AP_TYPE(mtmp) == M_AP_FURNITURE
                     && mtmp->mappearance == S_altar) ? MCORPSENM(mtmp)
-                   : levl[x][y].altarmask;
+                   : NH_TILE(x, y).altarmask;
             algn = Amask2align(amsk & ~AM_SHRINE);
             Sprintf(buf, "%s %saltar",
                     /* like endgame high priests, endgame high altars
@@ -521,7 +521,7 @@ char *buf, *monbuf;
         case S_ndoor:
             if (is_drawbridge_wall(x, y) >= 0)
                 Strcpy(buf, "open drawbridge portcullis");
-            else if ((levl[x][y].doormask & ~D_TRAPPED) == D_BROKEN)
+            else if ((NH_TILE(x, y).doormask & ~D_TRAPPED) == D_BROKEN)
                 Strcpy(buf, "broken door");
             else
                 Strcpy(buf, "doorway");
@@ -531,7 +531,7 @@ char *buf, *monbuf;
                    Is_airlevel(&u.uz) ? "cloudy area" : "fog/vapor cloud");
             break;
         case S_stone:
-            if (!levl[x][y].seenv) {
+            if (!NH_TILE(x, y).seenv) {
                 Strcpy(buf, "unexplored");
                 break;
             } else if (Underwater && !Is_waterlevel(&u.uz)) {
@@ -539,7 +539,7 @@ char *buf, *monbuf;
                    submerged; better terminology appreciated... */
                 Strcpy(buf, (distu(x, y) <= 2) ? "land" : "unknown");
                 break;
-            } else if (levl[x][y].typ == STONE || levl[x][y].typ == SCORR) {
+            } else if (NH_TILE(x, y).typ == STONE || NH_TILE(x, y).typ == SCORR) {
                 Strcpy(buf, "stone");
                 break;
             }

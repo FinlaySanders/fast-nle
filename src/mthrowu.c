@@ -167,7 +167,7 @@ monmulti(mtmp, otmp, mwep)
 struct monst *mtmp;
 struct obj *otmp, *mwep;
 {
-    int skill = (int) objects[otmp->otyp].oc_skill;
+    int skill = (int) object_defaults[otmp->otyp].oc_skill;
     int multishot = 1;
 
     if (otmp->quan > 1L /* no point checking if there's only 1 */
@@ -474,19 +474,19 @@ boolean verbose;    /* give message(s) even when you can't see what happened */
     (/* missile hits edge of screen */                                  \
      !isok(bhitpos.x + dx, bhitpos.y + dy)                              \
      /* missile hits the wall */                                        \
-     || IS_ROCK(levl[bhitpos.x + dx][bhitpos.y + dy].typ)               \
+     || IS_ROCK(NH_TILE(bhitpos.x + dx, bhitpos.y + dy).typ)               \
      /* missile hit closed door */                                      \
      || closed_door(bhitpos.x + dx, bhitpos.y + dy)                     \
      /* missile might hit iron bars */                                  \
      /* the random chance for small objects hitting bars is */          \
      /* skipped when reaching them at point blank range */              \
-     || (levl[bhitpos.x + dx][bhitpos.y + dy].typ == IRONBARS           \
+     || (NH_TILE(bhitpos.x + dx, bhitpos.y + dy).typ == IRONBARS           \
          && hits_bars(&singleobj,                                       \
                       bhitpos.x, bhitpos.y,                             \
                       bhitpos.x + dx, bhitpos.y + dy,                   \
                       ((pre) ? 0 : !rn2(5)), 0))                        \
      /* Thrown objects "sink" */                                        \
-     || (!(pre) && IS_SINK(levl[bhitpos.x][bhitpos.y].typ)))
+     || (!(pre) && IS_SINK(NH_TILE(bhitpos.x, bhitpos.y).typ)))
 
 void
 m_throw(mon, x, y, dx, dy, range, obj)
@@ -619,7 +619,7 @@ struct obj *obj;         /* missile (or stack providing it) */
                 if (hitv < -4)
                     hitv = -4;
                 if (is_elf(mon->data)
-                    && objects[singleobj->otyp].oc_skill == P_BOW) {
+                    && object_defaults[singleobj->otyp].oc_skill == P_BOW) {
                     hitv++;
                     if (MON_WEP(mon) && MON_WEP(mon)->otyp == ELVEN_BOW)
                         hitv++;
@@ -884,7 +884,7 @@ struct obj *obj;
 {
     if (obj->quan > 1L) {
         obj->quan--;
-        obj->owt = weight(obj);
+        nh_set_owt(obj);
     } else {
         m_useupall(mon, obj);
     }
@@ -1073,7 +1073,7 @@ int boulderhandling; /* 0=block, 1=ignore, 2=conditionally block */
         do {
             /* <bx,by> is guaranteed to eventually converge with <ax,ay> */
             bx += dx, by += dy;
-            if (IS_ROCK(levl[bx][by].typ) || closed_door(bx, by))
+            if (IS_ROCK(NH_TILE(bx, by).typ) || closed_door(bx, by))
                 return FALSE;
             if (sobj_at(BOULDER, bx, by))
                 ++boulderspots;
@@ -1134,7 +1134,7 @@ boolean your_fault, from_invent;
 {
     struct obj *otmp = *objp;
     int obj_type = otmp->otyp;
-    boolean unbreakable = (levl[barsx][barsy].wall_info & W_NONDIGGABLE) != 0;
+    boolean unbreakable = (NH_TILE(barsx, barsy).wall_info & W_NONDIGGABLE) != 0;
 
     if (your_fault
         ? hero_breaks(otmp, objx, objy, from_invent)
@@ -1175,7 +1175,7 @@ int whodidit;   /* 1==hero, 0=other, -1==just check whether it'll pass thru */
     if (!hits)
         switch (otmp->oclass) {
         case WEAPON_CLASS: {
-            int oskill = objects[obj_type].oc_skill;
+            int oskill = object_defaults[obj_type].oc_skill;
 
             hits = (oskill != -P_BOW && oskill != -P_CROSSBOW
                     && oskill != -P_DART && oskill != -P_SHURIKEN
@@ -1184,7 +1184,7 @@ int whodidit;   /* 1==hero, 0=other, -1==just check whether it'll pass thru */
             break;
         }
         case ARMOR_CLASS:
-            hits = (objects[obj_type].oc_armcat != ARM_GLOVES);
+            hits = (object_defaults[obj_type].oc_armcat != ARM_GLOVES);
             break;
         case TOOL_CLASS:
             hits = (obj_type != SKELETON_KEY && obj_type != LOCK_PICK

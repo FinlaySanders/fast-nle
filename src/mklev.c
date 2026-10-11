@@ -108,7 +108,7 @@ xchar xl, yl, xh, yh;
 
     for (x = xl; x <= xh; x++)
         for (y = yl; y <= yh; y++)
-            if (IS_DOOR(levl[x][y].typ) || levl[x][y].typ == SDOOR)
+            if (IS_DOOR(NH_TILE(x, y).typ) || NH_TILE(x, y).typ == SDOOR)
                 goto gotit;
     /* cannot find something reasonable -- strange */
     x = xl;
@@ -157,9 +157,8 @@ boolean is_room;
 
     if (lit) {
         for (x = lowx - 1; x <= hix + 1; x++) {
-            lev = &levl[x][max(lowy - 1, 0)];
             for (y = lowy - 1; y <= hiy + 1; y++)
-                lev++->lit = 1;
+                NH_TILE(x, y).lit = 1;
         }
         croom->rlit = 1;
     } else
@@ -184,18 +183,16 @@ boolean is_room;
         for (x = lowx - 1; x <= hix + 1; x++)
             for (y = lowy - 1; y <= hiy + 1; y += (hiy - lowy + 2)) {
                 SET_TYP_XY(x, y, HWALL);
-                levl[x][y].horizontal = 1; /* For open/secret doors. */
+                NH_TILE(x, y).horizontal = 1; /* For open/secret doors. */
             }
         for (x = lowx - 1; x <= hix + 1; x += (hix - lowx + 2))
             for (y = lowy; y <= hiy; y++) {
                 SET_TYP_XY(x, y, VWALL);
-                levl[x][y].horizontal = 0; /* For open/secret doors. */
+                NH_TILE(x, y).horizontal = 0; /* For open/secret doors. */
             }
         for (x = lowx; x <= hix; x++) {
-            lev = &levl[x][lowy];
             for (y = lowy; y <= hiy; y++) {
-                SET_TYP_P(lev, ROOM);
-                lev++;
+                SET_TYP_XY(x, y, ROOM);
             }
         }
         if (is_room) {
@@ -318,7 +315,7 @@ boolean nxcor;
     yy = cc.y;
     tx = tt.x - dx;
     ty = tt.y - dy;
-    if (nxcor && levl[xx + dx][yy + dy].typ)
+    if (nxcor && NH_TILE(xx + dx, yy + dy).typ)
         return;
     if (okdoor(xx, yy) || !nxcor)
         dodoor(xx, yy, croom);
@@ -423,7 +420,7 @@ int type;
 {
     boolean shdoor = *in_rooms(x, y, SHOPBASE) ? TRUE : FALSE;
 
-    if (!IS_WALL(levl[x][y].typ)) /* avoid SDOORs on already made doors */
+    if (!IS_WALL(NH_TILE(x, y).typ)) /* avoid SDOORs on already made doors */
         type = DOOR;
     SET_TYP_XY(x, y, type);
     if (type == DOOR) {
@@ -437,32 +434,32 @@ int type;
              * keeps the (int) cast in range (never compute (int)+inf). */
             int lock_mod = 6;
                         if (!rn2(5))
-                levl[x][y].doormask = D_ISOPEN;
+                NH_TILE(x, y).doormask = D_ISOPEN;
             else if (!rn2(lock_mod))
-                levl[x][y].doormask = D_LOCKED;
+                NH_TILE(x, y).doormask = D_LOCKED;
             else
-                levl[x][y].doormask = D_CLOSED;
+                NH_TILE(x, y).doormask = D_CLOSED;
 
-            if (levl[x][y].doormask != D_ISOPEN && !shdoor
+            if (NH_TILE(x, y).doormask != D_ISOPEN && !shdoor
                 && level_difficulty() >= 5 && !rn2(25))
-                levl[x][y].doormask |= D_TRAPPED;
+                NH_TILE(x, y).doormask |= D_TRAPPED;
         } else {
 #ifdef STUPID
             if (shdoor)
-                levl[x][y].doormask = D_ISOPEN;
+                NH_TILE(x, y).doormask = D_ISOPEN;
             else
-                levl[x][y].doormask = D_NODOOR;
+                NH_TILE(x, y).doormask = D_NODOOR;
 #else
-            levl[x][y].doormask = (shdoor ? D_ISOPEN : D_NODOOR);
+            NH_TILE(x, y).doormask = (shdoor ? D_ISOPEN : D_NODOOR);
 #endif
         }
 
         /* also done in roguecorr(); doing it here first prevents
            making mimics in place of trapped doors on rogue level */
         if (Is_rogue_level(&u.uz))
-            levl[x][y].doormask = D_NODOOR;
+            NH_TILE(x, y).doormask = D_NODOOR;
 
-        if (levl[x][y].doormask & D_TRAPPED) {
+        if (NH_TILE(x, y).doormask & D_TRAPPED) {
             struct monst *mtmp;
 
             if (level_difficulty() >= 9 && !rn2(5)
@@ -470,7 +467,7 @@ int type;
                      && (mvitals[PM_LARGE_MIMIC].mvflags & G_GONE)
                      && (mvitals[PM_GIANT_MIMIC].mvflags & G_GONE))) {
                 /* make a mimic instead */
-                levl[x][y].doormask = D_NODOOR;
+                NH_TILE(x, y).doormask = D_NODOOR;
                 mtmp = makemon(mkclass(S_MIMIC, 0), x, y, NO_MM_FLAGS);
                 if (mtmp)
                     set_mimic_sym(mtmp);
@@ -479,12 +476,12 @@ int type;
         /* newsym(x,y); */
     } else { /* SDOOR */
         if (shdoor || !rn2(5))
-            levl[x][y].doormask = D_LOCKED;
+            NH_TILE(x, y).doormask = D_LOCKED;
         else
-            levl[x][y].doormask = D_CLOSED;
+            NH_TILE(x, y).doormask = D_CLOSED;
 
         if (!shdoor && level_difficulty() >= 4 && !rn2(20))
-            levl[x][y].doormask |= D_TRAPPED;
+            NH_TILE(x, y).doormask |= D_TRAPPED;
     }
 
     add_door(x, y, aroom);
@@ -507,10 +504,10 @@ int *dy, *xx, *yy;
     *xx = dd.x;
     *yy = dd.y;
     return (boolean) ((isok(*xx, *yy + *dy)
-                       && levl[*xx][*yy + *dy].typ == STONE)
+                       && NH_TILE(*xx, *yy + *dy).typ == STONE)
                       && (isok(*xx, *yy - *dy)
-                          && !IS_POOL(levl[*xx][*yy - *dy].typ)
-                          && !IS_FURNITURE(levl[*xx][*yy - *dy].typ)));
+                          && !IS_POOL(NH_TILE(*xx, *yy - *dy).typ)
+                          && !IS_FURNITURE(NH_TILE(*xx, *yy - *dy).typ)));
 }
 
 /* there should be one of these per trap, in the same order as trap.h */
@@ -543,7 +540,7 @@ int trap_type;
             if (!place_niche(aroom, &dy, &xx, &yy))
                 continue;
 
-            rm = &levl[xx][yy + dy];
+            rm = &NH_TILE(xx, yy + dy);
             if (trap_type || !rn2(4)) {
                 SET_TYP_P(rm, SCORR);
                 if (trap_type) {
@@ -569,7 +566,7 @@ int trap_type;
                     dosdoor(xx, yy, aroom, rn2(5) ? SDOOR : DOOR);
                 else {
                     /* inaccessible niches occasionally have iron bars */
-                    if (!rn2(5) && IS_WALL(levl[xx][yy].typ)) {
+                    if (!rn2(5) && IS_WALL(NH_TILE(xx, yy).typ)) {
                         SET_TYP_XY(xx, yy, IRONBARS);
                         if (rn2(3))
                             (void) mkcorpstat(CORPSE, (struct monst *) 0,
@@ -621,19 +618,19 @@ makevtele()
 STATIC_OVL void
 clear_level_structures()
 {
-    static struct rm zerorm = { cmap_to_glyph(S_stone),
-                                0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    static struct rm zerorm = { .glyph = cmap_to_glyph(S_stone) };
     register int x, y;
-    register struct rm *lev;
 
     /* note:  normally we'd start at x=1 because map column #0 isn't used
        (except for placing vault guard at <0,0> when removed from the map
        but not from the level); explicitly reset column #0 along with the
        rest so that we start the new level with a completely clean slate */
     for (x = 0; x < COLNO; x++) {
-        lev = &levl[x][0];
         for (y = 0; y < ROWNO; y++) {
-            *lev++ = zerorm;
+            nh_copy_terrain(&NH_TILE(x, y), &zerorm);
+            NH_SUMMARY(x, y).move_pile = NH_SUMMARY(x, y).move_trap = 0;
+            NH_SUMMARY(x, y).move_trap_present = NH_SUMMARY(x, y).move_gas = 0;
+            NH_SUMMARY(x, y).move_obj_present = 0;
             /*
              * These used to be '#if MICROPORT_BUG',
              * with use of memset(0) for '#if !MICROPORT_BUG' below,
@@ -642,7 +639,7 @@ clear_level_structures()
              * initializations unconditionally.
              */
             level.objs[x][y] = (struct obj *) 0;
-            level.monsters[x][y] = (struct monst *) 0;
+            NH_SET_MON(x, y, (struct monst *) 0);
         }
     }
     nh_fobj_invalidate();
@@ -943,9 +940,9 @@ makelevel()
                 do {
                     x = somex(croom);
                     y = somey(croom);
-                } while (levl[x][y].typ != ROOM && !rn2(40));
-                if (!(IS_POOL(levl[x][y].typ)
-                      || IS_FURNITURE(levl[x][y].typ)))
+                } while (NH_TILE(x, y).typ != ROOM && !rn2(40));
+                if (!(IS_POOL(NH_TILE(x, y).typ)
+                      || IS_FURNITURE(NH_TILE(x, y).typ)))
                     make_engr_at(x, y, mesg, 0L, MARK);
             }
         }
@@ -994,8 +991,8 @@ boolean skip_lvl_checks;
         return;
     for (x = 2; x < (COLNO - 2); x++)
         for (y = 1; y < (ROWNO - 1); y++)
-            if ((kelp_pool && levl[x][y].typ == POOL && !rn2(kelp_pool))
-                || (kelp_moat && levl[x][y].typ == MOAT && !rn2(kelp_moat)))
+            if ((kelp_pool && NH_TILE(x, y).typ == POOL && !rn2(kelp_pool))
+                || (kelp_moat && NH_TILE(x, y).typ == MOAT && !rn2(kelp_moat)))
                 (void) mksobj_at(KELP_FROND, x, y, TRUE, FALSE);
 
     /* determine if it is even allowed;
@@ -1031,23 +1028,23 @@ boolean skip_lvl_checks;
      */
     for (x = 2; x < (COLNO - 2); x++)
         for (y = 1; y < (ROWNO - 1); y++)
-            if (levl[x][y + 1].typ != STONE) { /* <x,y> spot not eligible */
+            if (NH_TILE(x, y + 1).typ != STONE) { /* <x,y> spot not eligible */
                 y += 2; /* next two spots aren't eligible either */
-            } else if (levl[x][y].typ != STONE) { /* this spot not eligible */
+            } else if (NH_TILE(x, y).typ != STONE) { /* this spot not eligible */
                 y += 1; /* next spot isn't eligible either */
-            } else if (!(levl[x][y].wall_info & W_NONDIGGABLE)
-                       && levl[x][y - 1].typ == STONE
-                       && levl[x + 1][y - 1].typ == STONE
-                       && levl[x - 1][y - 1].typ == STONE
-                       && levl[x + 1][y].typ == STONE
-                       && levl[x - 1][y].typ == STONE
-                       && levl[x + 1][y + 1].typ == STONE
-                       && levl[x - 1][y + 1].typ == STONE) {
+            } else if (!(NH_TILE(x, y).wall_info & W_NONDIGGABLE)
+                       && NH_TILE(x, y - 1).typ == STONE
+                       && NH_TILE(x + 1, y - 1).typ == STONE
+                       && NH_TILE(x - 1, y - 1).typ == STONE
+                       && NH_TILE(x + 1, y).typ == STONE
+                       && NH_TILE(x - 1, y).typ == STONE
+                       && NH_TILE(x + 1, y + 1).typ == STONE
+                       && NH_TILE(x - 1, y + 1).typ == STONE) {
                 if (rn2(1000) < goldprob) {
                     if ((otmp = mksobj(GOLD_PIECE, FALSE, FALSE)) != 0) {
                         otmp->ox = x, otmp->oy = y;
                         otmp->quan = 1L + rnd(goldprob * 3);
-                        otmp->owt = weight(otmp);
+                        nh_set_owt(otmp);
                         if (!rn2(3))
                             add_to_buried(otmp);
                         else
@@ -1145,7 +1142,7 @@ struct mkroom *croom;
 
     /* skip the room if already done; i.e. a shop handled out of order */
     /* also skip if this is non-rectangular (it _must_ be done already) */
-    if ((int) levl[lowx][lowy].roomno == roomno || croom->irregular)
+    if ((int) NH_TILE(lowx, lowy).roomno == roomno || croom->irregular)
         return;
     /* Guard against degenerate room dimensions that would make
      * the "sides" and "edges" loops below (which use `+= (h - lo + 2)` as
@@ -1165,27 +1162,27 @@ struct mkroom *croom;
             for (y = lowy; y <= hiy; y++)
 #ifdef SPECIALIZATION
                 if (rtype == OROOM)
-                    levl[x][y].roomno = NO_ROOM;
+                    NH_TILE(x, y).roomno = NO_ROOM;
                 else
 #endif
-                    levl[x][y].roomno = roomno;
+                    NH_TILE(x, y).roomno = roomno;
         /* top and bottom edges */
         for (x = lowx - 1; x <= hix + 1; x++)
             for (y = lowy - 1; y <= hiy + 1; y += (hiy - lowy + 2)) {
-                levl[x][y].edge = 1;
-                if (levl[x][y].roomno)
-                    levl[x][y].roomno = SHARED;
+                NH_TILE(x, y).edge = 1;
+                if (NH_TILE(x, y).roomno)
+                    NH_TILE(x, y).roomno = SHARED;
                 else
-                    levl[x][y].roomno = roomno;
+                    NH_TILE(x, y).roomno = roomno;
             }
         /* sides */
         for (x = lowx - 1; x <= hix + 1; x += (hix - lowx + 2))
             for (y = lowy; y <= hiy; y++) {
-                levl[x][y].edge = 1;
-                if (levl[x][y].roomno)
-                    levl[x][y].roomno = SHARED;
+                NH_TILE(x, y).edge = 1;
+                if (NH_TILE(x, y).roomno)
+                    NH_TILE(x, y).roomno = SHARED;
                 else
-                    levl[x][y].roomno = roomno;
+                    NH_TILE(x, y).roomno = roomno;
             }
     }
     /* subrooms */
@@ -1230,8 +1227,8 @@ coord *mp;
             if (!somexy(croom, mp))
                 impossible("Can't place branch!");
         } while ((occupied(mp->x, mp->y)
-                  || (levl[mp->x][mp->y].typ != CORR
-                      && levl[mp->x][mp->y].typ != ROOM))
+                  || (NH_TILE(mp->x, mp->y).typ != CORR
+                      && NH_TILE(mp->x, mp->y).typ != ROOM))
                  && (++sxy_tries < 200));
     }
     return croom;
@@ -1300,7 +1297,7 @@ xchar x, y; /* location */
         assign_level(&sstairs.tolev, dest);
         sstairs_room = br_room;
 
-        levl[x][y].ladder = sstairs.up ? LA_UP : LA_DOWN;
+        NH_TILE(x, y).ladder = sstairs.up ? LA_UP : LA_DOWN;
         SET_TYP_XY(x, y, STAIRS);
     }
     /*
@@ -1319,22 +1316,22 @@ register xchar x, y;
     register int typ;
 
     if (isok(x + 1, y)) {
-        typ = levl[x + 1][y].typ;
+        typ = NH_TILE(x + 1, y).typ;
         if (IS_DOOR(typ) || typ == SDOOR)
             return TRUE;
     }
     if (isok(x - 1, y)) {
-        typ = levl[x - 1][y].typ;
+        typ = NH_TILE(x - 1, y).typ;
         if (IS_DOOR(typ) || typ == SDOOR)
             return TRUE;
     }
     if (isok(x, y + 1)) {
-        typ = levl[x][y + 1].typ;
+        typ = NH_TILE(x, y + 1).typ;
         if (IS_DOOR(typ) || typ == SDOOR)
             return TRUE;
     }
     if (isok(x, y - 1)) {
-        typ = levl[x][y - 1].typ;
+        typ = NH_TILE(x, y - 1).typ;
         if (IS_DOOR(typ) || typ == SDOOR)
             return TRUE;
     }
@@ -1348,7 +1345,7 @@ xchar x, y;
 {
     boolean near_door = bydoor(x, y);
 
-    return ((levl[x][y].typ == HWALL || levl[x][y].typ == VWALL)
+    return ((NH_TILE(x, y).typ == HWALL || NH_TILE(x, y).typ == VWALL)
             && doorindex < DOORMAX && !near_door);
 }
 
@@ -1369,7 +1366,7 @@ boolean
 occupied(x, y)
 register xchar x, y;
 {
-    return (boolean) (t_at(x, y) || IS_FURNITURE(levl[x][y].typ)
+    return (boolean) (t_at(x, y) || IS_FURNITURE(NH_TILE(x, y).typ)
                       || is_lava(x, y) || is_pool(x, y)
                       || invocation_pos(x, y));
 }
@@ -1588,7 +1585,7 @@ coord *tm;
             if (otmp) {
                 otmp->blessed = 0;
                 otmp->cursed = 1;
-                otmp->owt = weight(otmp);
+                nh_set_owt(otmp);
                 place_object(otmp, m.x, m.y);
             }
 
@@ -1623,7 +1620,7 @@ coord *tm;
                 otmp->quan = 1;
                 otmp->blessed = 0;
                 otmp->cursed = 1;
-                otmp->owt = weight(otmp);
+                nh_set_owt(otmp);
                 place_object(otmp, m.x, m.y);
             }
             break;
@@ -1670,7 +1667,7 @@ struct mkroom *croom;
     }
 
     SET_TYP_XY(x, y, STAIRS);
-    levl[x][y].ladder = up ? LA_UP : LA_DOWN;
+    NH_TILE(x, y).ladder = up ? LA_UP : LA_DOWN;
 }
 
 STATIC_OVL void
@@ -1694,7 +1691,7 @@ struct mkroom *croom;
     SET_TYP_XY(m.x, m.y, FOUNTAIN);
     /* Is it a "blessed" fountain? (affects drinking from fountain) */
     if (!rn2(7))
-        levl[m.x][m.y].blessedftn = 1;
+        NH_TILE(m.x, m.y).blessedftn = 1;
 
     level.lflags.nfountains++;
 }
@@ -1742,7 +1739,7 @@ struct mkroom *croom;
 
     /* -1 - A_CHAOTIC, 0 - A_NEUTRAL, 1 - A_LAWFUL */
     al = rn2((int) A_LAWFUL + 2) - 1;
-    levl[m.x][m.y].altarmask = Align2amask(al);
+    NH_TILE(m.x, m.y).altarmask = Align2amask(al);
 }
 
 static void
@@ -1777,7 +1774,7 @@ struct mkroom *croom;
         struct obj *gold = mksobj(GOLD_PIECE, TRUE, FALSE);
 
         gold->quan = (long) (rnd(20) + level_difficulty() * rnd(5));
-        gold->owt = weight(gold);
+        nh_set_owt(gold);
         gold->ox = m.x, gold->oy = m.y;
         add_to_buried(gold);
     }
@@ -1878,7 +1875,7 @@ int dist;
     struct trap *ttmp;
     struct obj *otmp;
     boolean make_rocks;
-    register struct rm *lev = &levl[x][y];
+    register struct rm *lev = &NH_TILE(x, y);
     struct monst *mon;
 
     /* clip at existing map borders if necessary */

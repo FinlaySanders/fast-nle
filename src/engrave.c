@@ -183,7 +183,7 @@ const char *
 surface(x, y)
 register int x, y;
 {
-    register struct rm *lev = &levl[x][y];
+    register struct rm *lev = &NH_TILE(x, y);
 
     if (x == u.ux && y == u.uy && u.uswallow && is_animal(u.ustuck->data))
         return "maw";
@@ -215,7 +215,7 @@ const char *
 ceiling(x, y)
 register int x, y;
 {
-    register struct rm *lev = &levl[x][y];
+    register struct rm *lev = &NH_TILE(x, y);
     const char *what;
 
     /* other room types will no longer exist when we're interested --
@@ -585,9 +585,9 @@ doengrave()
             You("would only make a small smudge on the %s.",
                 surface(u.ux, u.uy));
             return 0;
-        } else if (!levl[u.ux][u.uy].disturbed) {
+        } else if (!NH_TILE(u.ux, u.uy).disturbed) {
             You("disturb the undead!");
-            levl[u.ux][u.uy].disturbed = 1;
+            NH_TILE(u.ux, u.uy).disturbed = 1;
             (void) makemon(&mons[PM_GHOUL], u.ux, u.uy, NO_MM_FLAGS);
             exercise(A_WIS, FALSE);
             return 1;
@@ -767,7 +767,7 @@ doengrave()
                                  ? "Chips fly out from the headstone."
                                  : is_ice(u.ux, u.uy)
                                     ? "Ice chips fly up from the ice surface!"
-                                    : (level.locations[u.ux][u.uy].typ
+                                    : (NH_TILE(u.ux, u.uy).typ
                                        == DRAWBRIDGE_DOWN)
                                        ? "Splinters fly up from the bridge."
                                        : "Gravel flies up from the floor.");

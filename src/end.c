@@ -1605,7 +1605,7 @@ int how;
 
                 if (count == 0L)
                     continue;
-                if (objects[typ].oc_class != GEM_CLASS || typ <= LAST_GEM) {
+                if (object_defaults[typ].oc_class != GEM_CLASS || typ <= LAST_GEM) {
                     otmp = mksobj(typ, FALSE, FALSE);
                     discover_object(otmp->otyp, TRUE, FALSE);
                     otmp->known = 1;  /* for fake amulets */
@@ -1614,7 +1614,7 @@ int how;
                         free_oname(otmp);
                     otmp->quan = count;
                     Sprintf(pbuf, "%8ld %s (worth %ld %s),", count,
-                            xname(otmp), count * (long) objects[typ].oc_cost,
+                            xname(otmp), count * (long) object_defaults[typ].oc_cost,
                             currency(2L));
                     obfree(otmp, (struct obj *) 0);
                 } else {

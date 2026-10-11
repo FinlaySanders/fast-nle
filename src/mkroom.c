@@ -178,7 +178,7 @@ gottype:
 
         for (x = sroom->lx - 1; x <= sroom->hx + 1; x++)
             for (y = sroom->ly - 1; y <= sroom->hy + 1; y++)
-                levl[x][y].lit = 1;
+                NH_TILE(x, y).lit = 1;
         sroom->rlit = 1;
     }
 
@@ -283,7 +283,7 @@ struct mkroom *sroom;
         if (level.lflags.is_maze_lev) {
             for (tx = sroom->lx; tx <= sroom->hx; tx++)
                 for (ty = sroom->ly; ty <= sroom->hy; ty++)
-                    if (IS_THRONE(levl[tx][ty].typ))
+                    if (IS_THRONE(NH_TILE(tx, ty).typ))
                         goto throne_placed;
         }
         i = 100;
@@ -300,7 +300,7 @@ struct mkroom *sroom;
         ty = sroom->ly + (sroom->hy - sroom->ly + 1) / 2;
         if (sroom->irregular) {
             /* center might not be valid, so put queen elsewhere */
-            if ((int) levl[tx][ty].roomno != rmno || levl[tx][ty].edge) {
+            if ((int) NH_TILE(tx, ty).roomno != rmno || NH_TILE(tx, ty).edge) {
                 (void) somexy(sroom, &mm);
                 tx = mm.x;
                 ty = mm.y;
@@ -316,11 +316,11 @@ struct mkroom *sroom;
     for (sx = sroom->lx; sx <= sroom->hx; sx++)
         for (sy = sroom->ly; sy <= sroom->hy; sy++) {
             if (sroom->irregular) {
-                if ((int) levl[sx][sy].roomno != rmno || levl[sx][sy].edge
+                if ((int) NH_TILE(sx, sy).roomno != rmno || NH_TILE(sx, sy).edge
                     || (sroom->doorct
                         && distmin(sx, sy, doors[sh].x, doors[sh].y) <= 1))
                     continue;
-            } else if (!SPACE_POS(levl[sx][sy].typ)
+            } else if (!SPACE_POS(NH_TILE(sx, sy).typ)
                        || (sroom->doorct
                            && ((sx == sroom->lx && doors[sh].x == sx - 1)
                                || (sx == sroom->hx && doors[sh].x == sx + 1)
@@ -329,7 +329,7 @@ struct mkroom *sroom;
                                    && doors[sh].y == sy + 1))))
                 continue;
             /* don't place monster on explicitly placed throne */
-            if (type == COURT && IS_THRONE(levl[sx][sy].typ))
+            if (type == COURT && IS_THRONE(NH_TILE(sx, sy).typ))
                 continue;
             mon = makemon((type == COURT)
                            ? courtmon()
@@ -396,7 +396,7 @@ struct mkroom *sroom;
                         for (i = rn2(5); i; i--)
                             (void) add_to_container(
                                 sobj, mkobj(RANDOM_CLASS, FALSE));
-                        sobj->owt = weight(sobj);
+                        nh_set_owt(sobj);
                     }
                 }
                 break;
@@ -413,11 +413,11 @@ struct mkroom *sroom;
         (void) somexy(sroom, &mm);
         gold = mksobj(GOLD_PIECE, TRUE, FALSE);
         gold->quan = (long) rn1(50 * level_difficulty(), 10);
-        gold->owt = weight(gold);
+        nh_set_owt(gold);
         /* the royal coffers */
         chest = mksobj_at(CHEST, mm.x, mm.y, TRUE, FALSE);
         add_to_container(chest, gold);
-        chest->owt = weight(chest);
+        nh_set_owt(chest);
         chest->spe = 2; /* so it can be found later */
         level.lflags.has_court = 1;
         break;
@@ -594,7 +594,7 @@ mktemple()
      * located in the center of the room
      */
     shrine_spot = shrine_pos((int) ((sroom - rooms) + ROOMOFFSET));
-    lev = &levl[shrine_spot->x][shrine_spot->y];
+    lev = &NH_TILE(shrine_spot->x, shrine_spot->y);
     SET_TYP_P(lev, ALTAR);
     lev->altarmask = induced_align(80);
     priestini(&u.uz, sroom, shrine_spot->x, shrine_spot->y, FALSE);
@@ -613,7 +613,7 @@ register int sx, sy;
         for (dy = -1; dy <= 1; dy++) {
             if (!isok(sx + dx, sy + dy))
                 continue;
-            lev = &levl[sx + dx][sy + dy];
+            lev = &NH_TILE(sx + dx, sy + dy);
             if (IS_DOOR(lev->typ) || lev->typ == SDOOR)
                 return TRUE;
         }
@@ -679,14 +679,14 @@ coord *c;
         while (try_cnt++ < 100) {
             c->x = somex(croom);
             c->y = somey(croom);
-            if (!levl[c->x][c->y].edge && (int) levl[c->x][c->y].roomno == i)
+            if (!NH_TILE(c->x, c->y).edge && (int) NH_TILE(c->x, c->y).roomno == i)
                 return TRUE;
         }
         /* try harder; exhaustively search until one is found */
         for (c->x = croom->lx; c->x <= croom->hx; c->x++)
             for (c->y = croom->ly; c->y <= croom->hy; c->y++)
-                if (!levl[c->x][c->y].edge
-                    && (int) levl[c->x][c->y].roomno == i)
+                if (!NH_TILE(c->x, c->y).edge
+                    && (int) NH_TILE(c->x, c->y).roomno == i)
                     return TRUE;
         return FALSE;
     }
@@ -702,7 +702,7 @@ coord *c;
     while (try_cnt++ < 100) {
         c->x = somex(croom);
         c->y = somey(croom);
-        if (IS_WALL(levl[c->x][c->y].typ))
+        if (IS_WALL(NH_TILE(c->x, c->y).typ))
             continue;
         for (i = 0; i < croom->nsubrooms; i++)
             if (inside_room(croom->sbrooms[i], c->x, c->y))

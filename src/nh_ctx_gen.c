@@ -53,6 +53,12 @@ nh_ctx_free(struct nh_ctx *nh)
     int i;
     if (!nh)
         return;
+#ifndef NLE_OBJECTS_GLOBAL
+    nh_mon_pool_release(nh->g_mon_c_mon_pool);
+#endif
+#ifndef NLE_OBJECTS_GLOBAL
+    nh_obj_pool_release(nh->g_mkobj_c_obj_pool);
+#endif
     for (i = 0; i < NH_LAZY_SLOTS; i++)
         free(nh->nh_lazy[i]);
     munmap(nh, (sizeof(struct nh_ctx) + 4095) & ~(size_t) 4095);

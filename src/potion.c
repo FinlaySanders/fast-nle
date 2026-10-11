@@ -48,7 +48,8 @@ int incr;
 /* set the timeout field of intrinsic `which' */
 void
 set_itimeout(which, val)
-long *which, val;
+propbits_t *which;
+long val;
 {
     *which &= ~TIMEOUT;
     *which |= itimeout(val);
@@ -57,7 +58,7 @@ long *which, val;
 /* increment the timeout field of intrinsic `which' */
 void
 incr_itimeout(which, incr)
-long *which;
+propbits_t *which;
 int incr;
 {
     set_itimeout(which, itimeout_incr(*which, incr));
@@ -501,7 +502,7 @@ dodrink()
         return 0;
     }
     /* Is there a fountain to drink from here? */
-    if (IS_FOUNTAIN(levl[u.ux][u.uy].typ)
+    if (IS_FOUNTAIN(NH_TILE(u.ux, u.uy).typ)
         /* not as low as floor level but similar restrictions apply */
         && can_reach_floor(FALSE)) {
         if (yn("Drink from the fountain?") == 'y') {
@@ -510,7 +511,7 @@ dodrink()
         }
     }
     /* Or a kitchen sink? */
-    if (IS_SINK(levl[u.ux][u.uy].typ)
+    if (IS_SINK(NH_TILE(u.ux, u.uy).typ)
         /* not as low as floor level but similar restrictions apply */
         && can_reach_floor(FALSE)) {
         if (yn("Drink from the sink?") == 'y') {
@@ -835,7 +836,7 @@ register struct obj *otmp;
             incr_itimeout(&HDetect_monsters, i);
             for (x = 1; x < COLNO; x++) {
                 for (y = 0; y < ROWNO; y++) {
-                    if (levl[x][y].glyph == GLYPH_INVISIBLE) {
+                    if (NH_TILE(x, y).glyph == GLYPH_INVISIBLE) {
                         unmap_object(x, y);
                         newsym(x, y);
                     }
@@ -1077,7 +1078,7 @@ register struct obj *otmp;
         } else /* timeout is already at least 1 */
             incr_itimeout(&HLevitation, rn1(140, 10));
 
-        if (Levitation && IS_SINK(levl[u.ux][u.uy].typ))
+        if (Levitation && IS_SINK(NH_TILE(u.ux, u.uy).typ))
             spoteffects(FALSE);
         /* levitating blocks flying */
         float_vs_flight();
@@ -1915,7 +1916,7 @@ dodip()
                              QBUFSZ - sizeof "What do you want to dip \
  into? [abdeghjkmnpqstvwyzBCEFHIKLNOQRTUWXZ#-# or ?*] "));
 
-    here = levl[u.ux][u.uy].typ;
+    here = NH_TILE(u.ux, u.uy).typ;
     /* Is there a fountain to dip into here? */
     if (IS_FOUNTAIN(here)) {
         Sprintf(qbuf, "%s%s into the fountain?", Dip_,
@@ -2005,8 +2006,8 @@ dodip()
 
         mixture = mixtype(obj, potion);
 
-        magic = (mixture != STRANGE_OBJECT) ? objects[mixture].oc_magic
-            : (objects[obj->otyp].oc_magic || objects[potion->otyp].oc_magic);
+        magic = (mixture != STRANGE_OBJECT) ? object_defaults[mixture].oc_magic
+            : (object_defaults[obj->otyp].oc_magic || object_defaults[potion->otyp].oc_magic);
         Strcpy(qbuf, "The"); /* assume full stack */
         if (amt > (magic ? 3 : 7)) {
             /* trying to dip multiple potions will usually affect only a
@@ -2052,21 +2053,21 @@ dodip()
             obj->dknown = 0;
 
         if (mixture != STRANGE_OBJECT) {
-            obj->otyp = mixture;
+            NH_PILE_WRITE(obj, (obj->otyp = mixture));
         } else {
             struct obj *otmp;
 
             switch (obj->odiluted ? 1 : rnd(8)) {
             case 1:
-                obj->otyp = POT_WATER;
+                NH_PILE_WRITE(obj, (obj->otyp = POT_WATER));
                 break;
             case 2:
             case 3:
-                obj->otyp = POT_SICKNESS;
+                NH_PILE_WRITE(obj, (obj->otyp = POT_SICKNESS));
                 break;
             case 4:
                 otmp = mkobj(POTION_CLASS, FALSE);
-                obj->otyp = otmp->otyp;
+                NH_PILE_WRITE(obj, (obj->otyp = otmp->otyp));
                 obfree(otmp, (struct obj *) 0);
                 break;
             default:
@@ -2198,7 +2199,7 @@ dodip()
         }
         /* Adding oil to an empty magic lamp renders it into an oil lamp */
         if ((obj->otyp == MAGIC_LAMP) && obj->spe == 0) {
-            obj->otyp = OIL_LAMP;
+            NH_PILE_WRITE(obj, (obj->otyp = OIL_LAMP));
             obj->age = 0;
         }
         if (obj->age > 1000L) {
@@ -2244,7 +2245,7 @@ dodip()
             singlepotion = potion;
 
         costly_alteration(singlepotion, COST_NUTRLZ);
-        singlepotion->otyp = mixture;
+        NH_PILE_WRITE(singlepotion, (singlepotion->otyp = mixture));
         singlepotion->blessed = 0;
         if (mixture == POT_WATER)
             singlepotion->cursed = singlepotion->odiluted = 0;

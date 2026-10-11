@@ -4,6 +4,10 @@
 /* NetHack may be freely redistributed.  See license for details. */
 
 #include "hack.h"
+#include "mon_save.h"
+#include "rm_save.h"
+#include "obj_save.h"
+#include "you_save.h"
 #include "nle.h" /* nle_ctx_t for the level-blob save/load API */
 #include "lev.h"
 #include <errno.h>
@@ -45,8 +49,8 @@ long bytes_counted;
  * Hypothesis 1 (sizeof asymmetry) is ruled out — both TUs agree. */
 #if defined(__GNUC__) || defined(__clang__)
 _Static_assert(sizeof(struct eshk)  == 4936, "save.c: sizeof(struct eshk) drifted");
-_Static_assert(sizeof(struct monst) ==  144, "save.c: sizeof(struct monst) drifted");
-_Static_assert(sizeof(struct obj)   ==   96, "save.c: sizeof(struct obj) drifted");
+_Static_assert(sizeof(struct monst) ==  120, "save.c: sizeof(struct monst) drifted");
+_Static_assert(sizeof(struct obj)   ==   88, "save.c: sizeof(struct obj) drifted");
 #endif
 
 #ifdef MICRO
@@ -326,7 +330,8 @@ register int fd, mode;
     urealtime.finish_time = getnow();
     urealtime.realtime += (long) (urealtime.finish_time
                                   - urealtime.start_timing);
-    bwrite(fd, (genericptr_t) &u, sizeof u);
+    { struct you_legacy saved; you_to_legacy(&saved, &u);
+      bwrite(fd, (genericptr_t) &saved, sizeof saved); }
     bwrite(fd, yyyymmddhhmmss(ubirthday), 14);
     bwrite(fd, (genericptr_t) &urealtime.realtime, sizeof urealtime.realtime);
     bwrite(fd, yyyymmddhhmmss(urealtime.start_timing), 14);  /** Why? **/
@@ -708,9 +713,10 @@ int mode;
 
         for (y = 0; y < ROWNO; y++)
             for (x = 0; x < COLNO; x++)
-                level.monsters[x][y] = 0;
+                NH_SET_MON(x, y, (struct monst *) 0);
         fmon = 0;
         ftrap = 0;
+        nh_tile_clear_entities(NH_MOVE_TRAPS | NH_MOVE_PILES);
         nh_fobj_invalidate();
         fobj = level.buriedobjlist = billobjs = 0;
         /* level.bonesinfo = 0; -- handled by savecemetery() */
@@ -735,12 +741,12 @@ boolean rlecomp;
     if (rlecomp) {
         /* perform run-length encoding of rm structs */
 
-        rgrm = &levl[0][0]; /* start matching at first rm */
+        rgrm = &NH_TILE(0, 0); /* start matching at first rm */
         match = 0;
 
         for (y = 0; y < ROWNO; y++) {
             for (x = 0; x < COLNO; x++) {
-                prm = &levl[x][y];
+                prm = &NH_TILE(x, y);
                 if (prm->glyph == rgrm->glyph && prm->typ == rgrm->typ
                     && prm->seenv == rgrm->seenv
                     && prm->horizontal == rgrm->horizontal
@@ -757,7 +763,8 @@ boolean rlecomp;
                     /* run has been broken, write out run-length encoding */
  writeout:
                     bwrite(fd, (genericptr_t) &match, sizeof (uchar));
-                    bwrite(fd, (genericptr_t) rgrm, sizeof (struct rm));
+                    { struct rm_legacy saved; rm_to_legacy(&saved,rgrm);
+                      bwrite(fd, (genericptr_t) &saved, sizeof saved); }
                     /* start encoding again. we have at least 1 rm
                        in the next run, viz. this one. */
                     match = 1;
@@ -767,14 +774,17 @@ boolean rlecomp;
         }
         if (match > 0) {
             bwrite(fd, (genericptr_t) &match, sizeof (uchar));
-            bwrite(fd, (genericptr_t) rgrm, sizeof (struct rm));
+            { struct rm_legacy saved; rm_to_legacy(&saved,rgrm);
+                      bwrite(fd, (genericptr_t) &saved, sizeof saved); }
         }
         return;
     }
 #else /* !RLECOMP */
     nhUse(rlecomp);
 #endif /* ?RLECOMP */
-    bwrite(fd, (genericptr_t) levl, sizeof levl);
+    { struct rm_legacy saved[COLNO][ROWNO];
+      for(int x=0;x<COLNO;x++) for(int y=0;y<ROWNO;y++) rm_to_legacy(&saved[x][y],&NH_TILE(x, y));
+      bwrite(fd,(genericptr_t)saved,sizeof saved); }
 }
 
 /*ARGSUSED*/
@@ -1233,9 +1243,10 @@ struct obj *otmp;
 {
     int buflen, zerobuf = 0;
 
-    buflen = (int) sizeof (struct obj);
-    bwrite(fd, (genericptr_t) &buflen, sizeof buflen);
-    bwrite(fd, (genericptr_t) otmp, buflen);
+    { struct obj_legacy saved; obj_to_legacy(&saved,otmp);
+      buflen = (int) sizeof saved;
+      bwrite(fd, (genericptr_t) &buflen, sizeof buflen);
+      bwrite(fd, (genericptr_t) &saved, buflen); }
     if (otmp->oextra) {
         buflen = ONAME(otmp) ? (int) strlen(ONAME(otmp)) + 1 : 0;
         bwrite(fd, (genericptr_t) &buflen, sizeof buflen);
@@ -1338,10 +1349,11 @@ struct monst *mtmp;
 
     mtmp->mtemplit = 0; /* normally clear; if set here then a panic save
                          * is being written while bhit() was executing */
-    buflen = (int) sizeof (struct monst);
-    if (trace) fprintf(stderr, "SAVE_MON pid=%d fd=%d kind=monst buflen=%d\n", pid, fd, buflen);
-    bwrite(fd, (genericptr_t) &buflen, sizeof buflen);
-    bwrite(fd, (genericptr_t) mtmp, buflen);
+    { struct monst_legacy saved; mon_to_legacy(&saved,mtmp);
+      buflen = (int) sizeof saved;
+      if (trace) fprintf(stderr, "SAVE_MON pid=%d fd=%d kind=monst buflen=%d\n", pid, fd, buflen);
+      bwrite(fd, (genericptr_t) &buflen, sizeof buflen);
+      bwrite(fd, (genericptr_t) &saved, buflen); }
     if (mtmp->mextra) {
         buflen = MNAME(mtmp) ? (int) strlen(MNAME(mtmp)) + 1 : 0;
         if (trace) fprintf(stderr, "SAVE_MON pid=%d fd=%d kind=mname buflen=%d\n", pid, fd, buflen);
@@ -1667,7 +1679,10 @@ freedynamicdata()
        has no objects: null the maps. Runs strictly after the final obs
        fill, so golden hashes are unaffected. */
     (void) memset((genericptr_t) level.objs, 0, sizeof(level.objs));
+    nh_tile_clear_entities(NH_MOVE_TRAPS | NH_MOVE_PILES);
     (void) memset((genericptr_t) level.monsters, 0, sizeof(level.monsters));
+    for (int mx = 0; mx < COLNO + 2; mx++)
+        level.move_columns[mx].occupied = 0;
     nh_fobj_invalidate();
     fobj = (struct obj *) 0;
     fmon = (struct monst *) 0;

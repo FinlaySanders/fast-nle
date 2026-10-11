@@ -75,21 +75,21 @@ int x, y;
 {
     struct rm *lev;
 
-    lev = &levl[x][y];
+    lev = &NH_TILE(x, y);
     if (lev->typ != DOOR && lev->typ != DBWALL)
         return -1;
 
-    if (IS_DRAWBRIDGE(levl[x + 1][y].typ)
-        && (levl[x + 1][y].drawbridgemask & DB_DIR) == DB_WEST)
+    if (IS_DRAWBRIDGE(NH_TILE(x + 1, y).typ)
+        && (NH_TILE(x + 1, y).drawbridgemask & DB_DIR) == DB_WEST)
         return DB_WEST;
-    if (IS_DRAWBRIDGE(levl[x - 1][y].typ)
-        && (levl[x - 1][y].drawbridgemask & DB_DIR) == DB_EAST)
+    if (IS_DRAWBRIDGE(NH_TILE(x - 1, y).typ)
+        && (NH_TILE(x - 1, y).drawbridgemask & DB_DIR) == DB_EAST)
         return DB_EAST;
-    if (IS_DRAWBRIDGE(levl[x][y - 1].typ)
-        && (levl[x][y - 1].drawbridgemask & DB_DIR) == DB_SOUTH)
+    if (IS_DRAWBRIDGE(NH_TILE(x, y - 1).typ)
+        && (NH_TILE(x, y - 1).drawbridgemask & DB_DIR) == DB_SOUTH)
         return DB_SOUTH;
-    if (IS_DRAWBRIDGE(levl[x][y + 1].typ)
-        && (levl[x][y + 1].drawbridgemask & DB_DIR) == DB_NORTH)
+    if (IS_DRAWBRIDGE(NH_TILE(x, y + 1).typ)
+        && (NH_TILE(x, y + 1).drawbridgemask & DB_DIR) == DB_NORTH)
         return DB_NORTH;
 
     return -1;
@@ -104,7 +104,7 @@ boolean
 is_db_wall(x, y)
 int x, y;
 {
-    return (boolean) (levl[x][y].typ == DBWALL);
+    return (boolean) (NH_TILE(x, y).typ == DBWALL);
 }
 
 /*
@@ -117,7 +117,7 @@ int *x, *y;
 {
     int dir;
 
-    if (IS_DRAWBRIDGE(levl[*x][*y].typ))
+    if (IS_DRAWBRIDGE(NH_TILE(*x, *y).typ))
         return TRUE;
     dir = is_drawbridge_wall(*x, *y);
     if (dir >= 0) {
@@ -147,7 +147,7 @@ STATIC_OVL void
 get_wall_for_db(x, y)
 int *x, *y;
 {
-    switch (levl[*x][*y].drawbridgemask & DB_DIR) {
+    switch (NH_TILE(*x, *y).drawbridgemask & DB_DIR) {
     case DB_NORTH:
         (*y)--;
         break;
@@ -175,7 +175,7 @@ boolean flag;
 {
     int x2, y2;
     boolean horiz;
-    boolean lava = levl[x][y].typ == LAVAPOOL; /* assume initialized map */
+    boolean lava = NH_TILE(x, y).typ == LAVAPOOL; /* assume initialized map */
 
     x2 = x;
     y2 = y;
@@ -200,23 +200,23 @@ boolean flag;
         x2--;
         break;
     }
-    if (!IS_WALL(levl[x2][y2].typ))
+    if (!IS_WALL(NH_TILE(x2, y2).typ))
         return FALSE;
     if (flag) { /* We want the bridge open */
         SET_TYP_XY(x, y, DRAWBRIDGE_DOWN);
         SET_TYP_XY(x2, y2, DOOR);
-        levl[x2][y2].doormask = D_NODOOR;
+        NH_TILE(x2, y2).doormask = D_NODOOR;
     } else {
         SET_TYP_XY(x, y, DRAWBRIDGE_UP);
         SET_TYP_XY(x2, y2, DBWALL);
         /* Drawbridges are non-diggable. */
-        levl[x2][y2].wall_info = W_NONDIGGABLE;
+        NH_TILE(x2, y2).wall_info = W_NONDIGGABLE;
     }
-    levl[x][y].horizontal = !horiz;
-    levl[x2][y2].horizontal = horiz;
-    levl[x][y].drawbridgemask = dir;
+    NH_TILE(x, y).horizontal = !horiz;
+    NH_TILE(x2, y2).horizontal = horiz;
+    NH_TILE(x, y).drawbridgemask = dir;
     if (lava)
-        levl[x][y].drawbridgemask |= DB_LAVA;
+        NH_TILE(x, y).drawbridgemask |= DB_LAVA;
     return  TRUE;
 }
 
@@ -516,7 +516,7 @@ struct entity *etmp;
     oldx = etmp->ex;
     oldy = etmp->ey;
     at_portcullis = is_db_wall(oldx, oldy);
-    crm = &levl[oldx][oldy];
+    crm = &NH_TILE(oldx, oldy);
 
     if (automiss(etmp) && e_survives_at(etmp, oldx, oldy)) {
         if (e_inview && (at_portcullis || IS_DRAWBRIDGE(crm->typ)))
@@ -719,7 +719,7 @@ int x, y;
     struct trap *t;
     int x2, y2;
 
-    lev1 = &levl[x][y];
+    lev1 = &NH_TILE(x, y);
     if (lev1->typ != DRAWBRIDGE_DOWN)
         return;
     x2 = x;
@@ -734,7 +734,7 @@ int x, y;
     else /* "5 gears turn" for castle drawbridge tune */
         You_hear("chains rattling and gears turning.");
     SET_TYP_P(lev1, DRAWBRIDGE_UP);
-    lev2 = &levl[x2][y2];
+    lev2 = &NH_TILE(x2, y2);
     SET_TYP_P(lev2, DBWALL);
     switch (lev1->drawbridgemask & DB_DIR) {
     case DB_NORTH:
@@ -781,7 +781,7 @@ int x, y;
     struct trap *t;
     int x2, y2;
 
-    lev1 = &levl[x][y];
+    lev1 = &NH_TILE(x, y);
     if (lev1->typ != DRAWBRIDGE_UP)
         return;
     x2 = x;
@@ -793,7 +793,7 @@ int x, y;
     else /* "5 gears turn" for castle drawbridge tune */
         You_hear("gears turning and chains rattling.");
     SET_TYP_P(lev1, DRAWBRIDGE_DOWN);
-    lev2 = &levl[x2][y2];
+    lev2 = &NH_TILE(x2, y2);
     SET_TYP_P(lev2, DOOR);
     lev2->doormask = D_NODOOR;
     set_entity(x, y, &(occupants[0]));
@@ -831,13 +831,13 @@ int x, y;
     boolean e_inview;
     struct entity *etmp1 = &(occupants[0]), *etmp2 = &(occupants[1]);
 
-    lev1 = &levl[x][y];
+    lev1 = &NH_TILE(x, y);
     if (!IS_DRAWBRIDGE(lev1->typ))
         return;
     x2 = x;
     y2 = y;
     get_wall_for_db(&x2, &y2);
-    lev2 = &levl[x2][y2];
+    lev2 = &NH_TILE(x2, y2);
     if ((lev1->drawbridgemask & DB_UNDER) == DB_MOAT
         || (lev1->drawbridgemask & DB_UNDER) == DB_LAVA) {
         struct obj *otmp2;
@@ -944,7 +944,7 @@ int x, y;
             e_died(etmp1,
                    XKILL_NOCORPSE | (e_inview ? XKILL_GIVEMSG : XKILL_NOMSG),
                    CRUSHING); /*no corpse*/
-            if (levl[etmp1->ex][etmp1->ey].typ == MOAT)
+            if (NH_TILE(etmp1->ex, etmp1->ey).typ == MOAT)
                 do_entity(etmp1);
         }
     }

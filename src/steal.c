@@ -134,7 +134,7 @@ register struct monst *mtmp;
             monflee(mtmp, 0, FALSE, FALSE);
         }
     } else if (ygold) {
-        const int gold_price = objects[GOLD_PIECE].oc_cost;
+        const int gold_price = object_defaults[GOLD_PIECE].oc_cost;
 
         tmp = (somegold(money_cnt(invent)) + gold_price - 1) / gold_price;
         tmp = min(tmp, ygold->quan);
@@ -404,7 +404,7 @@ char *objnambuf;
             remove_worn_item(otmp, TRUE);
             break;
         case ARMOR_CLASS:
-            armordelay = objects[otmp->otyp].oc_delay;
+            armordelay = object_defaults[otmp->otyp].oc_delay;
             if (olddelay > 0 && olddelay < armordelay)
                 armordelay = olddelay;
             if (monkey_business) {
@@ -689,7 +689,7 @@ boolean verbosely;
                    && !obj->unpaid && costly_spot(omx, omy)
                    /* being at costly_spot guarantees lev->roomno is not 0 */
                    && index(in_rooms(u.ux, u.uy, SHOPBASE),
-                            levl[omx][omy].roomno)) {
+                            NH_TILE(omx, omy).roomno)) {
             obj->no_charge = 1;
         }
         /* this should be done even if the monster has died */

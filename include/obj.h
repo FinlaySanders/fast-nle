@@ -5,6 +5,7 @@
 
 #ifndef OBJ_H
 #define OBJ_H
+#include <stdint.h>
 
 /* #define obj obj_nh */ /* uncomment for SCO UNIX, which has a conflicting
                           * typedef for "obj" in <sys/types.h> */
@@ -28,6 +29,100 @@ struct oextra {
 };
 
 struct obj {
+    struct obj *nobj;
+    union vptrs v;
+#define nexthere v.v_nexthere
+#define ocontainer v.v_ocontainer
+#define ocarry v.v_ocarry
+
+    struct obj *cobj; /* contents list for containers */
+    unsigned o_id;
+    xchar ox, oy;
+    short otyp; /* object class number */
+    unsigned owt;
+    int32_t owornmask;
+    long quan; /* number of items */
+
+    schar spe; /* quality of weapon, weptool, armor or ring (+ or -);
+                  number of charges for wand or charged tool ( >= -1 );
+                  number of candles attached to candelabrum;
+                  marks your eggs, tin variety and spinach tins;
+                  Schroedinger's Box (1) or royal coffers for a court (2);
+                  tells which fruit a fruit is;
+                  special for uball and amulet;
+                  scroll of mail (normal==0, bones or wishing==1, written==2);
+                  historic and gender for statues */
+#define STATUE_HISTORIC 0x01
+#define STATUE_MALE 0x02
+#define STATUE_FEMALE 0x04
+    char oclass;    /* object class */
+    char invlet;    /* designation in inventory */
+    char oartifact; /* artifact array index */
+
+    xchar where;        /* where the object thinks it is */
+#define OBJ_FREE 0      /* object not attached to anything */
+#define OBJ_FLOOR 1     /* object on floor */
+#define OBJ_CONTAINED 2 /* object in a container */
+#define OBJ_INVENT 3    /* object in the hero's inventory */
+#define OBJ_MINVENT 4   /* object in a monster inventory */
+#define OBJ_MIGRATING 5 /* object sent off to another level */
+#define OBJ_BURIED 6    /* object buried */
+#define OBJ_ONBILL 7    /* object on shk bill */
+#define NOBJ_STATES 8
+    xchar timed; /* # of fuses (timers) attached to this obj */
+
+    Bitfield(cursed, 1);
+    Bitfield(blessed, 1);
+    Bitfield(unpaid, 1);    /* on some bill */
+    Bitfield(no_charge, 1); /* if shk shouldn't charge for this */
+    Bitfield(known, 1);     /* exact nature known */
+    Bitfield(dknown, 1);    /* color or text known */
+    Bitfield(bknown, 1);    /* blessing or curse known */
+    Bitfield(rknown, 1);    /* rustproof or not known */
+
+    Bitfield(oeroded, 2);  /* rusted/burnt weapon/armor */
+    Bitfield(oeroded2, 2); /* corroded/rotted weapon/armor */
+#define greatest_erosion(otmp)                                 \
+    (int)((otmp)->oeroded > (otmp)->oeroded2 ? (otmp)->oeroded \
+                                             : (otmp)->oeroded2)
+#define MAX_ERODE 3
+#define orotten oeroded  /* rotten food */
+#define odiluted oeroded /* diluted potions */
+#define norevive oeroded2
+    Bitfield(oerodeproof, 1); /* erodeproof weapon/armor */
+    Bitfield(olocked, 1);     /* object is locked */
+    Bitfield(obroken, 1);     /* lock has been broken */
+#define degraded_horn obroken /* unicorn horn will poly to non-magic */
+    Bitfield(otrapped, 1);    /* container is trapped */
+/* or accidental tripped rolling boulder trap */
+#define opoisoned otrapped /* object (weapon) is coated with poison */
+
+    Bitfield(recharged, 3); /* number of times it's been recharged */
+#define on_ice recharged    /* corpse on ice */
+    Bitfield(lamplit, 1);   /* a light-source -- can be lit */
+    Bitfield(globby, 1);    /* combines with like types on adjacent squares */
+    Bitfield(greased, 1);    /* covered with grease */
+    Bitfield(nomerge, 1);    /* set temporarily to prevent merging */
+    Bitfield(was_thrown, 1); /* thrown by hero since last picked up */
+
+    Bitfield(in_use, 1); /* for magic items before useup items */
+    Bitfield(bypass, 1); /* mark this as an object to be skipped by bhito() */
+    Bitfield(cknown, 1); /* contents of container assumed to be known */
+    Bitfield(lknown, 1); /* locked/unlocked status is known */
+    /* 4 free bits */
+
+    int corpsenm;         /* type of corpse is mons[corpsenm] */
+#define leashmon corpsenm /* gets m_id of attached pet */
+#define fromsink corpsenm /* a potion from a sink */
+#define novelidx corpsenm /* 3.6 tribute - the index of the novel title */
+#define record_achieve_special corpsenm
+    int usecount;           /* overloaded for various things that tally */
+#define spestudied usecount /* # of times a spellbook has been studied */
+    unsigned oeaten;        /* nutrition left in food, if partly eaten */
+    long age;               /* creation date */
+    struct oextra *oextra; /* pointer to oextra struct */
+};
+struct obj_legacy {
     struct obj *nobj;
     union vptrs v;
 #define nexthere v.v_nexthere
@@ -122,7 +217,7 @@ struct obj {
     struct oextra *oextra; /* pointer to oextra struct */
 };
 
-#define newobj() (struct obj *) alloc(sizeof(struct obj))
+#define newobj() nh_obj_alloc()
 
 /***
  **	oextra referencing and testing macros
@@ -154,78 +249,78 @@ struct obj {
  */
 #define is_blade(otmp)                           \
     (otmp->oclass == WEAPON_CLASS                \
-     && objects[otmp->otyp].oc_skill >= P_DAGGER \
-     && objects[otmp->otyp].oc_skill <= P_SABER)
+     && object_defaults[otmp->otyp].oc_skill >= P_DAGGER \
+     && object_defaults[otmp->otyp].oc_skill <= P_SABER)
 #define is_axe(otmp)                                              \
     ((otmp->oclass == WEAPON_CLASS || otmp->oclass == TOOL_CLASS) \
-     && objects[otmp->otyp].oc_skill == P_AXE)
+     && object_defaults[otmp->otyp].oc_skill == P_AXE)
 #define is_pick(otmp)                                             \
     ((otmp->oclass == WEAPON_CLASS || otmp->oclass == TOOL_CLASS) \
-     && objects[otmp->otyp].oc_skill == P_PICK_AXE)
+     && object_defaults[otmp->otyp].oc_skill == P_PICK_AXE)
 #define is_sword(otmp)                                \
     (otmp->oclass == WEAPON_CLASS                     \
-     && objects[otmp->otyp].oc_skill >= P_SHORT_SWORD \
-     && objects[otmp->otyp].oc_skill <= P_SABER)
+     && object_defaults[otmp->otyp].oc_skill >= P_SHORT_SWORD \
+     && object_defaults[otmp->otyp].oc_skill <= P_SABER)
 #define is_pole(otmp)                                             \
     ((otmp->oclass == WEAPON_CLASS || otmp->oclass == TOOL_CLASS) \
-     && (objects[otmp->otyp].oc_skill == P_POLEARMS               \
-         || objects[otmp->otyp].oc_skill == P_LANCE))
+     && (object_defaults[otmp->otyp].oc_skill == P_POLEARMS               \
+         || object_defaults[otmp->otyp].oc_skill == P_LANCE))
 #define is_spear(otmp) \
-    (otmp->oclass == WEAPON_CLASS && objects[otmp->otyp].oc_skill == P_SPEAR)
+    (otmp->oclass == WEAPON_CLASS && object_defaults[otmp->otyp].oc_skill == P_SPEAR)
 #define is_launcher(otmp)                                                  \
-    (otmp->oclass == WEAPON_CLASS && objects[otmp->otyp].oc_skill >= P_BOW \
-     && objects[otmp->otyp].oc_skill <= P_CROSSBOW)
+    (otmp->oclass == WEAPON_CLASS && object_defaults[otmp->otyp].oc_skill >= P_BOW \
+     && object_defaults[otmp->otyp].oc_skill <= P_CROSSBOW)
 #define is_ammo(otmp)                                            \
     ((otmp->oclass == WEAPON_CLASS || otmp->oclass == GEM_CLASS) \
-     && objects[otmp->otyp].oc_skill >= -P_CROSSBOW              \
-     && objects[otmp->otyp].oc_skill <= -P_BOW)
+     && object_defaults[otmp->otyp].oc_skill >= -P_CROSSBOW              \
+     && object_defaults[otmp->otyp].oc_skill <= -P_BOW)
 #define matching_launcher(a, l) \
-    ((l) && objects[(a)->otyp].oc_skill == -objects[(l)->otyp].oc_skill)
+    ((l) && object_defaults[(a)->otyp].oc_skill == -object_defaults[(l)->otyp].oc_skill)
 #define ammo_and_launcher(a, l) (is_ammo(a) && matching_launcher(a, l))
 #define is_missile(otmp)                                          \
     ((otmp->oclass == WEAPON_CLASS || otmp->oclass == TOOL_CLASS) \
-     && objects[otmp->otyp].oc_skill >= -P_BOOMERANG              \
-     && objects[otmp->otyp].oc_skill <= -P_DART)
+     && object_defaults[otmp->otyp].oc_skill >= -P_BOOMERANG              \
+     && object_defaults[otmp->otyp].oc_skill <= -P_DART)
 #define is_weptool(o) \
-    ((o)->oclass == TOOL_CLASS && objects[(o)->otyp].oc_skill != P_NONE)
+    ((o)->oclass == TOOL_CLASS && object_defaults[(o)->otyp].oc_skill != P_NONE)
         /* towel is not a weptool:  spe isn't an enchantment, cursed towel
            doesn't weld to hand, and twoweapon won't work with one */
 #define is_wet_towel(o) ((o)->otyp == TOWEL && (o)->spe > 0)
 #define bimanual(otmp)                                            \
     ((otmp->oclass == WEAPON_CLASS || otmp->oclass == TOOL_CLASS) \
-     && objects[otmp->otyp].oc_bimanual)
+     && object_defaults[otmp->otyp].oc_bimanual)
 #define is_multigen(otmp)                           \
     (otmp->oclass == WEAPON_CLASS                   \
-     && objects[otmp->otyp].oc_skill >= -P_SHURIKEN \
-     && objects[otmp->otyp].oc_skill <= -P_BOW)
+     && object_defaults[otmp->otyp].oc_skill >= -P_SHURIKEN \
+     && object_defaults[otmp->otyp].oc_skill <= -P_BOW)
 #define is_poisonable(otmp)                         \
     (otmp->oclass == WEAPON_CLASS                   \
-     && objects[otmp->otyp].oc_skill >= -P_SHURIKEN \
-     && objects[otmp->otyp].oc_skill <= -P_BOW)
-#define uslinging() (uwep && objects[uwep->otyp].oc_skill == P_SLING)
+     && object_defaults[otmp->otyp].oc_skill >= -P_SHURIKEN \
+     && object_defaults[otmp->otyp].oc_skill <= -P_BOW)
+#define uslinging() (uwep && object_defaults[uwep->otyp].oc_skill == P_SLING)
 /* 'is_quest_artifact()' only applies to the current role's artifact */
 #define any_quest_artifact(o) ((o)->oartifact >= ART_ORB_OF_DETECTION)
 
 /* Armor */
 #define is_shield(otmp)          \
     (otmp->oclass == ARMOR_CLASS \
-     && objects[otmp->otyp].oc_armcat == ARM_SHIELD)
+     && object_defaults[otmp->otyp].oc_armcat == ARM_SHIELD)
 #define is_helmet(otmp) \
-    (otmp->oclass == ARMOR_CLASS && objects[otmp->otyp].oc_armcat == ARM_HELM)
+    (otmp->oclass == ARMOR_CLASS && object_defaults[otmp->otyp].oc_armcat == ARM_HELM)
 #define is_boots(otmp)           \
     (otmp->oclass == ARMOR_CLASS \
-     && objects[otmp->otyp].oc_armcat == ARM_BOOTS)
+     && object_defaults[otmp->otyp].oc_armcat == ARM_BOOTS)
 #define is_gloves(otmp)          \
     (otmp->oclass == ARMOR_CLASS \
-     && objects[otmp->otyp].oc_armcat == ARM_GLOVES)
+     && object_defaults[otmp->otyp].oc_armcat == ARM_GLOVES)
 #define is_cloak(otmp)           \
     (otmp->oclass == ARMOR_CLASS \
-     && objects[otmp->otyp].oc_armcat == ARM_CLOAK)
+     && object_defaults[otmp->otyp].oc_armcat == ARM_CLOAK)
 #define is_shirt(otmp)           \
     (otmp->oclass == ARMOR_CLASS \
-     && objects[otmp->otyp].oc_armcat == ARM_SHIRT)
+     && object_defaults[otmp->otyp].oc_armcat == ARM_SHIRT)
 #define is_suit(otmp) \
-    (otmp->oclass == ARMOR_CLASS && objects[otmp->otyp].oc_armcat == ARM_SUIT)
+    (otmp->oclass == ARMOR_CLASS && object_defaults[otmp->otyp].oc_armcat == ARM_SUIT)
 #define is_elven_armor(otmp)                                              \
     ((otmp)->otyp == ELVEN_LEATHER_HELM                                   \
      || (otmp)->otyp == ELVEN_MITHRIL_COAT || (otmp)->otyp == ELVEN_CLOAK \

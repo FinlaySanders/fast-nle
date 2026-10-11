@@ -4,8 +4,9 @@
  * Include ONLY from mon.c, after hack.h. */
 #ifndef NH_CTX_FILE_MON_C_H
 #define NH_CTX_FILE_MON_C_H
-#define animal_list_count (nh_cur->g_mon_c_animal_list_count)
+#define mon_pool (nh_cur->g_mon_c_mon_pool)
 #define disintegested (nh_cur->g_mon_c_disintegested)
+#define animal_list_count (nh_cur->g_mon_c_animal_list_count)
 #define elemental_clog_msgmv (nh_cur->g_mon_c_elemental_clog_msgmv)
 #define vamp_rise_msg (nh_cur->g_mon_c_vamp_rise_msg)
 #endif /* NH_CTX_FILE_MON_C_H */

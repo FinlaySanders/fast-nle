@@ -36,7 +36,7 @@ target_include_directories(dgn_comp PRIVATE ${NLE_INC} ${NLE_INC_GEN}
 add_executable(lev_comp ${LEV_COMP_SRC})
 target_include_directories(lev_comp PRIVATE ${NLE_INC} ${NLE_INC_GEN}
                                             ${NLE_UTIL_GEN})
-target_compile_definitions(lev_comp PRIVATE NLE_OBJECTS_GLOBAL)
+target_compile_definitions(lev_comp PRIVATE NLE_OBJECTS_GLOBAL NLE_LEVEL_COMPILER)
 add_executable(dlb ${DLB_SRC})
 target_include_directories(dlb PRIVATE ${NLE_INC} ${NLE_INC_GEN}
                                        ${NLE_UTIL_GEN})

@@ -9,18 +9,84 @@ struct nh_ctx {
      * per-step working set spans the fewest cache lines. */
     /* --- hot --- */
     long g_moves; /* global: moves */
+    int g_nh_invwt_valid; /* global: nh_invwt_valid */
+    long g_nh_invwt_nb; /* global: nh_invwt_nb */
+    long g_nh_invwt_boulder; /* global: nh_invwt_boulder */
     long g_monstermoves; /* global: monstermoves */
     int g_multi; /* global: multi */
-    schar g_nh_typ_plane[COLNO][ROWNO]; /* global: nh_typ_plane */
-    boolean g_vision_full_recalc; /* global: vision_full_recalc */
-    char ** g_viz_array; /* global: viz_array */
     struct sinfo g_program_state; /* global: program_state */
     int (*g_occupation)(void); /* global: occupation */
     int (*g_afternmv)(void); /* global: afternmv */
-    char g_vision_c_could_see[2][ROWNO][COLNO]; /* vision.c: could_see */
-    char g_vision_c_viz_clear[ROWNO][COLNO]; /* vision.c: viz_clear */
-    char g_vision_c_left_ptrs[ROWNO][COLNO]; /* vision.c: left_ptrs */
-    char g_vision_c_right_ptrs[ROWNO][COLNO]; /* vision.c: right_ptrs */
+    boolean g_vision_full_recalc; /* global: vision_full_recalc */
+    int g_xwaitingforspace; /* global: xwaitingforspace */
+    coord g_bhitpos; /* global: bhitpos */
+    struct u_realtime g_urealtime; /* global: urealtime */
+    struct obj * g_invent; /* global: invent */
+    struct trap * g_ftrap; /* global: ftrap */
+    struct obj * g_migrating_objs; /* global: migrating_objs */
+    void * g_light_c_light_base; /* light.c: light_base */
+    void * g_timeout_c_timer_base; /* timeout.c: timer_base */
+    unsigned long g_timeout_c_timer_id; /* timeout.c: timer_id */
+    struct engr * g_engrave_c_head_engr; /* engrave.c: head_engr */
+    void * g_region_c_regions_p; /* region.c: regions_p */
+    int g_region_c_n_regions; /* region.c: n_regions */
+    int g_dungeon_c_n_dgns; /* dungeon.c: n_dgns */
+    void * g_mon_c_mon_pool; /* mon.c: mon_pool */
+    boolean g_mon_c_disintegested; /* mon.c: disintegested */
+    schar g_hack_c_spotloc_x; /* hack.c: spotloc_x */
+    schar g_hack_c_spotloc_y; /* hack.c: spotloc_y */
+    int g_hack_c_spotterrain; /* hack.c: spotterrain */
+    struct trap * g_hack_c_spottrap; /* hack.c: spottrap */
+    unsigned g_hack_c_spottraptyp; /* hack.c: spottraptyp */
+    int g_hack_c_wc; /* hack.c: wc */
+    long g_hack_c_moverock_lastmovetime; /* hack.c: moverock_lastmovetime */
+    int g_hack_c_inspoteffects; /* hack.c: inspoteffects */
+    int g_hack_c_domove_skates; /* hack.c: domove_skates */
+    char g_hack_c_in_rooms_buf[5]; /* hack.c: in_rooms_buf */
+    schar g_dogmove_c_gtyp; /* dogmove.c: gtyp */
+    schar g_dogmove_c_gx; /* dogmove.c: gx */
+    schar g_dogmove_c_gy; /* dogmove.c: gy */
+    int g_mhitu_c_dieroll; /* mhitu.c: dieroll */
+    struct obj * g_mhitu_c_mon_currwep; /* mhitu.c: mon_currwep */
+    struct obj * g_weapon_c_propellor; /* weapon.c: propellor */
+    int g_trap_c_force_mintrap; /* trap.c: force_mintrap */
+    boolean g_trap_c_recursive_mine; /* trap.c: recursive_mine */
+    unsigned g_rnd_c_rn2disprng_seed; /* rnd.c: rn2disprng_seed */
+    int g_display_c_flushing; /* display.c: flushing */
+    int g_display_c_delay_flushing; /* display.c: delay_flushing */
+    boolean g_display_c_in_cls; /* display.c: in_cls */
+    int g_display_c_nul_gbuf_new; /* display.c: nul_gbuf_new */
+    int g_display_c_nul_gbuf_glyph; /* display.c: nul_gbuf_glyph */
+    char g_display_c_gbuf_start[ROWNO]; /* display.c: gbuf_start */
+    char g_display_c_gbuf_stop[ROWNO]; /* display.c: gbuf_stop */
+    boolean g_botl_c_valset[23]; /* botl.c: valset */
+    boolean g_botl_c_update_all; /* botl.c: update_all */
+    boolean g_botl_c_blinit; /* botl.c: blinit */
+    long g_botl_c_bl_hilite_moves; /* botl.c: bl_hilite_moves */
+    int g_cmd_c_phead; /* cmd.c: phead */
+    int g_cmd_c_ptail; /* cmd.c: ptail */
+    int g_cmd_c_shead; /* cmd.c: shead */
+    int g_cmd_c_stail; /* cmd.c: stail */
+    char g_cmd_c_pushq[20]; /* cmd.c: pushq */
+    char g_cmd_c_saveq[20]; /* cmd.c: saveq */
+    const char * g_cmd_c_readchar_queue; /* cmd.c: readchar_queue */
+    int g_cmd_c_alt_esc; /* cmd.c: alt_esc */
+    int (*g_cmd_c_timed_occ_fn)(void); /* cmd.c: timed_occ_fn */
+    int g_track_c_utcnt; /* track.c: utcnt */
+    int g_track_c_utpnt; /* track.c: utpnt */
+    coord g_track_c_utrack[50]; /* track.c: utrack */
+    int g_vision_c_vis_start_row; /* vision.c: vis_start_row */
+    int g_vision_c_vis_start_col; /* vision.c: vis_start_col */
+    int g_vision_c_vis_step; /* vision.c: vis_step */
+    char ** g_vision_c_vis_cs_rows; /* vision.c: vis_cs_rows */
+    char * g_vision_c_vis_cs_left; /* vision.c: vis_cs_left */
+    char * g_vision_c_vis_cs_right; /* vision.c: vis_cs_right */
+    void (*g_vision_c_vis_func)(); /* vision.c: vis_func */
+    void * g_vision_c_vis_varg; /* vision.c: vis_varg */
+    int g_vision_c_vision_recur_depth; /* vision.c: vision_recur_depth */
+    char ** g_viz_array; /* global: viz_array */
+    char * g_vision_c_viz_rmin; /* vision.c: viz_rmin */
+    char * g_vision_c_viz_rmax; /* vision.c: viz_rmax */
     char * g_vision_c_viz_clear_rows[ROWNO]; /* vision.c: viz_clear_rows */
     char * g_vision_c_cs_rows0[ROWNO]; /* vision.c: cs_rows0 */
     char * g_vision_c_cs_rows1[ROWNO]; /* vision.c: cs_rows1 */
@@ -28,18 +94,32 @@ struct nh_ctx {
     char g_vision_c_cs_rmax0[ROWNO]; /* vision.c: cs_rmax0 */
     char g_vision_c_cs_rmin1[ROWNO]; /* vision.c: cs_rmin1 */
     char g_vision_c_cs_rmax1[ROWNO]; /* vision.c: cs_rmax1 */
-    char * g_vision_c_viz_rmin; /* vision.c: viz_rmin */
-    char * g_vision_c_viz_rmax; /* vision.c: viz_rmax */
-    char g_display_c_gbuf_start[ROWNO]; /* display.c: gbuf_start */
-    char g_display_c_gbuf_stop[ROWNO]; /* display.c: gbuf_stop */
-    int g_xwaitingforspace; /* global: xwaitingforspace */
+    struct you g_u; /* global: u */
+    struct monst g_youmonst; /* global: youmonst */
+    struct flag g_flags; /* global: flags */
+    struct instance_flags g_iflags; /* global: iflags */
+    struct context_info g_context; /* global: context */
+    dungeon g_dungeons[MAXDUNGEON]; /* global: dungeons */
+    unsigned char g_vision_c_vision_colbump[COLNO + 1]; /* vision.c: vision_colbump */
+    unsigned char g_nh_track_near[COLNO][ROWNO]; /* global: nh_track_near */
+    schar g_nh_typ_plane[COLNO][ROWNO]; /* global: nh_typ_plane */
+    char g_vision_c_could_see[2][ROWNO][COLNO]; /* vision.c: could_see */
+    char g_vision_c_viz_clear[ROWNO][COLNO]; /* vision.c: viz_clear */
+    char g_vision_c_left_ptrs[ROWNO][COLNO]; /* vision.c: left_ptrs */
+    char g_vision_c_right_ptrs[ROWNO][COLNO]; /* vision.c: right_ptrs */
+    nhsym g_drawing_c_showsyms[SYM_MAX]; /* drawing.c: showsyms */
     isaac64_ctx g_rnd_c_rng_state[2]; /* rnd.c: rng_state */
     int g_rnd_c_rng_init[2]; /* rnd.c: rng_init */
-    nhsym g_drawing_c_showsyms[SYM_MAX]; /* drawing.c: showsyms */
+    unsigned long g_nh_invgen; /* global: nh_invgen */
+    unsigned long g_nh_hgold_gen; /* global: nh_hgold_gen */
+    long g_nh_hgold_val; /* global: nh_hgold_val */
+    unsigned long g_nh_leash_gen; /* global: nh_leash_gen */
+    unsigned char g_nh_hgold_valid; /* global: nh_hgold_valid */
+    unsigned char g_nh_leash_valid; /* global: nh_leash_valid */
+    unsigned char g_nh_leash_cnt; /* global: nh_leash_cnt */
+    unsigned char g_nh_deepest_valid; /* global: nh_deepest_valid */
+    schar g_nh_deepest_val[2]; /* global: nh_deepest_val */
     /* --- cold --- */
-    int g_track_c_utcnt; /* track.c: utcnt */
-    int g_track_c_utpnt; /* track.c: utpnt */
-    coord g_track_c_utrack[50]; /* track.c: utrack */
     const char * g_hname; /* global: hname */
     int g_hackpid; /* global: hackpid */
     int g_locknum; /* global: locknum */
@@ -75,7 +155,6 @@ struct nh_ctx {
     schar g_tbx; /* global: tbx */
     schar g_tby; /* global: tby */
     struct multishot g_m_shot; /* global: m_shot */
-    dungeon g_dungeons[MAXDUNGEON]; /* global: dungeons */
     s_level * g_sp_levchn; /* global: sp_levchn */
     stairway g_upstair; /* global: upstair */
     stairway g_dnstair; /* global: dnstair */
@@ -92,7 +171,6 @@ struct nh_ctx {
     boolean g_mrg_to_wielded; /* global: mrg_to_wielded */
     boolean g_in_steed_dismounting; /* global: in_steed_dismounting */
     boolean g_has_strong_rngseed; /* global: has_strong_rngseed */
-    coord g_bhitpos; /* global: bhitpos */
     coord g_doors[DOORMAX]; /* global: doors */
     struct mkroom g_rooms[(MAXNROFROOMS + 1) * 2]; /* global: rooms */
     struct mkroom * g_subrooms; /* global: subrooms */
@@ -100,16 +178,8 @@ struct nh_ctx {
     struct mkroom * g_dnstairs_room; /* global: dnstairs_room */
     struct mkroom * g_sstairs_room; /* global: sstairs_room */
     dlevel_t g_level; /* global: level */
-    struct trap * g_ftrap; /* global: ftrap */
-    struct monst g_youmonst; /* global: youmonst */
-    struct context_info g_context; /* global: context */
-    struct flag g_flags; /* global: flags */
-    struct instance_flags g_iflags; /* global: iflags */
-    struct you g_u; /* global: u */
     time_t g_ubirthday; /* global: ubirthday */
-    struct u_realtime g_urealtime; /* global: urealtime */
     schar g_lastseentyp[COLNO][ROWNO]; /* global: lastseentyp */
-    struct obj * g_invent; /* global: invent */
     struct obj * g_uwep; /* global: uwep */
     struct obj * g_uarm; /* global: uarm */
     struct obj * g_uswapwep; /* global: uswapwep */
@@ -132,7 +202,6 @@ struct nh_ctx {
     struct obj * g_kickedobj; /* global: kickedobj */
     struct spell g_spl_book[MAXSPELL + 1]; /* global: spl_book */
     long g_wailmsg; /* global: wailmsg */
-    struct obj * g_migrating_objs; /* global: migrating_objs */
     struct obj * g_billobjs; /* global: billobjs */
     char g_dogname[PL_PSIZ]; /* global: dogname */
     char g_catname[PL_PSIZ]; /* global: catname */
@@ -160,32 +229,9 @@ struct nh_ctx {
     short g_options_c_n_menu_mapped; /* options.c: n_menu_mapped */
     char g_attrib_c_from_what_buf[256]; /* attrib.c: from_what_buf */
     struct cmd g_Cmd; /* global: Cmd */
-    int g_cmd_c_alt_esc; /* cmd.c: alt_esc */
-    int (*g_cmd_c_timed_occ_fn)(void); /* cmd.c: timed_occ_fn */
-    char g_cmd_c_pushq[20]; /* cmd.c: pushq */
-    char g_cmd_c_saveq[20]; /* cmd.c: saveq */
-    int g_cmd_c_phead; /* cmd.c: phead */
-    int g_cmd_c_ptail; /* cmd.c: ptail */
-    int g_cmd_c_shead; /* cmd.c: shead */
-    int g_cmd_c_stail; /* cmd.c: stail */
     short g_cmd_c_en_win; /* cmd.c: en_win */
     boolean g_cmd_c_en_via_menu; /* cmd.c: en_via_menu */
-    const char * g_cmd_c_readchar_queue; /* cmd.c: readchar_queue */
-    int g_vision_c_vis_start_row; /* vision.c: vis_start_row */
-    int g_vision_c_vis_start_col; /* vision.c: vis_start_col */
-    int g_vision_c_vis_step; /* vision.c: vis_step */
-    char ** g_vision_c_vis_cs_rows; /* vision.c: vis_cs_rows */
-    char * g_vision_c_vis_cs_left; /* vision.c: vis_cs_left */
-    char * g_vision_c_vis_cs_right; /* vision.c: vis_cs_right */
-    void (*g_vision_c_vis_func)(); /* vision.c: vis_func */
-    void * g_vision_c_vis_varg; /* vision.c: vis_varg */
-    int g_vision_c_vision_recur_depth; /* vision.c: vision_recur_depth */
-    unsigned char g_vision_c_vision_colbump[COLNO + 1]; /* vision.c: vision_colbump */
     char g_botl_c_strength_buf[32]; /* botl.c: strength_buf */
-    boolean g_botl_c_blinit; /* botl.c: blinit */
-    boolean g_botl_c_update_all; /* botl.c: update_all */
-    boolean g_botl_c_valset[23]; /* botl.c: valset */
-    long g_botl_c_bl_hilite_moves; /* botl.c: bl_hilite_moves */
     unsigned long g_botl_c_cond_hilites[21]; /* botl.c: cond_hilites */
     int g_botl_c_now_or_before_idx; /* botl.c: now_or_before_idx */
     int g_botl_c_status_hilite_str_id; /* botl.c: status_hilite_str_id */
@@ -221,17 +267,12 @@ struct nh_ctx {
     struct trap * g_mkmaze_c_wportal; /* mkmaze.c: wportal */
     int g_display_c_bad_count[36]; /* display.c: bad_count */
     void * g_display_c_tglyph_p; /* display.c: tglyph_p */
-    boolean g_display_c_in_cls; /* display.c: in_cls */
-    int g_display_c_flushing; /* display.c: flushing */
-    int g_display_c_delay_flushing; /* display.c: delay_flushing */
     schar g_display_c_swallowed_lastx; /* display.c: swallowed_lastx */
     schar g_display_c_swallowed_lasty; /* display.c: swallowed_lasty */
     schar g_display_c_under_water_lastx; /* display.c: under_water_lastx */
     schar g_display_c_under_water_lasty; /* display.c: under_water_lasty */
     boolean g_display_c_under_water_dela; /* display.c: under_water_dela */
     boolean g_display_c_under_ground_dela; /* display.c: under_ground_dela */
-    int g_display_c_nul_gbuf_new; /* display.c: nul_gbuf_new */
-    int g_display_c_nul_gbuf_glyph; /* display.c: nul_gbuf_glyph */
     int g_invent_c_lastinvnr; /* invent.c: lastinvnr */
     unsigned g_invent_c_sortlootmode; /* invent.c: sortlootmode */
     int g_invent_c_cached_pickinv_win; /* invent.c: cached_pickinv_win */
@@ -269,7 +310,6 @@ struct nh_ctx {
     char g_files_c_fqn_fname[2048]; /* files.c: fqn_fname */
     int g_files_c_lockptr; /* files.c: lockptr */
     char g_files_c_wizkit[128]; /* files.c: wizkit */
-    int g_dungeon_c_n_dgns; /* dungeon.c: n_dgns */
     long g_shk_c_pickmovetime; /* shk.c: pickmovetime */
     char g_shk_c_empty_shops[5]; /* shk.c: empty_shops */
     boolean g_muse_c_m_using; /* muse.c: m_using */
@@ -286,17 +326,7 @@ struct nh_ctx {
     long g_pickup_c_val_for_n_or_more; /* pickup.c: val_for_n_or_more */
     char g_pickup_c_valid_menu_classes[24]; /* pickup.c: valid_menu_classes */
     int g_pickup_c_vmc_count; /* pickup.c: vmc_count */
-    int g_hack_c_domove_skates; /* hack.c: domove_skates */
-    char g_hack_c_in_rooms_buf[5]; /* hack.c: in_rooms_buf */
-    int g_hack_c_inspoteffects; /* hack.c: inspoteffects */
-    long g_hack_c_moverock_lastmovetime; /* hack.c: moverock_lastmovetime */
-    schar g_hack_c_spotloc_x; /* hack.c: spotloc_x */
-    schar g_hack_c_spotloc_y; /* hack.c: spotloc_y */
-    int g_hack_c_spotterrain; /* hack.c: spotterrain */
-    struct trap * g_hack_c_spottrap; /* hack.c: spottrap */
-    unsigned g_hack_c_spottraptyp; /* hack.c: spottraptyp */
     void * g_hack_c_tmp_anything_p; /* hack.c: tmp_anything_p */
-    int g_hack_c_wc; /* hack.c: wc */
     char g_do_name_c_dxdy_buf[30]; /* do_name.c: dxdy_buf */
     char g_do_name_c_rndmonnam_buf[256]; /* do_name.c: rndmonnam_buf */
     int g_do_name_c_gloc_filter_match_glyph; /* do_name.c: gloc_filter_match_glyph */
@@ -305,8 +335,6 @@ struct nh_ctx {
     char g_do_name_c_mbufs[5 * 256]; /* do_name.c: mbufs */
     int g_do_name_c_via_naming; /* do_name.c: via_naming */
     char g_trap_c_tnbuf[12]; /* trap.c: tnbuf */
-    int g_trap_c_force_mintrap; /* trap.c: force_mintrap */
-    boolean g_trap_c_recursive_mine; /* trap.c: recursive_mine */
     int g_drawing_c_currentgraphics; /* drawing.c: currentgraphics */
     char g_files_c_lock[46]; /* files.c: lock */
     boolean g_restoring; /* global: restoring */
@@ -382,7 +410,6 @@ struct nh_ctx {
     int g_pline_c_in_pline; /* pline.c: in_pline */
     char g_pline_c_prevmsg[256]; /* pline.c: prevmsg */
     int g_mon_c_animal_list_count; /* mon.c: animal_list_count */
-    boolean g_mon_c_disintegested; /* mon.c: disintegested */
     long g_mon_c_elemental_clog_msgmv; /* mon.c: elemental_clog_msgmv */
     boolean g_mon_c_vamp_rise_msg; /* mon.c: vamp_rise_msg */
     int g_mhitm_c_dieroll; /* mhitm.c: dieroll */
@@ -394,18 +421,11 @@ struct nh_ctx {
     void * g_makemon_c_align_shift_lev_p; /* makemon.c: align_shift_lev_p */
     long g_makemon_c_align_shift_oldmoves; /* makemon.c: align_shift_oldmoves */
     int g_end_c_vanq_sortmode; /* end.c: vanq_sortmode */
-    unsigned g_rnd_c_rn2disprng_seed; /* rnd.c: rn2disprng_seed */
     isaac64_ctx g_nlernd_c_lgen_base; /* nlernd.c: lgen_base */
     isaac64_ctx g_nlernd_c_lgen_state[8]; /* nlernd.c: lgen_state */
     isaac64_ctx g_nlernd_c_core_state; /* nlernd.c: core_state */
     int g_nlernd_c_lgen_initialised; /* nlernd.c: lgen_initialised */
     int g_nlernd_c_lgen_active; /* nlernd.c: lgen_active */
-    struct engr * g_engrave_c_head_engr; /* engrave.c: head_engr */
-    void * g_light_c_light_base; /* light.c: light_base */
-    void * g_timeout_c_timer_base; /* timeout.c: timer_base */
-    unsigned long g_timeout_c_timer_id; /* timeout.c: timer_id */
-    void * g_region_c_regions_p; /* region.c: regions_p */
-    int g_region_c_n_regions; /* region.c: n_regions */
     int g_region_c_max_regions; /* region.c: max_regions */
     struct wseg * g_worm_c_wheads[32]; /* worm.c: wheads */
     struct wseg * g_worm_c_wtails[32]; /* worm.c: wtails */
@@ -417,14 +437,9 @@ struct nh_ctx {
     schar g_mklev_c_vault_x; /* mklev.c: vault_x */
     schar g_mklev_c_vault_y; /* mklev.c: vault_y */
     int g_rect_c_rect_cnt; /* rect.c: rect_cnt */
-    schar g_dogmove_c_gtyp; /* dogmove.c: gtyp */
-    schar g_dogmove_c_gx; /* dogmove.c: gx */
-    schar g_dogmove_c_gy; /* dogmove.c: gy */
     int g_mthrowu_c_mesg_given; /* mthrowu.c: mesg_given */
     struct monst * g_mthrowu_c_archer; /* mthrowu.c: archer */
     struct monst * g_mthrowu_c_target; /* mthrowu.c: target */
-    int g_mhitu_c_dieroll; /* mhitu.c: dieroll */
-    struct obj * g_mhitu_c_mon_currwep; /* mhitu.c: mon_currwep */
     struct symsetentry g_drawing_c_symset_store[2]; /* drawing.c: symset_store */
     nhsym g_drawing_c_primary_syms[SYM_MAX]; /* drawing.c: primary_syms */
     nhsym g_drawing_c_rogue_syms[SYM_MAX]; /* drawing.c: rogue_syms */
@@ -434,7 +449,6 @@ struct nh_ctx {
     int g_mkmap_c_n_loc_filled; /* mkmap.c: n_loc_filled */
     unsigned g_steal_c_stealmid; /* steal.c: stealmid */
     unsigned g_steal_c_stealoid; /* steal.c: stealoid */
-    struct obj * g_weapon_c_propellor; /* weapon.c: propellor */
     schar g_pray_c_p_aligntyp; /* pray.c: p_aligntyp */
     int g_pray_c_p_trouble; /* pray.c: p_trouble */
     int g_pray_c_p_type; /* pray.c: p_type */
@@ -464,6 +478,7 @@ struct nh_ctx {
     void * g_extralev_c_r_p; /* extralev.c: r_p */
     char g_mapglyph_c_encbuf[20]; /* mapglyph.c: encbuf */
     char g_mkobj_c_unknown[32]; /* mkobj.c: unknown */
+    void * g_mkobj_c_obj_pool; /* mkobj.c: obj_pool */
     char g_priest_c_piousness_buf[32]; /* priest.c: piousness_buf */
     long g_dothrow_c_breakobj_lastmovetime; /* dothrow.c: breakobj_lastmovetime */
     boolean g_dothrow_c_breakobj_peaceful_shk; /* dothrow.c: breakobj_peaceful_shk */
@@ -483,11 +498,12 @@ struct nh_ctx {
     unsigned long g_nh_fobj_generation; /* global: nh_fobj_generation */
     int g_nh_fobj_valid; /* global: nh_fobj_valid */
     int g_nh_fobj_count; /* global: nh_fobj_count */
-    short g_nh_fobj_x[2048]; /* global: nh_fobj_x */
-    short g_nh_fobj_y[2048]; /* global: nh_fobj_y */
+    int g_nh_fobj_lo; /* global: nh_fobj_lo */
+    schar g_nh_fobj_x[2048]; /* global: nh_fobj_x */
+    schar g_nh_fobj_y[2048]; /* global: nh_fobj_y */
     struct obj * g_nh_fobj_ptr[2048]; /* global: nh_fobj_ptr */
-    unsigned char g_nh_track_near[COLNO][ROWNO]; /* global: nh_track_near */
     unsigned char g_nh_no_hero_gold; /* global: nh_no_hero_gold */
+    struct nh_tile_summary g_nh_move_summary[COLNO][ROWNO]; /* global: nh_move_summary */
     /* lazily-allocated per-env blobs whose types are private to one
      * .c file (e.g. options.c boolopt copy); freed by nh_ctx_free.
      * Slot assignments are documented at the allocation sites. */
@@ -516,14 +532,30 @@ void nh_ctx_fixup(struct nh_ctx *);
 
 /* accessors: true globals (statics get per-file headers) */
 #define moves (nh_cur->g_moves)
+#define nh_invwt_valid (nh_cur->g_nh_invwt_valid)
+#define nh_invwt_nb (nh_cur->g_nh_invwt_nb)
+#define nh_invwt_boulder (nh_cur->g_nh_invwt_boulder)
 #define monstermoves (nh_cur->g_monstermoves)
 #define multi (nh_cur->g_multi)
-#define nh_typ_plane (nh_cur->g_nh_typ_plane)
-#define vision_full_recalc (nh_cur->g_vision_full_recalc)
-#define viz_array (nh_cur->g_viz_array)
 #define program_state (nh_cur->g_program_state)
 #define occupation (nh_cur->g_occupation)
 #define afternmv (nh_cur->g_afternmv)
+#define vision_full_recalc (nh_cur->g_vision_full_recalc)
+#define xwaitingforspace (nh_cur->g_xwaitingforspace)
+#define bhitpos (nh_cur->g_bhitpos)
+#define urealtime (nh_cur->g_urealtime)
+#define invent (nh_cur->g_invent)
+#define ftrap (nh_cur->g_ftrap)
+#define migrating_objs (nh_cur->g_migrating_objs)
+#define viz_array (nh_cur->g_viz_array)
+#define u (nh_cur->g_u)
+#define youmonst (nh_cur->g_youmonst)
+#define flags (nh_cur->g_flags)
+#define iflags (nh_cur->g_iflags)
+#define context (nh_cur->g_context)
+#define dungeons (nh_cur->g_dungeons)
+#define nh_track_near (nh_cur->g_nh_track_near)
+#define nh_typ_plane (nh_cur->g_nh_typ_plane)
 #define hname (nh_cur->g_hname)
 #define hackpid (nh_cur->g_hackpid)
 #define locknum (nh_cur->g_locknum)
@@ -559,7 +591,6 @@ void nh_ctx_fixup(struct nh_ctx *);
 #define tbx (nh_cur->g_tbx)
 #define tby (nh_cur->g_tby)
 #define m_shot (nh_cur->g_m_shot)
-#define dungeons (nh_cur->g_dungeons)
 #define sp_levchn (nh_cur->g_sp_levchn)
 #define upstair (nh_cur->g_upstair)
 #define dnstair (nh_cur->g_dnstair)
@@ -576,7 +607,6 @@ void nh_ctx_fixup(struct nh_ctx *);
 #define mrg_to_wielded (nh_cur->g_mrg_to_wielded)
 #define in_steed_dismounting (nh_cur->g_in_steed_dismounting)
 #define has_strong_rngseed (nh_cur->g_has_strong_rngseed)
-#define bhitpos (nh_cur->g_bhitpos)
 #define doors (nh_cur->g_doors)
 #define rooms (nh_cur->g_rooms)
 #define subrooms (nh_cur->g_subrooms)
@@ -584,16 +614,8 @@ void nh_ctx_fixup(struct nh_ctx *);
 #define dnstairs_room (nh_cur->g_dnstairs_room)
 #define sstairs_room (nh_cur->g_sstairs_room)
 #define level (nh_cur->g_level)
-#define ftrap (nh_cur->g_ftrap)
-#define youmonst (nh_cur->g_youmonst)
-#define context (nh_cur->g_context)
-#define flags (nh_cur->g_flags)
-#define iflags (nh_cur->g_iflags)
-#define u (nh_cur->g_u)
 #define ubirthday (nh_cur->g_ubirthday)
-#define urealtime (nh_cur->g_urealtime)
 #define lastseentyp (nh_cur->g_lastseentyp)
-#define invent (nh_cur->g_invent)
 #define uwep (nh_cur->g_uwep)
 #define uarm (nh_cur->g_uarm)
 #define uswapwep (nh_cur->g_uswapwep)
@@ -616,7 +638,6 @@ void nh_ctx_fixup(struct nh_ctx *);
 #define kickedobj (nh_cur->g_kickedobj)
 #define spl_book (nh_cur->g_spl_book)
 #define wailmsg (nh_cur->g_wailmsg)
-#define migrating_objs (nh_cur->g_migrating_objs)
 #define billobjs (nh_cur->g_billobjs)
 #define dogname (nh_cur->g_dogname)
 #define catname (nh_cur->g_catname)
@@ -642,7 +663,6 @@ void nh_ctx_fixup(struct nh_ctx *);
 #define plinemsg_types (nh_cur->g_plinemsg_types)
 #define nhUse_dummy (nh_cur->g_nhUse_dummy)
 #define Cmd (nh_cur->g_Cmd)
-#define xwaitingforspace (nh_cur->g_xwaitingforspace)
 #define restoring (nh_cur->g_restoring)
 #define notonhead (nh_cur->g_notonhead)
 #define nle_seeds (nh_cur->g_nle_seeds)
@@ -652,10 +672,20 @@ void nh_ctx_fixup(struct nh_ctx *);
 #define nh_fobj_generation (nh_cur->g_nh_fobj_generation)
 #define nh_fobj_valid (nh_cur->g_nh_fobj_valid)
 #define nh_fobj_count (nh_cur->g_nh_fobj_count)
+#define nh_fobj_lo (nh_cur->g_nh_fobj_lo)
+#define nh_invgen (nh_cur->g_nh_invgen)
+#define nh_hgold_gen (nh_cur->g_nh_hgold_gen)
+#define nh_hgold_val (nh_cur->g_nh_hgold_val)
+#define nh_leash_gen (nh_cur->g_nh_leash_gen)
+#define nh_hgold_valid (nh_cur->g_nh_hgold_valid)
+#define nh_leash_valid (nh_cur->g_nh_leash_valid)
+#define nh_leash_cnt (nh_cur->g_nh_leash_cnt)
+#define nh_deepest_valid (nh_cur->g_nh_deepest_valid)
+#define nh_deepest_val (nh_cur->g_nh_deepest_val)
 #define nh_fobj_x (nh_cur->g_nh_fobj_x)
 #define nh_fobj_y (nh_cur->g_nh_fobj_y)
 #define nh_fobj_ptr (nh_cur->g_nh_fobj_ptr)
-#define nh_track_near (nh_cur->g_nh_track_near)
 #define nh_no_hero_gold (nh_cur->g_nh_no_hero_gold)
+#define nh_move_summary (nh_cur->g_nh_move_summary)
 
 #endif /* NH_CTX_GEN_H */

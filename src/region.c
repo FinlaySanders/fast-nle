@@ -3,6 +3,17 @@
 /* NetHack may be freely redistributed.  See license for details. */
 
 #include "hack.h"
+static void
+nh_gas_update_rect(const NhRect *rect)
+{
+    int x, y, lx = max(0, rect->lx), hx = min(COLNO - 1, rect->hx);
+    int ly = max(0, rect->ly), hy = min(ROWNO - 1, rect->hy);
+    for (x = lx; x <= hx; x++) for (y = ly; y <= hy; y++) {
+        NhRegion *reg = visible_region_at(x, y);
+        NH_SUMMARY(x, y).move_gas = reg && reg->glyph == cmap_to_glyph(S_poisoncloud);
+    }
+}
+
 #include "lev.h"
 
 /*
@@ -165,6 +176,8 @@ NhRect *rect;
         reg->bounding_box.hx = rect->hx;
     if (reg->bounding_box.hy < rect->hy)
         reg->bounding_box.hy = rect->hy;
+    for (int ri = 0; ri < n_regions; ri++)
+        if (regions[ri] == reg) { nh_gas_update_rect(rect); break; }
 }
 
 /*
@@ -309,6 +322,7 @@ NhRegion *reg;
     }
     regions[n_regions] = reg;
     n_regions++;
+    nh_gas_update_rect(&reg->bounding_box);
     /* Check for monsters inside the region */
     for (i = reg->bounding_box.lx; i <= reg->bounding_box.hx; i++)
         for (j = reg->bounding_box.ly; j <= reg->bounding_box.hy; j++) {
@@ -349,6 +363,8 @@ NhRegion *reg;
 
     /* Update screen if necessary */
     reg->ttl = -2L; /* for visible_region_at */
+    nh_gas_update_rect(&reg->bounding_box);
+    if (i < n_regions) nh_gas_update_rect(&regions[i]->bounding_box);
     if (reg->visible)
         for (x = reg->bounding_box.lx; x <= reg->bounding_box.hx; x++)
             for (y = reg->bounding_box.ly; y <= reg->bounding_box.hy; y++)
@@ -374,6 +390,7 @@ clear_regions()
         free((genericptr_t) regions);
     max_regions = 0;
     regions = (NhRegion **) 0;
+    nh_tile_clear_entities(NH_MOVE_GAS);
 }
 
 /*
@@ -770,6 +787,7 @@ boolean ghostly; /* If a bones file restore */
         mread(fd, (genericptr_t) &regions[i]->glyph, sizeof(int));
         mread(fd, (genericptr_t) &regions[i]->arg, sizeof(anything));
     }
+    for (i = 0; i < n_regions; i++) nh_gas_update_rect(&regions[i]->bounding_box);
     /* remove expired regions, do not trigger the expire_f callback (yet!);
        also update monster lists if this data is coming from a bones file */
     for (i = n_regions - 1; i >= 0; i--)

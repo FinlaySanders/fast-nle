@@ -15,7 +15,7 @@ mon_in_room(mon, rmtyp)
 struct monst *mon;
 int rmtyp;
 {
-    int rno = levl[mon->mx][mon->my].roomno;
+    int rno = NH_TILE(mon->mx, mon->my).roomno;
     if (rno >= ROOMOFFSET)
         return rooms[rno - ROOMOFFSET].rtype == rmtyp;
     return FALSE;

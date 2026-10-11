@@ -4,6 +4,10 @@
 /* NetHack may be freely redistributed.  See license for details. */
 
 #include "hack.h"
+#include "mon_save.h"
+#include "rm_save.h"
+#include "obj_save.h"
+#include "you_save.h"
 #include "nle.h" /* nle_ctx_t for the level-blob save/load API */
 #include "lev.h"
 #include "tcap.h" /* for TERMLIB and ASCIIGRAPH */
@@ -102,8 +106,8 @@ extern int amii_numcolors;
  * restore.c. Sizes verified to match save.c (see save.c comment block). */
 #if defined(__GNUC__) || defined(__clang__)
 _Static_assert(sizeof(struct eshk)  == 4936, "restore.c: sizeof(struct eshk) drifted");
-_Static_assert(sizeof(struct monst) ==  144, "restore.c: sizeof(struct monst) drifted");
-_Static_assert(sizeof(struct obj)   ==   96, "restore.c: sizeof(struct obj) drifted");
+_Static_assert(sizeof(struct monst) ==  120, "restore.c: sizeof(struct monst) drifted");
+_Static_assert(sizeof(struct obj)   ==   88, "restore.c: sizeof(struct obj) drifted");
 #endif
 
 #define Is_IceBox(o) ((o)->otyp == ICE_BOX ? TRUE : FALSE)
@@ -120,6 +124,7 @@ find_lev_obj()
         for (y = 0; y < ROWNO; y++)
             level.objs[x][y] = (struct obj *) 0;
 
+    nh_tile_clear_entities(NH_MOVE_PILES);
     /*
      * Reverse the entire fobj chain, which is necessary so that we can
      * place the objects in the proper order.  Make all obj in chain
@@ -234,7 +239,8 @@ struct obj *otmp;
 {
     int buflen;
 
-    mread(fd, (genericptr_t) otmp, sizeof(struct obj));
+    { struct obj_legacy saved; mread(fd,(genericptr_t)&saved,sizeof saved);
+      obj_from_legacy(otmp,&saved); }
 
     /* next object pointers are invalid; otmp->cobj needs to be left
        as is--being non-null is key to restoring container contents */
@@ -343,7 +349,7 @@ boolean ghostly, frozen;
                 set_corpsenm(catcorpse, PM_HOUSECAT);
                 (void) stop_timer(ROT_CORPSE, obj_to_any(catcorpse));
                 add_to_container(otmp, catcorpse);
-                otmp->owt = weight(otmp);
+                nh_set_owt(otmp);
             }
         }
         if (otmp->bypass)
@@ -390,7 +396,8 @@ struct monst *mtmp;
     int trace = rest_mon_trace_enabled();
     int pid = current_nle_ctx ? hackpid : -1;
 
-    mread(fd, (genericptr_t) mtmp, sizeof(struct monst));
+    { struct monst_legacy saved; mread(fd,(genericptr_t)&saved,sizeof saved);
+      mon_from_legacy(mtmp,&saved); }
 
     /* next monster pointer is invalid */
     mtmp->nmon = (struct monst *) 0;
@@ -652,7 +659,9 @@ unsigned int *stuckid, *steedid;
 #ifdef AMII_GRAPHICS
     amii_setpens(amii_numcolors); /* use colors from save file */
 #endif
-    mread(fd, (genericptr_t) &u, sizeof(struct you));
+    { struct you_legacy saved;
+      mread(fd, (genericptr_t) &saved, sizeof saved);
+      you_from_legacy(&u, &saved); }
 
 #define ReadTimebuf(foo)                   \
     mread(fd, (genericptr_t) timebuf, 14); \
@@ -696,7 +705,7 @@ unsigned int *stuckid, *steedid;
     restore_timers(fd, RANGE_GLOBAL, FALSE, 0L);
     restore_light_sources(fd);
     invent = restobjchn(fd, FALSE, FALSE);
-    nh_no_hero_gold = 0;
+    nh_no_hero_gold = 0; nh_invgen++;
 
     /* restore dangling (not on floor or in inventory) ball and/or chain */
     bc_obj = restobjchn(fd, FALSE, FALSE);
@@ -982,7 +991,7 @@ register int fd;
     inven_inuse(FALSE);
 
     load_qtlist(); /* re-load the quest text info */
-    /* Set up the vision internals, after levl[] data is loaded
+    /* Set up the vision internals, after tile data is loaded
        but before docrt(). */
     reglyph_darkroom();
     vision_reset();
@@ -1145,12 +1154,13 @@ boolean rlecomp;
         while (i < ROWNO) {
             while (j < COLNO) {
                 if (len > 0) {
-                    levl[j][i] = r;
+                    nh_copy_terrain(&NH_TILE(j, i), &r);
                     len -= 1;
                     j += 1;
                 } else {
                     mread(fd, (genericptr_t) &len, sizeof(uchar));
-                    mread(fd, (genericptr_t) &r, sizeof(struct rm));
+                    { struct rm_legacy saved; mread(fd,(genericptr_t)&saved,sizeof saved);
+                      rm_from_legacy(&r,&saved); }
                 }
             }
             j = 0;
@@ -1162,7 +1172,9 @@ boolean rlecomp;
 #else /* !RLECOMP */
     nhUse(rlecomp);
 #endif /* ?RLECOMP */
-    mread(fd, (genericptr_t) levl, sizeof levl);
+    { struct rm_legacy saved[COLNO][ROWNO];
+      mread(fd,(genericptr_t)saved,sizeof saved);
+      for(int x=0;x<COLNO;x++) for(int y=0;y<ROWNO;y++) rm_from_legacy(&NH_TILE(x, y),&saved[x][y]); }
     nh_typ_sync();
 }
 
@@ -1259,11 +1271,13 @@ boolean ghostly;
 
     rest_worm(fd); /* restore worm information */
     ftrap = 0;
+    nh_tile_clear_entities(NH_MOVE_TRAPS);
     while (trap = newtrap(),
            mread(fd, (genericptr_t) trap, sizeof(struct trap)),
            trap->tx != 0) { /* need "!= 0" to work around DICE 3.0 bug */
         trap->ntrap = ftrap;
         ftrap = trap;
+        nh_trap_update(trap->tx, trap->ty);
     }
     dealloc_trap(trap);
     nh_fobj_invalidate();
@@ -1278,7 +1292,7 @@ boolean ghostly;
     /* reset level.monsters for new level */
     for (x = 0; x < COLNO; x++)
         for (y = 0; y < ROWNO; y++)
-            level.monsters[x][y] = (struct monst *) 0;
+            NH_SET_MON(x, y, (struct monst *) 0);
     for (mtmp = fmon; mtmp; mtmp = mtmp->nmon) {
         if (mtmp->isshk)
             set_residency(mtmp, FALSE);
