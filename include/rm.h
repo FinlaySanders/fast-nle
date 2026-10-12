@@ -665,7 +665,7 @@ extern dlevel_t level; /* structure describing the current level */
  * Macros for compatibility with old code. Someday these will go away.
  */
 static inline struct rm *
-nh_tile_at(dlevel_t *lev, unsigned int x, unsigned int y)
+nh_tile_at(dlevel_t *lev, int x, int y)
 {
     return &lev->locations[x][y];
 }
