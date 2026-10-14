@@ -576,7 +576,7 @@ struct attack *uattk; /* ... but we don't enforce that here; Null works ok */
      */
     for (count = 3; count > 0; --count) {
         struct monst *mtmp;
-        int tx, ty, tmp, dieroll, mhit, attknum, armorpenalty;
+        int tx, ty, tmp, dieroll, mhit, attknum = 0, armorpenalty;
 
         /* ++i, wrap 8 to i=0 /or/ --i, wrap -1 to i=7 */
         i = (i + (clockwise ? 1 : 7)) % 8;

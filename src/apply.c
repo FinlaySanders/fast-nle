@@ -1860,15 +1860,14 @@ struct obj *obj;
         && !uarmg) {
         char kbuf[BUFSZ];
 
+        Sprintf(kbuf, "trying to tin %s without gloves",
+                an(mons[corpse->corpsenm].mname));
         if (poly_when_stoned(youmonst.data))
             You("tin %s without wearing gloves.",
                 an(mons[corpse->corpsenm].mname));
-        else {
+        else
             pline("Tinning %s without wearing gloves is a fatal mistake...",
                   an(mons[corpse->corpsenm].mname));
-            Sprintf(kbuf, "trying to tin %s without gloves",
-                    an(mons[corpse->corpsenm].mname));
-        }
         instapetrify(kbuf);
     }
     if (is_rider(&mons[corpse->corpsenm])) {
