@@ -1809,7 +1809,8 @@ long flag;
 
     boolean wantpool, poolok, lavaok, nodiag;
     boolean rockok = FALSE, treeok = FALSE, thrudoor;
-    unsigned int candidates, occupied;
+    unsigned int candidates, occupied, nonrock_n, squeeze_n;
+    boolean simple_rock;
     struct nh_move_column *cols;
     int bit;
     boolean poisongas_ok, in_poisongas;
@@ -1873,6 +1874,14 @@ nexttry: /* eels prefer the water, but if there is no water nearby,
     if (!mon->mcansee)
         flag |= ALLOW_SSM;
     cols = &level.move_columns[x];
+    nonrock_n = nh_move_neighbours(cols[0].nonrock, cols[1].nonrock, cols[2].nonrock, y);
+    /* tight squeeze: for movers without tunnelling, wall-passing or Sokoban rules bad_rock is exactly rock terrain, so the diagonals
+       whose two orthogonal cells are both rock come straight from the nonrock mask; other movers test every diagonal exactly */
+    simple_rock = !mover.sokoban && !SPWQ(mdat, SPW_TUNNELS, tunnels(mdat)) && !SPWQ(mdat, SPW_PASSWALL, passes_walls(mdat));
+    {
+        unsigned int r1 = !((nonrock_n >> 1) & 1U), r3 = !((nonrock_n >> 3) & 1U), r5 = !((nonrock_n >> 5) & 1U), r7 = !((nonrock_n >> 7) & 1U);
+        squeeze_n = simple_rock ? ((r1 & r3) | ((r1 & r5) << 2) | ((r7 & r3) << 6) | ((r7 & r5) << 8)) : 0x145U;
+    }
     if (!(flag & ALLOW_WALL) && !rockok && !treeok)
         candidates = nh_move_neighbours(cols[0].nonrock, cols[1].nonrock,
                                         cols[2].nonrock, y);
@@ -2009,9 +2018,10 @@ nexttry: /* eels prefer the water, but if there is no water nearby,
                         continue;
                     info[cnt] |= NOTONL;
                 }
-                /* check for diagonal tight squeeze */
-                if (nx != x && ny != y && nh_mover_bad_rock(&mover, x, ny)
-                    && nh_mover_bad_rock(&mover, nx, y) && nh_mover_squeeze(&mover))
+                /* check for diagonal tight squeeze (squeeze_n: see above) */
+                if ((squeeze_n & (1U << bit))
+                    && (simple_rock || (nh_mover_bad_rock(&mover, x, ny) && nh_mover_bad_rock(&mover, nx, y)))
+                    && nh_mover_squeeze(&mover))
                     continue;
                 /* The monster avoids a particular type of trap if it's
                  * familiar with the trap type.  Pets get ALLOW_TRAPS

@@ -700,7 +700,7 @@ boolean
 itsstuck(mtmp)
 register struct monst *mtmp;
 {
-    if (sticks(youmonst.data) && mtmp == u.ustuck && !u.uswallow) {
+    if (mtmp == u.ustuck && !u.uswallow && sticks(youmonst.data)) { /* same predicate; the identity test first skips the attack-table walk */
         pline("%s cannot escape from you!", Monnam(mtmp));
         return TRUE;
     }
@@ -738,9 +738,9 @@ xchar gx, gy;
                 || (ndist < shortest_with_displacing))
                 shortest_with_displacing = ndist;
         } else {
-            if ((shortest_without_displacing == -1)
-                || (ndist < shortest_without_displacing))
-                shortest_without_displacing = ndist;
+            int upd = (shortest_without_displacing == -1) | (ndist < shortest_without_displacing);
+            int m = -upd;
+            shortest_without_displacing = (ndist & m) | (shortest_without_displacing & ~m);
             count_without_displacing++;
         }
     }
@@ -1314,22 +1314,31 @@ register int after;
                 && !(info[i] & ALLOW_M) && !better_with_displacing)
                 continue;
             if (appr != 0 && (trackmask & nh_move_position_bit(omx, omy, nx, ny))) {
+                /* same draws in the same order: one rn2 per matching track entry, ascending, until the first nonzero */
+                unsigned int hits = 0;
                 mtrk = &mtmp->mtrack[0];
-                for (j = 0; j < jcnt; mtrk++, j++)
-                    if (nx == mtrk->x && ny == mtrk->y)
-                        if (rn2(4 * (cnt - j)))
-                            goto nxti;
+                for (j = 0; j < MTSZ; j++)
+                    hits |= (unsigned int) ((j < jcnt) & (nx == mtrk[j].x) & (ny == mtrk[j].y)) << j;
+                while (hits) {
+                    j = __builtin_ctz(hits);
+                    hits &= hits - 1;
+                    if (rn2(4 * (cnt - j)))
+                        goto nxti;
+                }
             }
 
-            nearer = ((ndist = dist2(nx, ny, gx, gy)) < nidist);
-
-            if ((appr == 1 && nearer) || (appr == -1 && !nearer)
-                || (!appr && !rn2(++chcnt)) || !mmoved) {
-                nix = nx;
-                niy = ny;
-                nidist = ndist;
-                chi = i;
-                mmoved = 1;
+            ndist = dist2(nx, ny, gx, gy);
+            nearer = (ndist < nidist);
+            {
+                /* The original predicate without its data-dependent branch: appr 1 takes a nearer cell, -1 a farther one,
+                   0 draws rn2(++chcnt) for every candidate exactly as before, and the first candidate is always taken. */
+                int take = appr ? ((nearer != (appr < 0)) | !mmoved) : (!rn2(++chcnt) | !mmoved);
+                int m = -take;
+                nix = (xchar) ((nx & m) | (nix & ~m));
+                niy = (xchar) ((ny & m) | (niy & ~m));
+                nidist = (ndist & m) | (nidist & ~m);
+                chi = (i & m) | (chi & ~m);
+                mmoved |= (schar) take;
             }
  nxti:
             ;

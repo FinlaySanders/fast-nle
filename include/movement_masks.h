@@ -42,6 +42,7 @@ nh_move_position_bit(int x, int y, int px, int py)
 {
     unsigned int dx = (unsigned int) (px - x + 1);
     unsigned int dy = (unsigned int) (py - y + 1);
-    return dx < 3 && dy < 3 ? 1U << (3 * dx + dy) : 0U;
+    unsigned int in = (dx < 3U) & (dy < 3U); /* branch-free: an out-of-range position yields 0 */
+    return (1U << ((3U * dx + dy) & 31U)) & (0U - in);
 }
 #endif
