@@ -125,8 +125,10 @@ boolean resuming;
                     /* reallocate movement rations to monsters; don't need
                        to skip dead monsters here because they will have
                        been purged at end of their previous round of moving */
-                    for (mtmp = fmon; mtmp; mtmp = mtmp->nmon)
+                    for (mtmp = fmon; mtmp; mtmp = mtmp->nmon) {
+                        __builtin_prefetch(mtmp->nmon); /* v1.8 */
                         mtmp->movement += mcalcmove(mtmp);
+                    }
 
                     /* occasionally add another monster; since this takes
                        place after movement has been allotted, the new

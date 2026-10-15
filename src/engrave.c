@@ -243,8 +243,8 @@ register int x, y;
     return what;
 }
 
-struct engr *
-engr_at(x, y)
+STATIC_OVL struct engr *
+nh_engr_walk(x, y)
 xchar x, y;
 {
     register struct engr *ep = head_engr;
@@ -255,6 +255,28 @@ xchar x, y;
         ep = ep->nxt_engr;
     }
     return (struct engr *) 0;
+}
+
+/* v1.8: per-column presence bits, maintained by every writer of the engraving list (make_engr_at, del_engr, rloc_engr,
+   rest_engravings, save_engravings release, level creation); a set bit only says "walk the list". */
+static void
+nh_engr_bit_update(int x, int y)
+{
+    if ((unsigned) x < COLNO && (unsigned) y < ROWNO)
+        nh_move_set_col_bit(&level.move_columns[x + 1].engr, y, nh_engr_walk((xchar) x, (xchar) y) != 0);
+}
+
+struct engr *
+engr_at(x, y)
+xchar x, y;
+{
+    if ((unsigned) x < COLNO && (unsigned) y < ROWNO && !((level.move_columns[x + 1].engr >> y) & 1U)) {
+#ifdef NH_MT2_CG
+        if (nh_engr_walk(x, y)) fprintf(stderr, "ENGR_BITMAP_MISMATCH %d,%d\n", x, y);
+#endif
+        return (struct engr *) 0;
+    }
+    return nh_engr_walk(x, y);
 }
 
 /* Decide whether a particular string is engraved at a specified
@@ -407,6 +429,7 @@ xchar e_type;
     head_engr = ep;
     ep->engr_x = x;
     ep->engr_y = y;
+    nh_engr_bit_update(x, y);
     ep->engr_txt = (char *) (ep + 1);
     Strcpy(ep->engr_txt, s);
     /* engraving Elbereth shows wisdom */
@@ -1202,8 +1225,10 @@ int fd, mode;
     }
     if (perform_bwrite(mode))
         bwrite(fd, (genericptr_t) &no_more_engr, sizeof no_more_engr);
-    if (release_data(mode))
+    if (release_data(mode)) {
         head_engr = 0;
+        nh_tile_clear_entities(NH_MOVE_ENGR);
+    }
 }
 
 void
@@ -1214,6 +1239,7 @@ int fd;
     unsigned lth;
 
     head_engr = 0;
+    nh_tile_clear_entities(NH_MOVE_ENGR);
     while (1) {
         mread(fd, (genericptr_t) &lth, sizeof lth);
         if (lth == 0)
@@ -1222,6 +1248,7 @@ int fd;
         mread(fd, (genericptr_t) ep, sizeof (struct engr) + lth);
         ep->nxt_engr = head_engr;
         head_engr = ep;
+        nh_engr_bit_update(ep->engr_x, ep->engr_y);
         ep->engr_txt = (char *) (ep + 1); /* Andreas Bormann */
         /* Mark as finished for bones levels -- no problem for
          * normal levels as the player must have finished engraving
@@ -1267,6 +1294,7 @@ register struct engr *ep;
             return;
         }
     }
+    nh_engr_bit_update(ep->engr_x, ep->engr_y);
     dealloc_engr(ep);
 }
 
@@ -1284,8 +1312,13 @@ struct engr *ep;
         ty = rn2(ROWNO);
     } while (engr_at(tx, ty) || !goodpos(tx, ty, (struct monst *) 0, 0));
 
-    ep->engr_x = tx;
-    ep->engr_y = ty;
+    {
+        int ox = ep->engr_x, oy = ep->engr_y;
+        ep->engr_x = tx;
+        ep->engr_y = ty;
+        nh_engr_bit_update(ox, oy);
+        nh_engr_bit_update(tx, ty);
+    }
 }
 
 /* Create a headstone at the given location.

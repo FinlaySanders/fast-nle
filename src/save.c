@@ -50,7 +50,7 @@ long bytes_counted;
 #if defined(__GNUC__) || defined(__clang__)
 _Static_assert(sizeof(struct eshk)  == 4936, "save.c: sizeof(struct eshk) drifted");
 _Static_assert(sizeof(struct monst) ==  120, "save.c: sizeof(struct monst) drifted");
-_Static_assert(sizeof(struct obj)   ==   88, "save.c: sizeof(struct obj) drifted");
+_Static_assert(sizeof(struct obj)   ==   96, "save.c: sizeof(struct obj) drifted");
 #endif
 
 #ifdef MICRO

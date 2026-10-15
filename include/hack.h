@@ -545,7 +545,13 @@ enum bodypart_types {
 #define SPW_CORRDMG (1ULL << 43)
 #define SPW_WEAPATTK (1ULL << 44)
 #define SPW_RANGED (1ULL << 45)
+#define SPW_NODIAG (1ULL << 46)
+#define SPW_HASEYES (1ULL << 47)
+#define SPW_RANDAPPR (1ULL << 48)   /* stalker, bats, lights: random approach draw in m_move() */
+#define SPW_LEPRECHAUN (1ULL << 49)
+#define SPW_MT2_NOFAST (1ULL << 50) /* species the monster-turn fast path leaves on the original code */
 extern unsigned long long nh_spw[NUMMONS];
+extern short nh_spw_maxload[NUMMONS]; /* max_mon_load() per species */
 #ifdef NLE_SPW_VERIFY
 #define SPWQ(p, bit, orig) ({ const struct permonst *spw_p_ = (p); int spw_a_ = (nh_spw[spw_p_ - mons] & (bit)) != 0; \
     int spw_b_ = (orig) != 0; if (spw_a_ != spw_b_) fprintf(stderr, "SPW_MISMATCH %s idx=%d\n", #orig, (int) (spw_p_ - mons)); spw_b_; })
@@ -649,13 +655,39 @@ is_moat(int x, int y)
     return FALSE;
 }
 
+/* the terrain minliquid() acts on (its own first test, inlined at the call sites) */
+static inline int
+nh_typ_liquidish(schar typ)
+{
+    return typ == POOL || typ == MOAT || typ == WATER || typ == DRAWBRIDGE_UP || typ == LAVAPOOL || typ == FOUNTAIN;
+}
+static inline int
+nh_typ_special(schar typ)
+{
+    return typ == DOOR || typ == IRONBARS || typ == ALTAR || (typ >= POOL && typ <= LAVAPOOL)
+           || typ == DRAWBRIDGE_DOWN || typ == AIR || typ == CLOUD;
+}
 static inline void
 nh_move_typ_set(int x, int y, schar typ)
 {
     nh_typ_plane[x][y] = typ;
     nh_move_set_terrain(level.move_columns, x, y, !IS_ROCK(typ));
+    nh_move_set_col_bit(&level.move_columns[x + 1].special, y, nh_typ_special(typ));
+    nh_move_set_col_bit(&level.move_columns[x + 1].door, y, typ == DOOR);
+    nh_vis_epoch++; /* vision input */
 }
 #define TYP_AT(x, y) (nh_typ_plane[(x)][(y)])
+#ifdef NH_MT2_CG
+#define NH_CYC(n) n##_impl
+#define NH_CYC_WRAP(ret, name, params, kr, call, acc) \
+    ret FDECL(name##_impl, params); unsigned long long acc; \
+    ret name kr { unsigned long long nh_t0_ = __builtin_ia32_rdtsc(); ret nh_r_ = call; acc += __builtin_ia32_rdtsc() - nh_t0_; return nh_r_; }
+#define NH_CYC_WRAPV(name, params, kr, call, acc) \
+    void FDECL(name##_impl, params); unsigned long long acc; \
+    void name kr { unsigned long long nh_t0_ = __builtin_ia32_rdtsc(); call; acc += __builtin_ia32_rdtsc() - nh_t0_; }
+#else
+#define NH_CYC(n) n
+#endif
 #define SET_TYP_XY(x, y, ...) \
     do { schar set_typ_v_ = (__VA_ARGS__); NH_TILE(x, y).typ = set_typ_v_; \
          nh_move_typ_set((x), (y), set_typ_v_); } while (0)

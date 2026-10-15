@@ -368,8 +368,11 @@ struct attack *alt_attk_buf;
  *              monster which it attacks by mistake, the caller had better
  *              take care of it...
  */
+#ifdef NH_MT2_CG
+NH_CYC_WRAP(int, mattacku, (struct monst *), (struct monst *mtmp), mattacku_impl(mtmp), nh_cyc_mattacku)
+#endif
 int
-mattacku(mtmp)
+NH_CYC(mattacku)(mtmp)
 register struct monst *mtmp;
 {
     struct attack *mattk, alt_attk;

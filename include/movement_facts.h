@@ -5,7 +5,8 @@
 #define NH_MOVE_PILES   2U
 #define NH_MOVE_TRAPS   4U
 #define NH_MOVE_GAS     8U
-#define NH_MOVE_ALL     15U
+#define NH_MOVE_ENGR    16U
+#define NH_MOVE_ALL     31U
 #define MV_ROCK        (1U << 0)
 #define MV_TREE        (1U << 1)
 #define MV_PASSWALL    (1U << 2)

@@ -42,6 +42,35 @@ static inline uint32_t upper_bits(uint64_t y)
 	return (y >> (ISAAC64_SZ_LOG+3)) & (ISAAC64_SZ-1);
 }
 
+#ifdef NH_RNG_LEAN
+/* NH_RNG_LEAN: a 64-bit-state generator (wyrand construction) behind the ISAAC64 API; state in _ctx->a, _ctx->n unused */
+static uint64_t nh_lean_splitmix(uint64_t *s){
+  uint64_t z=(*s+=0x9E3779B97F4A7C15ULL);
+  z=(z^(z>>30))*0xBF58476D1CE4E5B9ULL;
+  z=(z^(z>>27))*0x94D049BB133111EBULL;
+  return z^(z>>31);
+}
+static uint64_t nh_lean_fold(const unsigned char *_seed,int _nseed,uint64_t s){
+  int i;
+  for(i=0;i<_nseed;i++)s=(s^(uint64_t)_seed[i])*0x100000001B3ULL;
+  return s;
+}
+void isaac64_init(isaac64_ctx *_ctx,const unsigned char *_seed,int _nseed){
+  uint64_t s=nh_lean_fold(_seed,_nseed,0x6A09E667F3BCC908ULL);
+  _ctx->a=nh_lean_splitmix(&s);
+  _ctx->b=_ctx->c=0;
+  _ctx->n=0;
+}
+void isaac64_reseed(isaac64_ctx *_ctx,const unsigned char *_seed,int _nseed){
+  uint64_t s=nh_lean_fold(_seed,_nseed,_ctx->a^0x510E527FADE682D1ULL);
+  _ctx->a^=nh_lean_splitmix(&s);
+}
+uint64_t isaac64_next_uint64(isaac64_ctx *_ctx){
+  uint64_t a=(_ctx->a+=0xA0761D6478BD642FULL);
+  unsigned __int128 t=(unsigned __int128)a*(a^0xE7037ED1A0B428DBULL);
+  return (uint64_t)(t>>64)^(uint64_t)t;
+}
+#else
 static void isaac64_update(isaac64_ctx *_ctx){
   uint64_t *m;
   uint64_t *r;
@@ -157,6 +186,7 @@ uint64_t isaac64_next_uint64(isaac64_ctx *_ctx){
   if(!_ctx->n)isaac64_update(_ctx);
   return _ctx->r[--_ctx->n];
 }
+#endif /* NH_RNG_LEAN */
 
 uint64_t isaac64_next_uint(isaac64_ctx *_ctx,uint64_t _n){
   uint64_t r;

@@ -107,7 +107,7 @@ extern int amii_numcolors;
 #if defined(__GNUC__) || defined(__clang__)
 _Static_assert(sizeof(struct eshk)  == 4936, "restore.c: sizeof(struct eshk) drifted");
 _Static_assert(sizeof(struct monst) ==  120, "restore.c: sizeof(struct monst) drifted");
-_Static_assert(sizeof(struct obj)   ==   88, "restore.c: sizeof(struct obj) drifted");
+_Static_assert(sizeof(struct obj)   ==   96, "restore.c: sizeof(struct obj) drifted");
 #endif
 
 #define Is_IceBox(o) ((o)->otyp == ICE_BOX ? TRUE : FALSE)

@@ -67,6 +67,41 @@ nle_musable(void)
     return (struct musable *) nh_cur->nh_lazy[25];
 }
 #define m     (*nle_musable())
+
+/* monster-turn fast path (monmove.c): the observable side effects of find_misc()/find_offensive() for a monster that returns
+   FALSE by distance. find_misc() clears m.misc before its early return; find_defensive() returns before touching m. */
+void
+nh_muse_far_misc()
+{
+    m.misc = (struct obj *) 0;
+    m.has_misc = 0;
+}
+
+/* find_offensive() for a monster at distmin >= BOLT_LIM while !Reflecting: lined_up() draws only the Upolyd roll and can only
+   store tbx/tby and fail the range test, so the result is always FALSE. */
+boolean
+find_offensive_far(mtmp)
+struct monst *mtmp;
+{
+    m.offensive = (struct obj *) 0;
+    m.has_offense = 0;
+    if (mtmp->mpeaceful || is_animal(mtmp->data) || mindless(mtmp->data)
+        || nohands(mtmp->data))
+        return FALSE;
+    if (u.uswallow)
+        return FALSE;
+    if (in_your_sanctuary(mtmp, 0, 0))
+        return FALSE;
+    if (dmgtype(mtmp->data, AD_HEAL)
+        && !uwep && !uarmu && !uarm && !uarmh
+        && !uarms && !uarmg && !uarmc && !uarmf)
+        return FALSE;
+    if (Upolyd)
+        (void) rn2(25); /* lined_up(): hero concealment draw; cannot return early since uundetected/U_AP are excluded */
+    tbx = mtmp->mux - mtmp->mx;
+    tby = mtmp->muy - mtmp->my;
+    return FALSE;
+}
 #define trapx (nh_cur->g_muse_c_trapx)
 #define trapy (nh_cur->g_muse_c_trapy)
 /* (zap_oseen migrated to nh_cur->g_muse_c_zap_oseen
@@ -1107,7 +1142,7 @@ struct monst *mtmp;
 {
     register struct obj *obj;
     boolean reflection_skip = (Reflecting && rn2(2));
-    struct obj *helmet = which_armor(mtmp, W_ARMH);
+    struct obj *helmet;
 
     m.offensive = (struct obj *) 0;
     m.has_offense = 0;
@@ -1125,6 +1160,7 @@ struct monst *mtmp;
     /* all offensive items require orthogonal or diagonal targetting */
     if (!lined_up(mtmp))
         return FALSE;
+    helmet = which_armor(mtmp, W_ARMH); /* v1.9: pure, first read below */
 
 #define nomore(x)       if (m.has_offense == x) continue;
     /* this picks the last viable item rather than prioritizing choices */

@@ -1,7 +1,7 @@
 #ifndef OBJ_SAVE_H
 #define OBJ_SAVE_H
 #include <stddef.h>
-_Static_assert(sizeof(struct obj)==88,"compact object size");
+_Static_assert(sizeof(struct obj)==96,"compact object size");
 _Static_assert(sizeof(struct obj_legacy)==96,"legacy object size");
 _Static_assert(offsetof(struct obj,owornmask)==36,"mask occupies old padding");
 _Static_assert(offsetof(struct obj,quan)==40 && offsetof(struct obj_legacy,quan)==40,"middle layout");

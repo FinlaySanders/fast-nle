@@ -2484,8 +2484,11 @@ mapseen *mptr;
 }
 
 /* recalculate mapseen for the current level */
+#ifdef NH_MT2_CG
+NH_CYC_WRAPV(recalc_mapseen, (void), (void), recalc_mapseen_impl(), nh_cyc_mapseen)
+#endif
 void
-recalc_mapseen()
+NH_CYC(recalc_mapseen)()
 {
     /* exp_039: recalc_mapseen was ~6% of user CPU at iter-5 puffer N=128.
      * It updates the player's "discovered rooms/features" annotations used

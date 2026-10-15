@@ -74,6 +74,7 @@ boolean waslit, rockit;
 
     /* fake out saved state */
     lev->seenv = 0;
+    nh_vis_epoch++; /* vision input: seenv/lit */
     lev->doormask = 0;
     if (dist < 3)
         lev->lit = (rockit ? FALSE : TRUE);
@@ -82,6 +83,8 @@ boolean waslit, rockit;
     lev->horizontal = FALSE;
     /* short-circuit vision recalc */
     viz_array[y][x] = (dist < 3) ? (IN_SIGHT | COULD_SEE) : COULD_SEE;
+    nh_vis_epoch++; /* vision state written directly */
+    nh_vis_epoch++; /* vision state written directly */
     SET_TYP_P(lev, (rockit ? STONE : ROOM)); /* flags set via doormask above */
     if (dist >= 3)
         impossible("mkcavepos called with dist %d", dist);

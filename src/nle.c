@@ -160,6 +160,7 @@ init_nle(FILE *ttyrec, nle_obs *obs)
     nle->nh = nh_ctx_new();
     assert(nle->nh);
     nh_cur = nle->nh;
+    { static int nh_ctx_counter; nh_ctx_serial = nh_ctx_counter++; }
 
     /* Seed the per-env save/restore codec tables (they hold function
      * pointers, so they can't be zero-init or memcpy templates; the
@@ -1122,8 +1123,50 @@ nle_obs_refresh(nle_ctx_t *nle, nle_obs *obs)
     return nle;
 }
 
+#ifdef NH_MT2_CG
+#include <valgrind/callgrind.h>
+extern unsigned long long nh_mt2_elig_moves, nh_mt2_all_moves, nh_mt2_resync; extern int nh_mt2_on;
+__attribute__((destructor)) static void nh_mt2_dump(void) {
+    const char *p = getenv("NH_MT2_STATS"); if (!p) return; FILE *f = fopen(p, "w"); if (!f) return;
+    fprintf(f, "eligible_moves %llu all_moves %llu resyncs %llu\n", nh_mt2_elig_moves, nh_mt2_all_moves, nh_mt2_resync);
+    { extern unsigned long long nh_mt2_why[16]; static const char *why[] = {"tame","peaceful(v1.2 only)","shk/priest/guard/wiz/worm","mstrategy","asleep","fleeing","status(conf/stun/trap/eat/frozen/blind/hidden/mimic/cham/stuck)","species_nofast","hero_state","near(distmin<=9)","couldsee"};
+      int w; for (w = 0; w < 11; w++) fprintf(f, "why_%s %llu\n", why[w], nh_mt2_why[w]); }
+    { extern unsigned long long nh_cyc_step, nh_cyc_steps, nh_cyc_movemon, nh_cyc_dochugw, nh_cyc_mcalcdistress, nh_cyc_vision, nh_cyc_viewfrom, nh_cyc_visupdate, nh_cyc_lights, nh_cyc_mapseen, nh_cyc_newsym, nh_cyc_flush, nh_cyc_timeout, nh_cyc_rhack, nh_cyc_domove, nh_cyc_dosearch, nh_cyc_mattacku;
+      fprintf(f, "CYC steps %llu step %llu movemon %llu dochugw %llu mcalcdistress %llu vision %llu viewfrom %llu visupdate %llu lights %llu mapseen %llu newsym %llu flush %llu timeout %llu rhack %llu domove %llu dosearch %llu mattacku %llu\n",
+              nh_cyc_steps, nh_cyc_step, nh_cyc_movemon, nh_cyc_dochugw, nh_cyc_mcalcdistress, nh_cyc_vision, nh_cyc_viewfrom, nh_cyc_visupdate, nh_cyc_lights, nh_cyc_mapseen, nh_cyc_newsym, nh_cyc_flush, nh_cyc_timeout, nh_cyc_rhack, nh_cyc_domove, nh_cyc_dosearch, nh_cyc_mattacku); }
+    { extern unsigned long long nh_vis_c[8], nh_vis_comp_viol[8]; fprintf(f, "vision_recalcs %llu skipped %llu VIOLATIONS %llu missed %llu viol_hero %llu viol_vizclear %llu viol_typ %llu viol_lit %llu viol_seenv %llu viol_lights %llu\n", nh_vis_c[0], nh_vis_c[1], nh_vis_c[2], nh_vis_c[3], nh_vis_comp_viol[0], nh_vis_comp_viol[1], nh_vis_comp_viol[2], nh_vis_comp_viol[3], nh_vis_comp_viol[4], nh_vis_comp_viol[5]);
+      fprintf(f, "vision_executed_by_cause lights_only %llu hero %llu epoch %llu other %llu\n", nh_vis_c[4], nh_vis_c[5], nh_vis_c[6], nh_vis_c[7]); }
+    {
+      { extern unsigned long long nh_vis_oracle_viol[6]; fprintf(f, "oracle_skips %llu ORACLE_VIOL viz %llu rminmax %llu seenv %llu waslit %llu glyph %llu\n", nh_vis_oracle_viol[5], nh_vis_oracle_viol[0], nh_vis_oracle_viol[1], nh_vis_oracle_viol[2], nh_vis_oracle_viol[3], nh_vis_oracle_viol[4]); } }
+    { extern unsigned long long nh_mt2_why_sp[NUMMONS], nh_mt2_why_h[12]; static const char *hn[] = {"uswallow","Underwater","Invis","Displaced","Hallucination","Conflict","Upolyd","Reflecting","uundetected","U_AP_TYPE"};
+      int w, i, top; for (w = 0; w < 10; w++) fprintf(f, "hero_%s %llu\n", hn[w], nh_mt2_why_h[w]);
+      for (top = 0; top < 15; top++) { int best = -1; for (i = 0; i < NUMMONS; i++) if (nh_mt2_why_sp[i] && (best < 0 || nh_mt2_why_sp[i] > nh_mt2_why_sp[best])) best = i;
+        if (best < 0) break; fprintf(f, "species_%s %llu\n", mons[best].mname, nh_mt2_why_sp[best]); nh_mt2_why_sp[best] = 0; } }
+    { extern unsigned long long nh_mt2_c[64]; static const char *names[] = {"moves","plain","doorwin","pilewin","trapwin","liqwin","barswin","gaswin","altarwin","origdoor","occwin","temple","soko",
+        "boxempty","search","searchobj","target","moved","nomove","trackhit","destobj","desttrap","destdoor","winsee","hides","ranged","reflect","upolyd","engrhere","engrany","regions","displaces",
+        "interest","usesitems","minvent","appr0","itemspecies","shoproom","canopen","origcouldsee","cnt0","cnt1","cnt2","cnt3","cnt4","cnt5","cnt6","cnt7","cnt8","nodiag","sensebits","mmoved3"};
+      int k; for (k = 0; k < (int) (sizeof names / sizeof names[0]); k++) fprintf(f, "%s %llu\n", names[k], nh_mt2_c[k]); }
+    fclose(f);
+}
+#endif
+#ifdef NH_MT2_CG
+static nle_ctx_t *FDECL(nle_step_impl, (nle_ctx_t *, nle_obs *));
+unsigned long long nh_cyc_step, nh_cyc_steps;
 nle_ctx_t *
 nle_step(nle_ctx_t *nle, nle_obs *obs)
+{
+    unsigned long long t0 = __builtin_ia32_rdtsc(); nle_ctx_t *r;
+    if (nh_mt2_on) { CALLGRIND_TOGGLE_COLLECT; nh_mt2_on = 0; nh_mt2_resync++; }
+    r = nle_step_impl(nle, obs); nh_cyc_step += __builtin_ia32_rdtsc() - t0; nh_cyc_steps++; return r;
+}
+#endif
+#ifdef NH_MT2_CG
+static nle_ctx_t *
+nle_step_impl(nle_ctx_t *nle, nle_obs *obs)
+#else
+nle_ctx_t *
+nle_step(nle_ctx_t *nle, nle_obs *obs)
+#endif
 {
     if (nle->done) { /* dead games don't step; a stray macro key must not
                         resume the coroutine past its final yield */

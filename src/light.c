@@ -130,8 +130,11 @@ anything *id;
 }
 
 /* Mark locations that are temporarily lit via mobile light sources. */
+#ifdef NH_MT2_CG
+NH_CYC_WRAPV(do_light_sources, (char **), (char **cs_rows), do_light_sources_impl(cs_rows), nh_cyc_lights)
+#endif
 void
-do_light_sources(cs_rows)
+NH_CYC(do_light_sources)(cs_rows)
 char **cs_rows;
 {
     int x, y, min_x, max_x, max_y, offset;
@@ -557,6 +560,22 @@ struct obj *src, *dest;
             ls->id.a_obj = dest;
     src->lamplit = 0;
     dest->lamplit = 1;
+}
+
+/* vision skip: mix every light source's identity, type, range and owner position into h */
+unsigned long long
+nh_vis_light_hash(unsigned long long h)
+{
+    light_source *ls;
+    for (ls = light_base; ls; ls = ls->next) {
+        xchar lx = 0, ly = 0;
+        if (ls->type == LS_OBJECT) (void) get_obj_location(ls->id.a_obj, &lx, &ly, 0);
+        else if (ls->type == LS_MONSTER) (void) get_mon_location(ls->id.a_monst, &lx, &ly, 0);
+        h = (h ^ (unsigned long long) ls->type) * 1099511628211ULL; h = (h ^ (unsigned long long) ls->range) * 1099511628211ULL;
+        h = (h ^ (unsigned long long) lx) * 1099511628211ULL; h = (h ^ (unsigned long long) ly) * 1099511628211ULL;
+        h = (h ^ (unsigned long long) (unsigned long) ls) * 1099511628211ULL;
+    }
+    return h;
 }
 
 /* return true if there exist any light sources */

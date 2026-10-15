@@ -207,6 +207,8 @@ register struct rm *lev;
 void
 vision_reset()
 {
+    nh_vis_epoch++; /* vision input: whole level */
+    nh_vis_last_valid = 0;
     nh_typ_sync();
     int y;
     register int x, i, dig_left, block;
@@ -513,8 +515,71 @@ int row, col;
  *      + Right after the hero is swallowed. [gulpmu()]
  *      + Just before bubbles are moved. [movebubbles()]
  */
+/* hero-side and light-source inputs of vision_recalc(), folded into one word (the level-side inputs are tracked by nh_vis_epoch) */
+static unsigned long long
+nh_vis_fingerprint(void)
+{
+    unsigned long long h = 1469598103934665603ULL;
+    extern unsigned long long nh_vis_light_hash(unsigned long long);
+#define NHVF(v) (h = (h ^ (unsigned long long) (v)) * 1099511628211ULL)
+    NHVF(u.ux); NHVF(u.uy); NHVF(!!Blind); NHVF(!!Underwater); NHVF(!!u.uswallow); NHVF(u.utrap); NHVF(u.utraptype);
+    NHVF(u.xray_range); NHVF(u.nv_range); NHVF(Is_rogue_level(&u.uz)); NHVF(Is_waterlevel(&u.uz));
+#undef NHVF
+    return nh_vis_light_hash(h);
+}
+#ifdef NH_MT2_CG
+unsigned long long nh_vis_c[8], nh_vis_comp_viol[8];
+static unsigned long long nh_vis_full_last[4096], nh_vis_comp_last[4096][6];
+/* verify: the epoch/fingerprint decision must agree with a full hash of every input plane */
+static void
+nh_vis_verify(int same)
+{
+    unsigned long long h = 1469598103934665603ULL, c[6]; int x, y, k; unsigned slot = ((unsigned long) nh_cur >> 6) & 4095;
+    extern unsigned long long nh_vis_light_hash(unsigned long long);
+#define HM(v) (h = (h ^ (unsigned long long) (v)) * 1099511628211ULL)
+    HM(u.ux); HM(u.uy); HM(!!Blind); HM(!!Underwater); HM(!!u.uswallow); HM(u.utrap); HM(u.utraptype); HM(u.xray_range); HM(u.nv_range);
+    HM(Is_rogue_level(&u.uz)); HM(Is_waterlevel(&u.uz)); c[0] = h;
+    h = 1; for (x = 0; x < COLNO; x++) for (y = 0; y < ROWNO; y++) HM(viz_clear[y][x]); c[1] = h;
+    h = 1; for (x = 0; x < COLNO; x++) for (y = 0; y < ROWNO; y++) HM(NH_TILE(x, y).typ); c[2] = h;
+    h = 1; for (x = 0; x < COLNO; x++) for (y = 0; y < ROWNO; y++) HM(NH_TILE(x, y).lit); c[3] = h;
+    h = 1; for (x = 0; x < COLNO; x++) for (y = 0; y < ROWNO; y++) HM(NH_TILE(x, y).seenv); c[4] = h;
+    c[5] = nh_vis_light_hash(1469598103934665603ULL);
+    h = c[0] ^ c[1] * 3 ^ c[2] * 5 ^ c[3] * 7 ^ c[4] * 11 ^ c[5] * 13;
+#undef HM
+    nh_vis_c[0]++; nh_vis_c[1] += same;
+    if (same && nh_vis_full_last[slot] != h) { nh_vis_c[2]++; for (k = 0; k < 6; k++) if (nh_vis_comp_last[slot][k] != c[k]) nh_vis_comp_viol[k]++; }
+    if (!same && nh_vis_full_last[slot] == h) nh_vis_c[3]++;
+    nh_vis_full_last[slot] = h; for (k = 0; k < 6; k++) nh_vis_comp_last[slot][k] = c[k];
+}
+#endif
+#ifdef NH_MT2_CG
+static int nh_vis_oracle_pending;
+static struct { char viz[ROWNO][COLNO]; char rmin[ROWNO], rmax[ROWNO]; unsigned char seenv[COLNO][ROWNO], waslit[COLNO][ROWNO]; short glyph[COLNO][ROWNO]; } nh_vis_snap;
+static void
+nh_vis_oracle_snapshot(void)
+{
+    int x, y;
+    for (y = 0; y < ROWNO; y++) { memcpy(nh_vis_snap.viz[y], viz_array[y], COLNO); nh_vis_snap.rmin[y] = viz_rmin[y]; nh_vis_snap.rmax[y] = viz_rmax[y]; }
+    for (x = 0; x < COLNO; x++) for (y = 0; y < ROWNO; y++) { nh_vis_snap.seenv[x][y] = NH_TILE(x, y).seenv; nh_vis_snap.waslit[x][y] = NH_TILE(x, y).waslit; nh_vis_snap.glyph[x][y] = NH_TILE(x, y).glyph; }
+}
+unsigned long long nh_vis_oracle_viol[6];
+static void
+nh_vis_oracle_compare(void)
+{
+    int x, y, d[5] = {0, 0, 0, 0, 0};
+    for (y = 0; y < ROWNO; y++) { if (memcmp(nh_vis_snap.viz[y], viz_array[y], COLNO)) d[0] = 1; if (nh_vis_snap.rmin[y] != viz_rmin[y] || nh_vis_snap.rmax[y] != viz_rmax[y]) d[1] = 1; }
+    for (x = 0; x < COLNO; x++) for (y = 0; y < ROWNO; y++) { if (nh_vis_snap.seenv[x][y] != NH_TILE(x, y).seenv) d[2] = 1; if (nh_vis_snap.waslit[x][y] != NH_TILE(x, y).waslit) d[3] = 1; if (nh_vis_snap.glyph[x][y] != NH_TILE(x, y).glyph && !(x == u.ux && y == u.uy)) d[4] = 1; } /* the hero cell is redrawn on the skip path too */
+    nh_vis_oracle_viol[5]++;
+    for (x = 0; x < 5; x++) if (d[x]) nh_vis_oracle_viol[x]++;
+    nh_vis_oracle_pending = 0;
+}
+#endif
+#ifdef NH_MT2_CG
+NH_CYC_WRAPV(vision_recalc, (int), (int control), vision_recalc_impl(control), nh_cyc_vision)
+unsigned long long nh_cyc_viewfrom, nh_cyc_visupdate;
+#endif
 void
-vision_recalc(control)
+NH_CYC(vision_recalc)(control)
 int control;
 {
     char **temp_array; /* points to the old vision array */
@@ -538,6 +603,48 @@ int control;
     vision_full_recalc = 0; /* reset flag */
     if (in_mklev || !iflags.vision_inited)
         return;
+    {
+        unsigned long long fp = nh_vis_fingerprint();
+        /* x-ray vision redisplays every cell in range on each recalc (newsym unconditionally): never skip while it is active */
+        int same = (control != 2 && u.xray_range < 0 && nh_vis_last_valid && nh_vis_last_epoch == nh_vis_epoch && nh_vis_last_fp == fp);
+#ifdef NH_MT2_CG
+        { static int vv = -1; if (vv < 0) { const char *e = getenv("NH_VIS_VERIFY"); vv = e && *e == '1'; }
+          if (vv) { nh_vis_verify(same); nh_vis_oracle_pending = same; if (same) nh_vis_oracle_snapshot(); } /* NH_VIS_VERIFY=1: oracle mode */
+          else if (same) { if (!program_state.panicking) newsym(u.ux, u.uy); recalc_mapseen(); return; } }
+#else
+        if (same) {
+            /* identical inputs to the previous full recalc: could_see/in_sight and every per-cell update would repeat exactly
+               (seenv/waslit are already at their fixed point), so only the two unconditional tail effects remain */
+            if (!program_state.panicking)
+                newsym(u.ux, u.uy);
+            recalc_mapseen();
+            return;
+        }
+#endif
+#ifdef NH_MT2_CG
+        { /* census of executed recalcs by changed input group (per env slot) */
+            static unsigned long long cl_epoch[4096], cl_hero[4096], cl_light[4096]; static char cl_valid[4096];
+            unsigned slot = ((unsigned long) nh_cur >> 6) & 4095;
+            unsigned long long hh = 1469598103934665603ULL, lh;
+            extern unsigned long long nh_vis_light_hash(unsigned long long);
+#define NHVC(v) (hh = (hh ^ (unsigned long long) (v)) * 1099511628211ULL)
+            NHVC(u.ux); NHVC(u.uy); NHVC(!!Blind); NHVC(!!Underwater); NHVC(!!u.uswallow); NHVC(u.utrap); NHVC(u.utraptype);
+            NHVC(u.xray_range); NHVC(u.nv_range); NHVC(Is_rogue_level(&u.uz)); NHVC(Is_waterlevel(&u.uz));
+#undef NHVC
+            lh = nh_vis_light_hash(1469598103934665603ULL);
+            if (!cl_valid[slot]) nh_vis_c[7]++;
+            else if (control == 2) nh_vis_c[7]++;
+            else if (cl_epoch[slot] != nh_vis_epoch) nh_vis_c[6]++;
+            else if (cl_hero[slot] != hh) nh_vis_c[5]++;
+            else if (cl_light[slot] != lh) nh_vis_c[4]++;
+            else nh_vis_c[7]++; /* xray or other: fingerprint equal but not skipped */
+            cl_epoch[slot] = nh_vis_epoch; cl_hero[slot] = hh; cl_light[slot] = lh; cl_valid[slot] = 1;
+        }
+#endif
+        nh_vis_last_valid = (control != 2);
+        nh_vis_last_epoch = nh_vis_epoch;
+        nh_vis_last_fp = fp;
+    }
 
     /*
      * Either the light sources have been taken care of, or we must
@@ -562,9 +669,16 @@ int control;
          *
          *      + Monsters can see you even when you're in a pit.
          */
+        { unsigned long long nh_t1_ = __builtin_ia32_rdtsc();
         view_from(u.uy, u.ux, next_array, next_rmin, next_rmax, 0,
                   (void FDECL((*), (int, int, genericptr_t))) 0,
                   (genericptr_t) 0);
+#ifdef NH_MT2_CG
+        nh_cyc_viewfrom += __builtin_ia32_rdtsc() - nh_t1_;
+#else
+        (void) nh_t1_;
+#endif
+        }
 
         /*
          * Our own version of the update loop below.  We know we can't see
@@ -627,9 +741,16 @@ int control;
                     next_row[col] = IN_SIGHT | COULD_SEE;
             }
         } else
+            { unsigned long long nh_t1_ = __builtin_ia32_rdtsc();
             view_from(u.uy, u.ux, next_array, next_rmin, next_rmax, 0,
                       (void FDECL((*), (int, int, genericptr_t))) 0,
                       (genericptr_t) 0);
+#ifdef NH_MT2_CG
+            nh_cyc_viewfrom += __builtin_ia32_rdtsc() - nh_t1_;
+#else
+            (void) nh_t1_;
+#endif
+            }
 
         /*
          * Set the IN_SIGHT bit for xray and night vision.
@@ -729,6 +850,7 @@ int control;
      *      Even so, that is not entirely correct.  But it seems close
      *      enough for now.
      */
+    { unsigned long long nh_t2_ = __builtin_ia32_rdtsc();
     colbump[u.ux] = colbump[u.ux + 1] = 1;
     for (row = 0; row < ROWNO; row++) {
         dy = u.uy - row;
@@ -834,6 +956,12 @@ int control;
         } /* end for col . . */
     }     /* end for row . .  */
     colbump[u.ux] = colbump[u.ux + 1] = 0;
+#ifdef NH_MT2_CG
+    nh_cyc_visupdate += __builtin_ia32_rdtsc() - nh_t2_;
+#else
+    (void) nh_t2_;
+#endif
+    }
 
 skip:
     /* This newsym() caused a crash delivering msg about failure to open
@@ -849,6 +977,10 @@ skip:
     viz_rmax = next_rmax;
 
     recalc_mapseen();
+#ifdef NH_MT2_CG
+    if (nh_vis_oracle_pending)
+        nh_vis_oracle_compare();
+#endif
 
     /* reveal_map knob is now applied as a render-time overlay on
      * the emitted observation in the rl window port (NetHackRL::fill_obs), never
@@ -949,6 +1081,7 @@ STATIC_OVL void
 dig_point(row, col)
 int row, col;
 {
+    nh_vis_epoch++; /* vision input: opacity */
     int i;
 
     if (viz_clear[row][col])
@@ -1034,6 +1167,7 @@ STATIC_OVL void
 fill_point(row, col)
 int row, col;
 {
+    nh_vis_epoch++; /* vision input: opacity */
     int i;
 
     if (!viz_clear[row][col])

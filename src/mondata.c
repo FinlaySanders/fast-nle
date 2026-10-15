@@ -1196,6 +1196,7 @@ struct permonst *mdat;
 /*mondata.c*/
 
 unsigned long long nh_spw[NUMMONS];
+short nh_spw_maxload[NUMMONS];
 static void __attribute__((constructor))
 nh_spw_init(void)
 {
@@ -1203,6 +1204,22 @@ nh_spw_init(void)
     for (i = 0; i < NUMMONS; i++) {
         const struct permonst *p = &mons[i];
         unsigned long long w = 0;
+        struct monst fake;
+        (void) memset((genericptr_t) &fake, 0, sizeof fake);
+        fake.data = (struct permonst *) p;
+        nh_spw_maxload[i] = (short) max_mon_load(&fake); /* reads only mtmp->data */
+        if (NODIAG(i)) w |= SPW_NODIAG;
+        if (haseyes(p)) w |= SPW_HASEYES;
+        if (i == PM_STALKER || p->mlet == S_BAT || p->mlet == S_LIGHT) w |= SPW_RANDAPPR;
+        if (i == PM_LEPRECHAUN) w |= SPW_LEPRECHAUN;
+        if (is_covetous(p) || tunnels(p) || passes_walls(p) || is_watch(p) || is_mind_flayer(p) || p->mlet == S_EEL
+            || is_hider(p) || p->msound == MS_SHRIEK || p->msound == MS_NEMESIS || i == PM_MEDUSA || i == PM_TENGU
+            || (p->mflags3 & M3_DISPLACES) || i == PM_PURPLE_WORM || is_unicorn(p) || is_rider(p) || p->mlet == S_GHOST
+#ifdef MAIL
+            || i == PM_MAIL_DAEMON
+#endif
+            )
+            w |= SPW_MT2_NOFAST;
         if (tunnels(p)) w |= SPW_TUNNELS;
         if (needspick(p)) w |= SPW_NEEDSPICK;
         if (nohands(p)) w |= SPW_NOHANDS;

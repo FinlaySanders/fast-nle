@@ -475,8 +475,11 @@ int how, which;
     context.botl = TRUE;
 }
 
+#ifdef NH_MT2_CG
+NH_CYC_WRAPV(nh_timeout, (void), (void), nh_timeout_impl(), nh_cyc_timeout)
+#endif
 void
-nh_timeout()
+NH_CYC(nh_timeout)()
 {
     register struct prop *upp;
     struct kinfo *kptr;

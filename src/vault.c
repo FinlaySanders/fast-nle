@@ -135,6 +135,7 @@ int x, y;
                of doing a blanket blackout of adjacent locations] */
             if (lev->typ == STONE)
                 lev->lit = lev->waslit = 0;
+                nh_vis_epoch++; /* vision input: lit */
             /* mark <i,j> as not having been seen from <x,y> */
             unset_seenv(lev, x, y, i, j);
         }

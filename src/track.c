@@ -20,8 +20,9 @@ static void
 nh_track_adjust(coord *position, int delta)
 {
     int x, y;
-    for (x = max(0, position->x - 1); x <= min(COLNO - 1, position->x + 1); x++)
-        for (y = max(0, position->y - 1); y <= min(ROWNO - 1, position->y + 1); y++)
+    /* v1.8: padded array, so the 3x3 window needs no clamps (track positions are hero positions: 0..COLNO-1, 0..ROWNO-1) */
+    for (x = position->x; x <= position->x + 2; x++)
+        for (y = position->y; y <= position->y + 2; y++)
             nh_track_near[x][y] += delta;
 }
 
@@ -48,7 +49,7 @@ register int x, y;
 {
     register int cnt, ndist;
     register coord *tc;
-    if (x >= 0 && x < COLNO && y >= 0 && y < ROWNO && !nh_track_near[x][y])
+    if (x >= 0 && x < COLNO && y >= 0 && y < ROWNO && !nh_track_near[x + 1][y + 1])
         return (coord *) 0;
     cnt = utcnt;
     for (tc = &utrack[utpnt]; cnt--;) {

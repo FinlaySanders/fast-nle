@@ -121,6 +121,7 @@ struct obj {
     unsigned oeaten;        /* nutrition left in food, if partly eaten */
     long age;               /* creation date */
     struct oextra *oextra; /* pointer to oextra struct */
+    int nh_fidx; /* position in the floor-object index (monmove.c nh_fobj_*), valid while nh_fobj_valid */
 };
 struct obj_legacy {
     struct obj *nobj;

@@ -11,6 +11,7 @@ nh_gas_update_rect(const NhRect *rect)
     for (x = lx; x <= hx; x++) for (y = ly; y <= hy; y++) {
         NhRegion *reg = visible_region_at(x, y);
         NH_SUMMARY(x, y).move_gas = reg && reg->glyph == cmap_to_glyph(S_poisoncloud);
+        nh_move_set_col_bit(&level.move_columns[x + 1].gas, y, NH_SUMMARY(x, y).move_gas);
     }
 }
 

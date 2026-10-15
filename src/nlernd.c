@@ -144,7 +144,15 @@ nle_fill_fixed_tm(struct tm *tm, unsigned long seed)
 {
     isaac64_ctx time_rng;
     unsigned char seed_bytes[sizeof(seed)];
+    /* v1.8: a pure function of the seed, asked for on nearly every turn (night()/midnight()/moon tests): memoise the six
+       fields it writes per thread instead of re-seeding a 4 KB ISAAC64 state each time; only those six fields are copied */
+    static __thread struct { int year, mon, mday, hour, wday, yday; unsigned long seed; int valid; } nh_tm_memo;
 
+    if (nh_tm_memo.valid && nh_tm_memo.seed == seed) {
+        tm->tm_year = nh_tm_memo.year; tm->tm_mon = nh_tm_memo.mon; tm->tm_mday = nh_tm_memo.mday;
+        tm->tm_hour = nh_tm_memo.hour; tm->tm_wday = nh_tm_memo.wday; tm->tm_yday = nh_tm_memo.yday;
+        return;
+    }
     memcpy(seed_bytes, &seed, sizeof(seed_bytes));
     isaac64_init(&time_rng, seed_bytes, sizeof(seed_bytes));
 
@@ -154,6 +162,9 @@ nle_fill_fixed_tm(struct tm *tm, unsigned long seed)
     tm->tm_hour = (int) isaac64_next_uint(&time_rng, 24);
     tm->tm_wday = (int) isaac64_next_uint(&time_rng, 7);
     tm->tm_yday = tm->tm_mon * 30 + tm->tm_mday;
+    nh_tm_memo.year = tm->tm_year; nh_tm_memo.mon = tm->tm_mon; nh_tm_memo.mday = tm->tm_mday;
+    nh_tm_memo.hour = tm->tm_hour; nh_tm_memo.wday = tm->tm_wday; nh_tm_memo.yday = tm->tm_yday;
+    nh_tm_memo.seed = seed; nh_tm_memo.valid = 1;
 }
 
 void

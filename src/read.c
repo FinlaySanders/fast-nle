@@ -820,6 +820,7 @@ int howmuch;
             if (howmuch & ALL_MAP || rn2(7)) {
                 /* Zonk all memory of this location. */
                 NH_TILE(zx, zy).seenv = 0;
+                nh_vis_epoch++; /* vision input: seenv reset */
                 NH_TILE(zx, zy).waslit = 0;
                 NH_TILE(zx, zy).glyph = cmap_to_glyph(S_stone);
                 lastseentyp[zx][zy] = STONE;
@@ -1926,6 +1927,7 @@ genericptr_t val;
     struct monst *mtmp;
     struct litmon *gremlin;
 
+    nh_vis_epoch++; /* vision input: lit */
     if (val) {
         NH_TILE(x, y).lit = 1;
         if ((mtmp = m_at(x, y)) != 0 && mtmp->data == &mons[PM_GREMLIN]) {

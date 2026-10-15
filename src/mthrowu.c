@@ -1093,23 +1093,63 @@ struct monst *mtarg, *mtmp;
 }
 
 
+/* v1.8: linedup(mux, muy, mx, my, ignore_boulders ? 1 : 2) with the boulder decision taken where linedup() first consults it
+   (after the clear-path test fails); throws_rocks() and m_carrying() are pure, so the result and the draws are identical */
+STATIC_OVL boolean
+nh_linedup_lazy(mtmp)
+struct monst *mtmp;
+{
+    register xchar ax = mtmp->mux, ay = mtmp->muy, bx = mtmp->mx, by = mtmp->my;
+    int dx, dy, boulderspots;
+
+    /* These two values are set for use after successful return. */
+    tbx = ax - bx;
+    tby = ay - by;
+
+    /* sometimes displacement makes a monster think that you're at its
+       own location; prevent it from throwing and zapping in that case */
+    if (!tbx && !tby)
+        return FALSE;
+
+    if ((!tbx || !tby || abs(tbx) == abs(tby)) /* straight line or diagonal */
+        && distmin(tbx, tby, 0, 0) < BOLT_LIM) {
+        boolean ignore_boulders;
+        if ((ax == u.ux && ay == u.uy) ? (boolean) couldsee(bx, by)
+                                       : clear_path(ax, ay, bx, by))
+            return TRUE;
+        /* don't have line of sight, but might still be lined up
+           if that lack of sight is due solely to boulders */
+        ignore_boulders = (throws_rocks(mtmp->data)
+                           || m_carrying(mtmp, WAN_STRIKING)); /* boulderhandling 1 : 2, never 0 */
+        dx = sgn(ax - bx), dy = sgn(ay - by);
+        boulderspots = 0;
+        do {
+            /* <bx,by> is guaranteed to eventually converge with <ax,ay> */
+            bx += dx, by += dy;
+            if (IS_ROCK(NH_TILE(bx, by).typ) || closed_door(bx, by))
+                return FALSE;
+            if (sobj_at(BOULDER, bx, by))
+                ++boulderspots;
+        } while (bx != ax || by != ay);
+        /* reached target position without encountering obstacle */
+        if (ignore_boulders || rn2(2 + boulderspots) < 2)
+            return TRUE;
+    }
+    return FALSE;
+}
+
 /* is mtmp in position to use ranged attack? */
 boolean
 lined_up(mtmp)
 register struct monst *mtmp;
 {
-    boolean ignore_boulders;
-
     /* hero concealment usually trumps monst awareness of being lined up */
     if (Upolyd && rn2(25)
         && (u.uundetected || (U_AP_TYPE != M_AP_NOTHING
                               && U_AP_TYPE != M_AP_MONSTER)))
         return FALSE;
 
-    ignore_boulders = (throws_rocks(mtmp->data)
-                       || m_carrying(mtmp, WAN_STRIKING));
-    return linedup(mtmp->mux, mtmp->muy, mtmp->mx, mtmp->my,
-                   ignore_boulders ? 1 : 2);
+    return nh_linedup_lazy(mtmp);
 }
 
 /* check if a monster is carrying a particular item */

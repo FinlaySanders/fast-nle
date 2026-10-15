@@ -4778,8 +4778,11 @@ int start,end;
     return NHKF_ESC;
 }
 
+#ifdef NH_MT2_CG
+NH_CYC_WRAPV(rhack, (char *), (char *cmd), rhack_impl(cmd), nh_cyc_rhack)
+#endif
 void
-rhack(cmd)
+NH_CYC(rhack)(cmd)
 register char *cmd;
 {
     int spkey;

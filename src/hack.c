@@ -242,6 +242,8 @@ moverock()
                        if this is one among multiple boulders */
                     if (!Blind)
                         viz_array[ry][rx] |= IN_SIGHT;
+                        nh_vis_epoch++; /* vision state written directly */
+                        nh_vis_epoch++; /* vision state written directly */
                     if (!flooreffects(otmp, rx, ry, "fall")) {
                         place_object(otmp, rx, ry);
                     }
@@ -1370,8 +1372,11 @@ u_rooted()
     return FALSE;
 }
 
+#ifdef NH_MT2_CG
+NH_CYC_WRAPV(domove, (void), (void), domove_impl(), nh_cyc_domove)
+#endif
 void
-domove()
+NH_CYC(domove)()
 {
         int ux1 = u.ux, uy1 = u.uy;
 

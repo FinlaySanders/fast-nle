@@ -1,3 +1,7 @@
+#ifdef NH_MT2_CG
+#include <valgrind/callgrind.h>
+#include <stdlib.h>
+#endif
 /* NetHack 3.6	mon.c	$NHDT-Date: 1569276991 2019/09/23 22:16:31 $  $NHDT-Branch: NetHack-3.6 $:$NHDT-Revision: 1.297 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Derek S. Ray, 2015. */
@@ -751,7 +755,11 @@ int mcalcmove(mon) struct monst *mon;
        a gap when fleeing a normal-speed monster, etc. */
     mmove_adj = mmove % NORMAL_SPEED;
     mmove -= mmove_adj;
+#ifdef NH_RNG_LEAN
+    if (mmove_adj && rn2(NORMAL_SPEED) < mmove_adj) /* a draw that cannot change anything is not taken */
+#else
     if (rn2(NORMAL_SPEED) < mmove_adj)
+#endif
         mmove += NORMAL_SPEED;
 
     return mmove;
@@ -760,12 +768,16 @@ int mcalcmove(mon) struct monst *mon;
 /* actions that happen once per ``turn'', regardless of each
    individual monster's metabolism; some of these might need to
    be reclassified to occur more in proportion with movement rate */
+#ifdef NH_MT2_CG
+NH_CYC_WRAPV(mcalcdistress, (void), (void), mcalcdistress_impl(), nh_cyc_mcalcdistress)
+#endif
 void
-mcalcdistress()
+NH_CYC(mcalcdistress)()
 {
     struct monst *mtmp;
 
     for (mtmp = fmon; mtmp; mtmp = mtmp->nmon) {
+        __builtin_prefetch(mtmp->nmon); /* v1.8 */
         if (DEADMONSTER(mtmp))
             continue;
 
@@ -775,7 +787,7 @@ mcalcdistress()
         if (mtmp->data->mmove == 0) {
             if (vision_full_recalc)
                 vision_recalc(0);
-            if (minliquid(mtmp))
+            if ((mtmp->data->mlet == S_EEL || nh_typ_liquidish(TYP_AT(mtmp->mx, mtmp->my))) && minliquid(mtmp)) /* minliquid()'s first test, inlined */
                 continue;
         }
 
@@ -802,13 +814,22 @@ mcalcdistress()
     }
 }
 
+#ifdef NH_MT2_CG
+NH_CYC_WRAP(int, movemon, (void), (void), movemon_impl(), nh_cyc_movemon)
+#endif
 int
-movemon()
+#ifdef NH_MT2_CG
+unsigned long long nh_mt2_elig_moves, nh_mt2_all_moves, nh_mt2_resync;
+int nh_mt2_cur_elig; unsigned long long nh_mt2_c[64];
+int nh_mt2_on; /* mirrors the callgrind collect state; a death inside dochug yields without returning, so nle_step re-syncs */
+#endif
+NH_CYC(movemon)()
 {
     register struct monst *mtmp, *nmtmp;
     register boolean somebody_can_move = FALSE;
 
     nh_display_sense_recalc();
+    nh_mt2_hero_valid = 0; /* hero actions since the last pass may have changed the cached hero-state word */
 
     /*
      * Some of you may remember the former assertion here that
@@ -841,6 +862,7 @@ movemon()
             break;
         }
         nmtmp = mtmp->nmon;
+        if (nmtmp) { __builtin_prefetch(nmtmp); __builtin_prefetch((const char *) nmtmp + 64); } /* v1.8: next monster, no semantic effect */
         /* one dead monster needs to perform a move after death: vault
            guard whose temporary corridor is still on the map; live
            guards who have led the hero back to civilization get moved
@@ -873,7 +895,7 @@ movemon()
         if (context.bypasses)
             clear_bypasses();
         clear_splitobjs();
-        if (minliquid(mtmp))
+        if ((mtmp->data->mlet == S_EEL || nh_typ_liquidish(TYP_AT(mtmp->mx, mtmp->my))) && minliquid(mtmp)) /* minliquid()'s first test, inlined */
             continue;
 
         /* after losing equipment, try to put on replacement */
@@ -921,8 +943,25 @@ movemon()
                 && fightm(mtmp))
                 continue; /* mon might have died */
         }
+#ifdef NH_MT2_CG
+        {
+            int elig = mt2_eligible(mtmp), rd, col;
+            static int inv = -1, whyf = -1; extern int nh_mt2_last_why;
+            if (inv < 0) { const char *e = getenv("NH_MT2_CG_INVERT"); inv = e && *e == '1'; e = getenv("NH_MT2_CG_WHY"); whyf = e ? atoi(e) : -1; }
+            nh_mt2_all_moves++; nh_mt2_elig_moves += elig;
+            col = inv ? (!elig && (whyf < 0 || nh_mt2_last_why == whyf)) : elig; /* NH_MT2_CG_INVERT=1 collects OLD-path moves, NH_MT2_CG_WHY narrows to one clause */
+            if (col && inv) nh_mt2_c[63]++;
+            if (col && !nh_mt2_on) { CALLGRIND_TOGGLE_COLLECT; nh_mt2_on = 1; }
+            nh_mt2_cur_elig = elig;
+            rd = dochugw(mtmp);
+            nh_mt2_cur_elig = 0;
+            if (col && nh_mt2_on) { CALLGRIND_TOGGLE_COLLECT; nh_mt2_on = 0; }
+            if (rd) continue;
+        }
+#else
         if (dochugw(mtmp)) /* otherwise just move the monster */
             continue;
+#endif
     }
 
     if (any_light_source())
@@ -1678,21 +1717,31 @@ nh_pile_update(int x, int y)
     for (o = level.objs[x][y]; o; o = o->nexthere) f |= nh_move_pile(o->otyp);
     NH_SUMMARY(x, y).move_pile = f >> 13;
     NH_SUMMARY(x, y).move_obj_present = OBJ_AT(x, y);
+    nh_move_set_col_bit(&level.move_columns[x + 1].pile, y, f != 0);
+    nh_move_set_col_bit(&level.move_columns[x + 1].obj, y, OBJ_AT(x, y));
 }
 void
 nh_trap_update(int x, int y)
 {
     struct trap *t;
+    extern struct trap *nh_trap_walk_ext(int, int);
     if ((unsigned) x >= COLNO || (unsigned) y >= ROWNO) return;
-    t = t_at(x, y);
+    t = nh_trap_walk_ext(x, y); /* v1.9: the raw walk; the bit is being (re)computed here */
     NH_SUMMARY(x, y).move_trap = t ? t->ttyp : 0;
     NH_SUMMARY(x, y).move_trap_present = t != 0;
+    nh_move_set_col_bit(&level.move_columns[x + 1].trap, y, t != 0);
 }
 /* Only used during level load/release, never on a movement query. */
 void
 nh_tile_clear_entities(unsigned int domains)
 {
     int x, y;
+    for (x = 0; x < COLNO + 2; x++) {
+        if (domains & NH_MOVE_PILES) level.move_columns[x].pile = level.move_columns[x].obj = 0;
+        if (domains & NH_MOVE_TRAPS) level.move_columns[x].trap = 0;
+        if (domains & NH_MOVE_GAS) level.move_columns[x].gas = 0;
+        if (domains & NH_MOVE_ENGR) level.move_columns[x].engr = 0;
+    }
     for (x = 0; x < COLNO; x++) for (y = 0; y < ROWNO; y++) {
         if (domains & NH_MOVE_PILES) {
             NH_SUMMARY(x, y).move_pile = 0;
@@ -2180,6 +2229,7 @@ dmonsfree()
     buf[0] = '\0';
     for (mtmp = &fmon; *mtmp;) {
         freetmp = *mtmp;
+        __builtin_prefetch(freetmp->nmon); /* v1.8 */
         if (DEADMONSTER(freetmp) && !freetmp->isgd) {
             *mtmp = freetmp->nmon;
             freetmp->nmon = NULL;

@@ -1711,8 +1711,11 @@ boolean via_warning;
     return 0;
 }
 
+#ifdef NH_MT2_CG
+NH_CYC_WRAP(int, dosearch0, (int), (int aflag), dosearch0_impl(aflag), nh_cyc_dosearch)
+#endif
 int
-dosearch0(aflag)
+NH_CYC(dosearch0)(aflag)
 register int aflag; /* intrinsic autosearch vs explicit searching */
 {
 #ifdef GCC_BUG
@@ -1872,6 +1875,7 @@ int default_glyph, which_subset;
         NH_TILE(x, y).seenv = SVALL;
         glyph = back_to_glyph(x, y);
         NH_TILE(x, y).seenv = seenv;
+        nh_vis_epoch++; /* vision input: seenv restored */
     } else {
         levl_glyph = level.lflags.hero_memory
               ? NH_TILE(x, y).glyph

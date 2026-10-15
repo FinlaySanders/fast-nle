@@ -89,7 +89,11 @@ nle_rng_trace(const char *fn, int x, int r)
 static int
 RND(int x)
 {
+#ifdef NH_RNG_LEAN
+    int r = (int) (((unsigned __int128) isaac64_next_uint64(nle_rng_state(CORE)) * (unsigned long) x) >> 64);
+#else
     int r = (int) (isaac64_next_uint64(nle_rng_state(CORE)) % x);
+#endif
 
     return nle_rng_trace("RND", x, r);
 }

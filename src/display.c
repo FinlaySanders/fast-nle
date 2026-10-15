@@ -754,8 +754,11 @@ xchar x, y;
  *
  * Possibly put a new glyph at the given location.
  */
+#ifdef NH_MT2_CG
+NH_CYC_WRAPV(newsym, (int, int), (int x, int y), newsym_impl(x, y), nh_cyc_newsym)
+#endif
 void
-newsym(x, y)
+NH_CYC(newsym)(x, y)
 register int x, y;
 {
     register struct monst *mon;
@@ -1596,6 +1599,40 @@ int x, y;
     newsym(x, y);
 }
 
+/* nh_newsym_moved() for the monster-turn fast path: the caller guarantees !u.uswallow, !Underwater and <x,y> != hero. */
+void
+nh_newsym_moved_far(x, y)
+int x, y;
+{
+    register struct rm *lev;
+    struct monst *mon;
+    int s = nh_display_sense;
+    gbuf_state *gb;
+
+    if (!(s & NH_SENSE_VALID) || (s & NH_SENSE_SPECIAL) || cansee(x, y))
+        goto full;
+    if ((s & ~NH_SENSE_VALID) && (mon = m_at(x, y)) != 0) {
+        if ((s & NH_SENSE_DETECT)
+            || ((s & NH_SENSE_TPBLIND) && !mindless(mon->data))
+            || ((s & NH_SENSE_TP) && !mindless(mon->data) && distu(mon->mx, mon->my) <= (BOLT_LIM * BOLT_LIM))
+            || ((s & NH_SENSE_WARNMON) && MATCH_WARN_OF_MON(mon))
+            || ((s & NH_SENSE_INFRA) && infravisible(mon->data) && couldsee(mon->mx, mon->my))
+            || ((s & NH_SENSE_WARNING) && mon_warning(mon)))
+            goto full;
+    }
+    lev = &(NH_TILE(x, y));
+    if ((!lev->waslit || (flags.dark_room && iflags.use_color))
+        && ((lev->glyph == cmap_to_glyph(S_litcorr) && lev->typ == CORR)
+            || (lev->glyph == cmap_to_glyph(S_room) && lev->typ == ROOM)))
+        goto full;
+    gb = (gbuf_state *) nh_cur->nh_lazy[15];
+    if (!gb || gb->glyph[y][x] != lev->glyph)
+        goto full;
+    return;
+ full:
+    newsym(x, y);
+}
+
 /* FIXME: This is a dirty hack, because newsym() doesn't distinguish
  * between object piles and single objects, it doesn't mark the location
  * for update. */
@@ -1768,8 +1805,11 @@ cls()
 /*
  * Synch the third screen with the display.
  */
+#ifdef NH_MT2_CG
+NH_CYC_WRAPV(flush_screen, (int), (int cursor_on_u), flush_screen_impl(cursor_on_u), nh_cyc_flush)
+#endif
 void
-flush_screen(cursor_on_u)
+NH_CYC(flush_screen)(cursor_on_u)
 int cursor_on_u;
 {
     /* Prevent infinite loops on errors:

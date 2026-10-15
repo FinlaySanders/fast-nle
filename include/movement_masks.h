@@ -1,6 +1,14 @@
 #ifndef NH_MOVEMENT_MASKS_H
 #define NH_MOVEMENT_MASKS_H
-struct nh_move_column { unsigned int nonrock, occupied; };
+struct nh_move_column { unsigned int nonrock, occupied, special, pile, trap, gas, obj, door, engr; };
+/* special: terrain mfndpos() treats specially (door, bars, liquids, drawbridge, altar, air, cloud); pile/trap/gas/obj: NH_SUMMARY entity bits */
+static inline void
+nh_move_set_col_bit(unsigned int *field, int y, int on)
+{
+    unsigned int bit = 1U << y;
+    if (on) *field |= bit;
+    else *field &= ~bit;
+}
 
 static inline void
 nh_move_set_terrain(struct nh_move_column *cols, int x, int y, int nonrock)

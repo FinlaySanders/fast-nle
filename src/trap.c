@@ -5024,8 +5024,8 @@ boolean disarm;
     return FALSE;
 }
 
-struct trap *
-t_at(x, y)
+STATIC_OVL struct trap *
+nh_trap_walk(x, y)
 register int x, y;
 {
     register struct trap *trap = ftrap;
@@ -5036,6 +5036,27 @@ register int x, y;
         trap = trap->ntrap;
     }
     return (struct trap *) 0;
+}
+
+struct trap *
+nh_trap_walk_ext(int x, int y)
+{
+    return nh_trap_walk(x, y);
+}
+
+/* v1.9: the per-column trap presence bits (maketrap/deltrap/restore/bubble moves keep them via nh_trap_update(), which walks)
+   answer "no trap here" without the walk; a set bit only says "walk the list" */
+struct trap *
+t_at(x, y)
+register int x, y;
+{
+    if ((unsigned) x < COLNO && (unsigned) y < ROWNO && !((level.move_columns[x + 1].trap >> y) & 1U)) {
+#ifdef NH_MT2_CG
+        if (nh_trap_walk(x, y)) fprintf(stderr, "TRAP_BITMAP_MISMATCH %d,%d\n", x, y);
+#endif
+        return (struct trap *) 0;
+    }
+    return nh_trap_walk(x, y);
 }
 
 void

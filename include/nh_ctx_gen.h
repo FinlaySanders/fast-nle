@@ -11,6 +11,9 @@ struct nh_ctx {
     long g_moves; /* global: moves */
     int g_nh_invwt_valid; /* global: nh_invwt_valid */
     int g_nh_display_sense; /* global: nh_display_sense */
+    int g_nh_mt2_hero_valid, g_nh_mt2_hero_bad; /* monster-turn fast path: cached hero-state word (0 = stale) */
+    int g_nh_ctx_serial; /* creation order of this env's context (trace filter) */
+    unsigned g_nh_vis_epoch, g_nh_vis_last_epoch; int g_nh_vis_last_valid; unsigned long long g_nh_vis_last_fp; /* vision_recalc() skip state */
     long g_nh_invwt_nb; /* global: nh_invwt_nb */
     long g_nh_invwt_boulder; /* global: nh_invwt_boulder */
     long g_monstermoves; /* global: monstermoves */
@@ -102,7 +105,7 @@ struct nh_ctx {
     struct context_info g_context; /* global: context */
     dungeon g_dungeons[MAXDUNGEON]; /* global: dungeons */
     unsigned char g_vision_c_vision_colbump[COLNO + 1]; /* vision.c: vision_colbump */
-    unsigned char g_nh_track_near[COLNO][ROWNO]; /* global: nh_track_near */
+    unsigned char g_nh_track_near[COLNO + 2][ROWNO + 2]; /* global: nh_track_near; v1.8: padded, indexed [x + 1][y + 1] */
     schar g_nh_typ_plane[COLNO][ROWNO]; /* global: nh_typ_plane */
     char g_vision_c_could_see[2][ROWNO][COLNO]; /* vision.c: could_see */
     char g_vision_c_viz_clear[ROWNO][COLNO]; /* vision.c: viz_clear */
@@ -535,6 +538,13 @@ void nh_ctx_fixup(struct nh_ctx *);
 #define moves (nh_cur->g_moves)
 #define nh_invwt_valid (nh_cur->g_nh_invwt_valid)
 #define nh_display_sense (nh_cur->g_nh_display_sense)
+#define nh_mt2_hero_valid (nh_cur->g_nh_mt2_hero_valid)
+#define nh_ctx_serial (nh_cur->g_nh_ctx_serial)
+#define nh_vis_epoch (nh_cur->g_nh_vis_epoch)
+#define nh_vis_last_epoch (nh_cur->g_nh_vis_last_epoch)
+#define nh_vis_last_valid (nh_cur->g_nh_vis_last_valid)
+#define nh_vis_last_fp (nh_cur->g_nh_vis_last_fp)
+#define nh_mt2_hero_bad (nh_cur->g_nh_mt2_hero_bad)
 #define nh_invwt_nb (nh_cur->g_nh_invwt_nb)
 #define nh_invwt_boulder (nh_cur->g_nh_invwt_boulder)
 #define monstermoves (nh_cur->g_monstermoves)

@@ -681,6 +681,7 @@ clear_level_structures()
     init_vault();
     xdnstair = ydnstair = xupstair = yupstair = 0;
     sstairs.sx = sstairs.sy = 0;
+    nh_tile_clear_entities(NH_MOVE_PILES | NH_MOVE_TRAPS | NH_MOVE_GAS | NH_MOVE_ENGR); /* column bits of the per-cell entity summaries cleared above */
     xdnladder = ydnladder = xupladder = yupladder = 0;
     dnstairs_room = upstairs_room = sstairs_room = (struct mkroom *) 0;
     made_branch = FALSE;
