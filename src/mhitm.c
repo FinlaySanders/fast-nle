@@ -1293,12 +1293,16 @@ register struct attack *mattk;
             add_to_minv(magr, gold);
         }
         mdef->mstrategy &= ~STRAT_WAITFORU;
+        buf[0] = '\0';
         if (vis && canseemon(mdef)) {
             Strcpy(buf, Monnam(magr));
             pline("%s steals some gold from %s.", buf, mon_nam(mdef));
         }
         if (!tele_restrict(magr)) {
             boolean couldspot = canspotmon(magr);
+
+            if (vis && couldspot && !*buf) /* victim unseen: name not set */
+                Strcpy(buf, Monnam(magr));
             (void) rloc(magr, TRUE);
             if (vis && couldspot && !canspotmon(magr))
                 pline("%s suddenly disappears!", buf);
@@ -1354,6 +1358,7 @@ register struct attack *mattk;
             if (vis)
                 Strcpy(onambuf, doname(otmp));
             (void) add_to_minv(magr, otmp);
+            buf[0] = '\0';
             if (vis && canseemon(mdef)) {
                 Strcpy(buf, Monnam(magr));
                 pline("%s steals %s from %s!", buf, onambuf, mdefnambuf);
@@ -1367,6 +1372,8 @@ register struct attack *mattk;
             if (pa->mlet == S_NYMPH && !tele_restrict(magr)) {
                 boolean couldspot = canspotmon(magr);
 
+                if (vis && couldspot && !*buf) /* victim unseen */
+                    Strcpy(buf, Monnam(magr));
                 (void) rloc(magr, TRUE);
                 if (vis && couldspot && !canspotmon(magr))
                     pline("%s suddenly disappears!", buf);
